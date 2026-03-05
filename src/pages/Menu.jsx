@@ -17,7 +17,10 @@ export default function Menu() {
 
   if (loading) {
     return (
-      <Loader/>
+      <div className="min-h-screen bg-[#FFC72C] flex items-center justify-center">
+         <Loader/>
+      </div>
+     
     );
   }
 
