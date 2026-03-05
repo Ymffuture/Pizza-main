@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { getMenu } from "../api/menu.api";
 import MenuCard from "../components/MenuCard";
-import Loader from "./components/Loader" ;
+import Loader from "../components/Loader" ;
 import { useNavigate } from "react-router-dom";
 
 export default function Menu() {
