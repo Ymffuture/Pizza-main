@@ -1,25 +1,25 @@
 // 1. Liquid Morphing Blob
-// export default function Loader() {
-//   return (
-//     <div className="flex justify-center items-center py-10">
-//       <div className="relative">
-//         <div className="absolute inset-0 bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 rounded-full blur-xl opacity-70 animate-pulse" />
-//         <div className="relative w-16 h-16 bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 rounded-full animate-[morph_3s_ease-in-out_infinite]" 
-//              style={{
-//                boxShadow: '0 0 40px rgba(168, 85, 247, 0.4)',
-//                animation: 'morph 3s ease-in-out infinite, spin 8s linear infinite'
-//              }}>
-//           <style>{`
-//             @keyframes morph {
-//               0%, 100% { border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; }
-//               50% { border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%; }
-//             }
-//           `}</style>
-//         </div>
-//       </div>
-//     </div>
-//   ); 
-// }
+export default function Loader() {
+  return (
+    <div className="flex justify-center items-center py-10">
+      <div className="relative">
+        <div className="absolute inset-0 bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 rounded-full blur-xl opacity-70 animate-pulse" />
+        <div className="relative w-16 h-16 bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 rounded-full animate-[morph_3s_ease-in-out_infinite]" 
+             style={{
+               boxShadow: '0 0 40px rgba(168, 85, 247, 0.4)',
+               animation: 'morph 3s ease-in-out infinite, spin 8s linear infinite'
+             }}>
+          <style>{`
+            @keyframes morph {
+              0%, 100% { border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; }
+              50% { border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%; }
+            }
+          `}</style>
+        </div>
+      </div>
+    </div>
+  ); 
+}
 
 // 2. Orbital Rings System
 // export default function Loader() {
@@ -106,26 +106,26 @@
 // }
 
 // 5. Glitch Text Effect
-export default function Loader() {
-  return (
-    <div className="flex justify-center items-center py-10">
-      <div className="relative font-bold text-2xl tracking-widest text-white">
-        <span className="relative z-10 animate-[glitch_2s_infinite]">LOADING</span>
-        <span className="absolute top-0 left-0 -ml-1 text-cyan-400 opacity-70 animate-[glitch_2s_infinite_0.1s]">LOADING</span>
-        <span className="absolute top-0 left-0 ml-1 text-pink-500 opacity-70 animate-[glitch_2s_infinite_0.2s]">LOADING</span>
-        <style>{`
-          @keyframes glitch {
-            0%, 90%, 100% { transform: translate(0); }
-            20% { transform: translate(-2px, 2px); }
-            40% { transform: translate(-2px, -2px); }
-            60% { transform: translate(2px, 2px); }
-            80% { transform: translate(2px, -2px); }
-          }
-        `}</style>
-      </div>
-    </div>
-  );
-}
+// export default function Loader() {
+//   return (
+//     <div className="flex justify-center items-center py-10">
+//       <div className="relative font-bold text-2xl tracking-widest text-white">
+//         <span className="relative z-10 animate-[glitch_2s_infinite]">LOADING</span>
+//         <span className="absolute top-0 left-0 -ml-1 text-cyan-400 opacity-70 animate-[glitch_2s_infinite_0.1s]">LOADING</span>
+//         <span className="absolute top-0 left-0 ml-1 text-pink-500 opacity-70 animate-[glitch_2s_infinite_0.2s]">LOADING</span>
+//         <style>{`
+//           @keyframes glitch {
+//             0%, 90%, 100% { transform: translate(0); }
+//             20% { transform: translate(-2px, 2px); }
+//             40% { transform: translate(-2px, -2px); }
+//             60% { transform: translate(2px, 2px); }
+//             80% { transform: translate(2px, -2px); }
+//           }
+//         `}</style>
+//       </div>
+//     </div>
+//   );
+// }
 
 // 6. Neon Pulse Ring
 // export default function Loader() {
