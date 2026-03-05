@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { getMenu } from "../api/menu.api";
 import MenuCard from "../components/MenuCard";
+import Loader from "./components/Loader" ;
 import { useNavigate } from "react-router-dom";
 
 export default function Menu() {
@@ -16,9 +17,7 @@ export default function Menu() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#FFC72C] flex items-center justify-center">
-        <div className="animate-spin rounded-full h-16 w-16 border-4 border-[#DA291C] border-t-transparent"></div>
-      </div>
+      <Loader/>
     );
   }
 
