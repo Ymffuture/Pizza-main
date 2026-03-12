@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const axiosClient = axios.create({
-  baseURL: "https://kotabites.onrender.com/api",
+  baseURL: "https://kotabites.onrender.com",
   headers: {
     "Content-Type": "application/json",
   },
