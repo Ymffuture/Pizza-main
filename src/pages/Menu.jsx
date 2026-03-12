@@ -3,6 +3,8 @@ import { getMenu } from "../api/menu.api";
 import MenuCard from "../components/MenuCard";
 import Loader from "../components/Loader";
 import { useNavigate } from "react-router-dom";
+import { useCart } from "../context/CartContext";
+import { toast } from "react-toastify";
 
 export default function Menu() {
   const [menu, setMenu] = useState([]);
@@ -10,19 +12,14 @@ export default function Menu() {
   const [error, setError] = useState(null);
   const [wakingUp, setWakingUp] = useState(false);
   const navigate = useNavigate();
+  const { addItem, count } = useCart();
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
-
-    // Show "server waking up" message after 4 seconds
     const wakeTimer = setTimeout(() => setWakingUp(true), 4000);
-
     try {
       const res = await getMenu();
-
-      // Guard against different response shapes:
-      // Could be res.data (array), res.data.data (nested), res.data.items, etc.
       const raw = res.data;
       const items = Array.isArray(raw)
         ? raw
@@ -33,7 +30,6 @@ export default function Menu() {
         : Array.isArray(raw?.menu)
         ? raw.menu
         : [];
-
       setMenu(items);
     } catch (err) {
       const msg =
@@ -55,7 +51,15 @@ export default function Menu() {
     load();
   }, [load]);
 
-  // ── Loading state ──────────────────────────────────────────────
+  const handleAddToCart = (item) => {
+    addItem(item);
+    toast.success(`🛒 ${item.name} added to cart!`, {
+      position: "bottom-right",
+      autoClose: 1800,
+      hideProgressBar: true,
+    });
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#DA291C] flex flex-col items-center justify-center gap-4">
@@ -74,7 +78,6 @@ export default function Menu() {
     );
   }
 
-  // ── Error state ────────────────────────────────────────────────
   if (error) {
     return (
       <div className="min-h-screen bg-[#DA291C] flex flex-col items-center justify-center gap-6 px-6 text-center">
@@ -91,7 +94,6 @@ export default function Menu() {
     );
   }
 
-  // ── Empty state ────────────────────────────────────────────────
   if (menu.length === 0) {
     return (
       <div className="min-h-screen bg-[#DA291C] flex flex-col items-center justify-center gap-6 px-6 text-center">
@@ -108,25 +110,36 @@ export default function Menu() {
     );
   }
 
-  // ── Menu grid ─────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#DA291C] via-[#DA291C] to-[#FFC72C] pb-12">
+    <div className="min-h-screen bg-gradient-to-b from-[#DA291C] via-[#DA291C] to-[#FFC72C] pb-24">
       {/* Header */}
       <div className="bg-[#DA291C] shadow-lg">
-        <div className="max-w-7xl mx-auto px-6 py-8">
+        <div className="max-w-7xl mx-auto px-6 py-8 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 bg-[#FFC72C] rounded-full flex items-center justify-center shadow-inner">
-              <span className="text-[#DA291C] text-2xl font-black">M</span>
+              <span className="text-[#DA291C] text-2xl font-black">K</span>
             </div>
             <div>
               <h1 className="text-4xl font-black text-white tracking-tight italic">
                 OUR MENU
               </h1>
               <p className="text-[#FFC72C] font-bold text-sm tracking-widest uppercase">
-                I'm lovin' it
+                Fresh & Fast
               </p>
             </div>
           </div>
+          {/* Cart count badge */}
+          {count > 0 && (
+            <button
+              onClick={() => navigate("/cart")}
+              className="relative bg-[#FFC72C] text-[#DA291C] font-black px-5 py-2 rounded-full text-sm hover:bg-yellow-300 transition flex items-center gap-2"
+            >
+              🛒 View Cart
+              <span className="bg-[#DA291C] text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-black">
+                {count}
+              </span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -136,19 +149,11 @@ export default function Menu() {
           {menu.map((item, index) => (
             <div
               key={item.id ?? index}
-              className="group relative bg-white rounded-2xl shadow-2xl overflow-hidden transform transition-all duration-300 hover:scale-105 hover:shadow-3xl"
+              className="group relative bg-white rounded-2xl shadow-2xl overflow-hidden transform transition-all duration-300 hover:scale-105"
               style={{ animationDelay: `${index * 100}ms` }}
             >
-              {/* Golden accent bar */}
               <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#FFC72C] via-[#DA291C] to-[#FFC72C]" />
-
-              <MenuCard
-                item={item}
-                onSelect={() => navigate(`/checkout?item=${item.id}`)}
-              />
-
-              {/* Hover tint */}
-              <div className="absolute inset-0 bg-gradient-to-t from-[#DA291C]/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+              <MenuCard item={item} onSelect={handleAddToCart} />
             </div>
           ))}
         </div>
@@ -157,12 +162,19 @@ export default function Menu() {
       {/* FAB – Cart */}
       <button
         onClick={() => navigate("/cart")}
-        className="fixed bottom-6 right-6 bg-[#DA291C] hover:bg-[#b91c1c] text-white p-4 rounded-full shadow-2xl transition-all duration-300 hover:scale-110 hover:rotate-3 z-50 border-4 border-[#FFC72C]"
+        className="fixed bottom-6 right-6 bg-[#DA291C] hover:bg-[#b91c1c] text-white p-4 rounded-full shadow-2xl transition-all duration-300 hover:scale-110 z-50 border-4 border-[#FFC72C]"
         aria-label="View cart"
       >
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-        </svg>
+        <div className="relative">
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+          </svg>
+          {count > 0 && (
+            <span className="absolute -top-3 -right-3 bg-[#FFC72C] text-[#DA291C] text-xs font-black w-5 h-5 rounded-full flex items-center justify-center">
+              {count}
+            </span>
+          )}
+        </div>
       </button>
     </div>
   );
