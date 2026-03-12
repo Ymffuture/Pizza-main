@@ -1,11 +1,12 @@
 import axios from "axios";
 
 const axiosClient = axios.create({
-  baseURL: "https://foodserver-w4ta.onrender.com/api",
+  baseURL: "https://kotabites.onrender.com/api",
   headers: {
     "Content-Type": "application/json",
   },
-  timeout: 15000,
+  // Render free tier cold starts can take 30-60s — raised from 15s
+  timeout: 60000,
 });
 
 axiosClient.interceptors.response.use(
