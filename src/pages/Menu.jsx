@@ -67,10 +67,10 @@ export default function Menu() {
         {wakingUp && (
           <div className="text-center px-6">
             <p className="text-yellow-300 font-bold text-lg animate-pulse">
-              ⏳ Waking up the server…
+              ⏳ Refresh the server…
             </p>
             <p className="text-white/70 text-sm mt-1">
-              Free hosting goes to sleep — usually ready in 30–60 seconds.
+              Due to high valume it might take a few minute— usually ready in 30–60 seconds.
             </p>
           </div>
         )}
