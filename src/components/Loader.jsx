@@ -24,33 +24,102 @@
 //  2. Orbital Rings System
  export default function Loader() {
   return (
-     <div className="flex justify-center items-center py-10">
-       <div className="relative w-20 h-20">
-       {[0, 1, 2].map((i) => (
-           <div
-             key={i}
-             className="absolute inset-0 border-2 border-transparent rounded-full"
-             style={{
-              borderTopColor: i === 0 ? '#06b6d4' : i === 1 ? '#8b5cf6' : '#ec4899',
-               borderRightColor: 'transparent',
-               borderBottomColor: 'transparent',
-               borderLeftColor: 'transparent',
-               animation: `orbit ${2 + i * 0.5}s linear infinite`,
-              transform: `rotate(${i * 45}deg) scale(${1 - i * 0.15})`,
-               boxShadow: `0 0 20px ${i === 0 ? 'rgba(6,182,212,0.5)' : i === 1 ? 'rgba(139,92,246,0.5)' : 'rgba(236,72,153,0.5)'}`
-            }}
-          />
-         ))}
-       <style>{`
-          @keyframes orbit {
-            0% { transform: rotate(0deg) scale(var(--scale, 1)); }
-            100% { transform: rotate(360deg) scale(var(--scale, 1)); }
-         }
-         `}</style>
-       </div>
-   </div>
+    <div className="flex justify-center items-center py-10">
+      <div className="relative w-24 h-24">
+        {/* Outer ring - Red */}
+        <div
+          className="absolute inset-0 border-4 border-transparent rounded-full"
+          style={{
+            borderTopColor: '#DC2626',      // Red-600
+            borderRightColor: 'transparent',
+            borderBottomColor: 'transparent',
+            borderLeftColor: 'transparent',
+            animation: 'spin 2s linear infinite',
+            boxShadow: '0 0 20px rgba(220, 38, 38, 0.6), 0 0 40px rgba(220, 38, 38, 0.3)',
+          }}
+        />
+        
+        {/* Middle ring - Orange */}
+        <div
+          className="absolute inset-2 border-4 border-transparent rounded-full"
+          style={{
+            borderTopColor: 'transparent',
+            borderRightColor: '#F97316',     // Orange-500
+            borderBottomColor: 'transparent',
+            borderLeftColor: 'transparent',
+            animation: 'spin-reverse 1.5s linear infinite',
+            boxShadow: '0 0 15px rgba(249, 115, 22, 0.5), 0 0 30px rgba(249, 115, 22, 0.2)',
+          }}
+        />
+        
+        {/* Inner ring - White/Red gradient effect */}
+        <div
+          className="absolute inset-4 border-4 border-transparent rounded-full"
+          style={{
+            borderTopColor: '#FFFFFF',
+            borderRightColor: 'transparent',
+            borderBottomColor: '#DC2626',
+            borderLeftColor: 'transparent',
+            animation: 'spin 1s linear infinite',
+            boxShadow: '0 0 10px rgba(255, 255, 255, 0.8), inset 0 0 10px rgba(220, 38, 38, 0.3)',
+          }}
+        />
+        
+        {/* Center pulse - White core */}
+        <div
+          className="absolute inset-8 bg-white rounded-full animate-pulse"
+          style={{
+            boxShadow: '0 0 20px rgba(255, 255, 255, 0.9), 0 0 40px rgba(249, 115, 22, 0.4)',
+            animation: 'pulse-core 1.5s ease-in-out infinite',
+          }}
+        />
+        
+        {/* Orbiting dot - Orange accent */}
+        <div
+          className="absolute w-3 h-3 bg-orange-500 rounded-full"
+          style={{
+            top: '0',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            animation: 'orbit-dot 2s linear infinite',
+            boxShadow: '0 0 10px rgba(249, 115, 22, 0.8)',
+          }}
+        />
+
+        <style>{`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+          @keyframes spin-reverse {
+            0% { transform: rotate(360deg); }
+            100% { transform: rotate(0deg); }
+          }
+          @keyframes pulse-core {
+            0%, 100% { 
+              transform: scale(0.8); 
+              opacity: 0.8;
+              box-shadow: 0 0 20px rgba(255, 255, 255, 0.9), 0 0 40px rgba(249, 115, 22, 0.4);
+            }
+            50% { 
+              transform: scale(1.2); 
+              opacity: 1;
+              box-shadow: 0 0 30px rgba(255, 255, 255, 1), 0 0 60px rgba(220, 38, 38, 0.6);
+            }
+          }
+          @keyframes orbit-dot {
+            0% { 
+              transform: translateX(-50%) rotate(0deg) translateY(-48px) rotate(0deg); 
+            }
+            100% { 
+              transform: translateX(-50%) rotate(360deg) translateY(-48px) rotate(-360deg); 
+            }
+          }
+        `}</style>
+      </div>
+    </div>
   );
- }
+}
 
 // 3. Pulsing Geometric Shapes
 // export default function Loader() {
