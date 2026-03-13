@@ -93,42 +93,68 @@
       }
       
       /* Smooth scroll */
-      html {
-        scroll-behavior: smooth;
-      }
-      
-      /* Selection color */
-      ::selection {
-        background: var(--mcd-yellow);
-        color: var(--mcd-red);
-      }
-    </style>
-    
-    <!-- Microsoft Clarity Analytics -->
-    <script type="text/javascript">
-      (function (c, l, a, r, i, t, y) {
-        c[a] =
-          c[a] ||
-          function () {
-            (c[a].q = c[a].q || []).push(arguments);
-          };
-        t = l.createElement(r);
-        t.async = 1;
-        t.src = "https://www.clarity.ms/tag/" + i;
-        y = l.getElementsByTagName(r)[0];
-        y.parentNode.insertBefore(t, y);
-      })(window, document, "clarity", "script", "rv61d21r2n");
-    </script>
-    
-    <!-- Google Analytics (Optional - Add your ID) -->
-    <!-- <script async src="https://www.googletagmanager.com/gtag/js?id=GA_MEASUREMENT_ID"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-      gtag('config', 'GA_MEASUREMENT_ID');
-    </script> -->
-  </head>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- ===== Title & Basic Meta ===== -->
+  <title>Kotabites – Fast Kota Delivery</title>
+  <meta name="title" content="Kotabites – Kota Delivery App" />
+  <meta name="description" content="Order delicious kota sandwiches, delivered hot to your door in Johannesburg. Fast, affordable, and full of flavour." />
+  <meta name="keywords" content="kota delivery, kota online, johannesburg food delivery, township food, kota sandwich" />
+  <meta name="author" content="Kotabites" />
+  <meta name="robots" content="index, follow" />
+
+  <!-- Canonical -->
+  <link rel="canonical" href="https://foodsorder.vercel.app" />
+
+  <!-- ===== PWA & Icons ===== -->
+  <link rel="icon" type="image/png" href="/logo-32.png" sizes="32x32" />
+  <link rel="icon" type="image/png" href="/logo-192.png" sizes="192x192" />
+  <link rel="apple-touch-icon" href="/logo-192.png" />
+  <link rel="manifest" href="/manifest.json" />
+
+  <!-- Theme colors (Kotabites red & yellow) -->
+  <meta name="theme-color" content="#DA291C" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#BD0017" media="(prefers-color-scheme: dark)" />
+
+  <!-- Android adaptive icon mask -->
+  <link rel="mask-icon" href="/kotabites-maskable.svg" color="#DA291C" />
+
+  <!-- ===== Open Graph / Facebook ===== -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://foodsorder.vercel.app" />
+  <meta property="og:title" content="Kotabites – Kota Delivery App" />
+  <meta property="og:description" content="Order kota online – fast delivery in Joburg. Choose your favourite fillings and get it hot!" />
+  <meta property="og:image" content="https://foodsorder.vercel.app/og-kotabites.jpg" />
+  <meta property="og:site_name" content="Kotabites" />
+
+  <!-- ===== Twitter / X ===== -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Kotabites – Kota Delivery App" />
+  <meta name="twitter:description" content="Order kota online – fast delivery in Joburg." />
+  <meta name="twitter:image" content="https://foodsorder.vercel.app/twitter-kotabites.jpg" />
+
+  <!-- ===== Preconnect ===== -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+  <!-- ===== Colors & Selection ===== -->
+  <style>
+    :root {
+      --primary: #DA291C;        /* KotaBites red */
+      --primary-dark: #BD0017;
+      --accent: #FFC72C;         /* KotaBites yellow */
+      --accent-hover: #FFBC0D;
+      --background: #FFFFFF;
+      --text: #000000;
+    }
+    ::selection {
+      background: var(--accent);
+      color: var(--primary);
+    }
+  </style>
+</head>
   
   <body>
     <div id="root"></div>
