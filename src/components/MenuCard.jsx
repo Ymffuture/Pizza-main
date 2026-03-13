@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { formatCurrency } from "../utils/formatCurrency";
 import { ShoppingCart, ZoomIn, X, Star, Tag } from "lucide-react";
-import {StarRating} from "./StarRating";
+import StarRating from "./StarRating";
 /* ─────────────────────────────────────────────
    3-D Lightbox — full-screen image viewer with
    mouse-drag orbit + touch drag orbit
@@ -208,7 +208,7 @@ export default function MenuCard({ item, onSelect }) {
             </div>
 
             <div className="mc-stars">
-               <StarRating/>
+               <StarRating rating={rating} onRating={setRating} />
             </div>
           </div>
 
