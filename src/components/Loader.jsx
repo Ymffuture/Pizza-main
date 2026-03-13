@@ -1,5 +1,5 @@
 // 1. Liquid Morphing Blob
-export default function Loader() {
+export default function Loader1() {
   return (
     <div className="flex justify-center items-center py-10">
       <div className="relative">
@@ -21,36 +21,36 @@ export default function Loader() {
   ); 
 }
 
-// 2. Orbital Rings System
-// export default function Loader() {
-//   return (
-//     <div className="flex justify-center items-center py-10">
-//       <div className="relative w-20 h-20">
-//         {[0, 1, 2].map((i) => (
-//           <div
-//             key={i}
-//             className="absolute inset-0 border-2 border-transparent rounded-full"
-//             style={{
-//               borderTopColor: i === 0 ? '#06b6d4' : i === 1 ? '#8b5cf6' : '#ec4899',
-//               borderRightColor: 'transparent',
-//               borderBottomColor: 'transparent',
-//               borderLeftColor: 'transparent',
-//               animation: `orbit ${2 + i * 0.5}s linear infinite`,
-//               transform: `rotate(${i * 45}deg) scale(${1 - i * 0.15})`,
-//               boxShadow: `0 0 20px ${i === 0 ? 'rgba(6,182,212,0.5)' : i === 1 ? 'rgba(139,92,246,0.5)' : 'rgba(236,72,153,0.5)'}`
-//             }}
-//           />
-//         ))}
-//         <style>{`
-//           @keyframes orbit {
-//             0% { transform: rotate(0deg) scale(var(--scale, 1)); }
-//             100% { transform: rotate(360deg) scale(var(--scale, 1)); }
-//           }
-//         `}</style>
-//       </div>
-//     </div>
-//   );
-// }
+//  2. Orbital Rings System
+ export default function Loader() {
+  return (
+     <div className="flex justify-center items-center py-10">
+       <div className="relative w-20 h-20">
+       {[0, 1, 2].map((i) => (
+           <div
+             key={i}
+             className="absolute inset-0 border-2 border-transparent rounded-full"
+             style={{
+              borderTopColor: i === 0 ? '#06b6d4' : i === 1 ? '#8b5cf6' : '#ec4899',
+               borderRightColor: 'transparent',
+               borderBottomColor: 'transparent',
+               borderLeftColor: 'transparent',
+               animation: `orbit ${2 + i * 0.5}s linear infinite`,
+              transform: `rotate(${i * 45}deg) scale(${1 - i * 0.15})`,
+               boxShadow: `0 0 20px ${i === 0 ? 'rgba(6,182,212,0.5)' : i === 1 ? 'rgba(139,92,246,0.5)' : 'rgba(236,72,153,0.5)'}`
+            }}
+          />
+         ))}
+       <style>{`
+          @keyframes orbit {
+            0% { transform: rotate(0deg) scale(var(--scale, 1)); }
+            100% { transform: rotate(360deg) scale(var(--scale, 1)); }
+         }
+         `}</style>
+       </div>
+   </div>
+  );
+ }
 
 // 3. Pulsing Geometric Shapes
 // export default function Loader() {
