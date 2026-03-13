@@ -208,7 +208,7 @@ export default function MenuCard({ item, onSelect }) {
             </div>
 
             <div className="mc-stars">
-               {StarRating} 
+               <StarRating/>
             </div>
           </div>
 
