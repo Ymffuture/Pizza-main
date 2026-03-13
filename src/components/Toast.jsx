@@ -89,7 +89,7 @@ function ToastItem({ toast, onRemove }) {
       <div style={{
         position: "absolute", bottom: 0, left: 0,
         height: 2, background: c.accent,
-        animation: `toastProgress ${toast.duration ?? 2500}ms linear forwards`,
+        animation: `toastProgress ${toast.duration ?? 5000}ms linear forwards`,
         borderRadius: "0 0 14px 14px",
       }} />
     </div>
@@ -104,7 +104,7 @@ export function ToastProvider({ children }) {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
-  const show = useCallback(({ type = "info", title, message, sub, image, duration = 3500 }) => {
+  const show = useCallback(({ type = "info", title, message, sub, image, duration = 5000 }) => {
     const id = ++idRef.current;
     setToasts((prev) => [...prev.slice(-4), { id, type, title, message, sub, image, duration }]);
     setTimeout(() => dismiss(id), duration);
