@@ -1,25 +1,25 @@
 // 1. Liquid Morphing Blob
-export default function Loader1() {
-  return (
-    <div className="flex justify-center items-center py-10">
-      <div className="relative">
-        <div className="absolute inset-0 bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 rounded-full blur-xl opacity-70 animate-pulse" />
-        <div className="relative w-16 h-16 bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 rounded-full animate-[morph_3s_ease-in-out_infinite]" 
-             style={{
-               boxShadow: '0 0 40px rgba(168, 85, 247, 0.4)',
-               animation: 'morph 3s ease-in-out infinite, spin 8s linear infinite'
-             }}>
-          <style>{`
-            @keyframes morph {
-              0%, 100% { border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; }
-              50% { border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%; }
-            }
-          `}</style>
-        </div>
-      </div>
-    </div>
-  ); 
-}
+//export default function Loader1() {
+//  return (
+//    <div className="flex justify-center items-center py-10">
+//      <div className="relative">
+  //      <div className="absolute inset-0 bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 rounded-full blur-xl opacity-70 animate-pulse" />
+ //       <div className="relative w-16 h-16 bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 rounded-full animate-[morph_3s_ease-in-out_infinite]" 
+   //          style={{
+    //           boxShadow: '0 0 40px rgba(168, 85, 247, 0.4)',
+ //              animation: 'morph 3s ease-in-out infinite, spin 8s linear infinite'
+   //          }}>
+//          <style>{`
+  //          @keyframes morph {
+//              0%, 100% { border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; }
+   //           50% { border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%; }
+     //       }
+//          `}</style>
+    //    </div>
+ //     </div>
+//    </div>
+//  ); 
+//}
 
 //  2. Orbital Rings System
  export default function Loader() {
