@@ -1,0 +1,40 @@
+{
+  "name": "Kotabites",
+  "short_name": "Kotabites",
+  "description": "Order kota online – fast delivery in Johannesburg",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FFFFFF",
+  "theme_color": "#DA291C",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/logo-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/kotabites-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": ["food", "shopping", "lifestyle"],
+  "screenshots": [
+    {
+      "src": "/screenshot1.jpg",
+      "sizes": "1280x800",
+      "type": "image/jpeg",
+      "form_factor": "wide",
+      "label": "Kotabites Home Screen"
+    }
+  ]
+}
