@@ -2,22 +2,30 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import useOrder from "../hooks/useOrder";
 import usePolling from "../hooks/usePolling";
+import { useAuth } from "../context/AuthContext";
+import { useToast } from "../components/Toast";
 import { formatCurrency } from "../utils/formatCurrency";
+import {
+  ArrowLeft, Flame, LogOut, RefreshCw,
+  Clock, CheckCircle2, ChefHat, Package, Truck,
+  XCircle, MapPin, Receipt,
+} from "lucide-react";
 
-const STATUS_CONFIG = {
-  pending:   { label: "Pending",          emoji: "⏳", color: "bg-yellow-100 text-yellow-800", step: 1 },
-  paid:      { label: "Payment Received", emoji: "✅", color: "bg-blue-100 text-blue-800",    step: 2 },
-  preparing: { label: "Preparing",        emoji: "👨‍🍳", color: "bg-orange-100 text-orange-800", step: 3 },
-  ready:     { label: "Ready for Pickup", emoji: "📦", color: "bg-purple-100 text-purple-800", step: 4 },
-  delivered: { label: "Delivered",        emoji: "🎉", color: "bg-green-100 text-green-800",   step: 5 },
-  cancelled: { label: "Cancelled",        emoji: "❌", color: "bg-red-100 text-red-800",        step: 0 },
+/* ── Status config ── */
+const STATUS_CFG = {
+  pending:   { label: "Order Placed",      Icon: Clock,         color: "#FFC72C", step: 1 },
+  paid:      { label: "Payment Received",  Icon: CheckCircle2,  color: "#60a5fa", step: 2 },
+  preparing: { label: "Being Prepared",    Icon: ChefHat,       color: "#fb923c", step: 3 },
+  ready:     { label: "Ready for Pickup",  Icon: Package,       color: "#a78bfa", step: 4 },
+  delivered: { label: "Delivered 🎉",      Icon: Truck,         color: "#4ade80", step: 5 },
+  cancelled: { label: "Cancelled",         Icon: XCircle,       color: "#f87171", step: 0 },
 };
 
 const STEPS = [
-  { key: "pending",   label: "Order Placed" },
-  { key: "paid",      label: "Payment" },
-  { key: "preparing", label: "Preparing" },
-  { key: "ready",     label: "Ready" },
+  { key: "pending",   label: "Placed"    },
+  { key: "paid",      label: "Paid"      },
+  { key: "preparing", label: "Kitchen"   },
+  { key: "ready",     label: "Ready"     },
   { key: "delivered", label: "Delivered" },
 ];
 
@@ -25,214 +33,338 @@ export default function OrderStatus() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { fetchOrder } = useOrder();
-  const [order, setOrder] = useState(null);
+  const { logout, user } = useAuth();
+  const toast = useToast();
+
+  const [order, setOrder]         = useState(null);
   const [loadError, setLoadError] = useState(null);
-  const [lastUpdated, setLastUpdated] = useState(null);
+  const [lastUpdated, setLast]    = useState(null);
 
   const load = async () => {
     try {
       const data = await fetchOrder(id);
       setOrder(data);
-      setLastUpdated(new Date());
+      setLast(new Date());
       setLoadError(null);
     } catch (err) {
       setLoadError(
         err?.response?.data?.detail ||
-          err?.response?.data?.message ||
-          err.message ||
-          "Could not load order."
+        err?.response?.data?.message ||
+        err.message || "Could not load order."
       );
     }
   };
 
-  useEffect(() => {
-    load();
-  }, [id]);
-
-  // Poll every 5 seconds
+  useEffect(() => { load(); }, [id]);
   usePolling(load, 5000);
 
-  const config = order ? STATUS_CONFIG[order.status] ?? STATUS_CONFIG["pending"] : null;
-  const currentStep = config?.step ?? 1;
+  const cfg = order ? (STATUS_CFG[order.status] ?? STATUS_CFG.pending) : null;
+  const currentStep = cfg?.step ?? 1;
 
+  const handleLogout = () => {
+    logout();
+    toast.show({ type: "info", title: "Signed out", message: "See you next time!" });
+    navigate("/login");
+  };
+
+  /* ── Error (no order yet) ── */
   if (loadError && !order) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-[#DA291C] to-[#FFC72C] flex flex-col items-center justify-center gap-6 px-6 text-center">
-        <div className="text-6xl">⚠️</div>
-        <h2 className="text-2xl font-black text-white">Order not found</h2>
-        <p className="text-yellow-200 max-w-sm">{loadError}</p>
-        <button
-          onClick={load}
-          className="bg-[#FFC72C] text-[#DA291C] font-black px-8 py-3 rounded-full hover:bg-yellow-300 transition"
-        >
-          Retry
-        </button>
-        <button
-          onClick={() => navigate("/")}
-          className="text-white/80 hover:text-white underline text-sm transition"
-        >
-          ← Back to Home
-        </button>
+      <div className="os-root">
+        <style>{styles}</style>
+        <header className="os-header">
+          <div className="os-header-inner">
+            <button className="os-back-btn" onClick={() => navigate("/menu")}><ArrowLeft className="w-5 h-5" /></button>
+            <div className="os-brand"><div className="os-brand-badge"><Flame className="w-4 h-4" style={{ color:"#0e0700" }} /></div><span className="os-brand-name">KOTABITES</span></div>
+            <button className="os-logout-btn" onClick={handleLogout}><LogOut className="w-4 h-4" /></button>
+          </div>
+        </header>
+        <div className="os-state-screen">
+          <div className="os-state-icon os-state-error"><XCircle className="w-10 h-10" /></div>
+          <h2 className="os-state-title">Order Not Found</h2>
+          <p className="os-state-sub">{loadError}</p>
+          <button className="os-state-btn" onClick={load}><RefreshCw className="w-4 h-4" /> Retry</button>
+          <button className="os-state-link" onClick={() => navigate("/")}>← Back to Home</button>
+        </div>
       </div>
     );
   }
 
+  /* ── Loading ── */
   if (!order) {
     return (
-      <div className="min-h-screen bg-[#DA291C] flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <div className="w-16 h-16 border-4 border-[#FFC72C] border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-white font-bold text-lg">Loading your order…</p>
+      <div className="os-root">
+        <style>{styles}</style>
+        <div className="os-loading-screen">
+          <div className="os-spinner" />
+          <p className="os-loading-text">Loading your order…</p>
         </div>
       </div>
     );
   }
 
+  const StatusIcon = cfg.Icon;
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#DA291C] to-[#FFC72C] pb-12">
-      {/* Header */}
-      <div className="bg-[#DA291C] shadow-lg">
-        <div className="max-w-2xl mx-auto px-6 py-6 flex items-center gap-3">
-          <button onClick={() => navigate("/")} className="text-white hover:text-yellow-300 transition">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-          <div>
-            <h1 className="text-3xl font-black text-white italic">TRACK ORDER</h1>
-            <p className="text-yellow-300 text-xs font-medium">
-              #{typeof id === "string" ? id.slice(-8).toUpperCase() : id}
-            </p>
+    <div className="os-root">
+      <style>{styles}</style>
+
+      {/* ── Header ── */}
+      <header className="os-header">
+        <div className="os-header-inner">
+          <div className="os-header-left">
+            <button className="os-back-btn" onClick={() => navigate("/menu")}><ArrowLeft className="w-5 h-5" /></button>
+            <div className="os-brand">
+              <div className="os-brand-badge"><Flame className="w-4 h-4" style={{ color:"#0e0700" }} /></div>
+              <div>
+                <span className="os-brand-name">TRACK ORDER</span>
+                <p className="os-brand-id">#{String(id).slice(-8).toUpperCase()}</p>
+              </div>
+            </div>
+          </div>
+          <div className="os-header-right">
+            {user && <span className="os-user-pill">{user.email?.split("@")[0]}</span>}
+            <button className="os-logout-btn" onClick={handleLogout} title="Sign out"><LogOut className="w-4 h-4" /></button>
           </div>
         </div>
-      </div>
+      </header>
 
-      <div className="max-w-2xl mx-auto px-6 py-6 space-y-5">
-        {/* Status Card */}
-        <div className="bg-white rounded-2xl shadow-lg p-6 text-center">
-          <div className="text-6xl mb-3">{config.emoji}</div>
-          <span className={`inline-block px-4 py-2 rounded-full text-sm font-black ${config.color}`}>
-            {config.label}
-          </span>
+      <div className="os-body">
+
+        {/* ── Status Hero ── */}
+        <section className="os-status-card" style={{ "--accent": cfg.color }}>
+          <div className="os-status-glow" style={{ background: `radial-gradient(circle, ${cfg.color}22 0%, transparent 70%)` }} />
+          <div className="os-status-icon-wrap" style={{ borderColor: `${cfg.color}40`, background: `${cfg.color}15` }}>
+            <StatusIcon className="w-9 h-9" style={{ color: cfg.color }} />
+          </div>
+          <h2 className="os-status-label" style={{ color: cfg.color }}>{cfg.label}</h2>
           {lastUpdated && (
-            <p className="text-xs text-gray-400 mt-3">
-              Last updated: {lastUpdated.toLocaleTimeString()} · auto-refreshing every 5s
+            <p className="os-status-updated">
+              <RefreshCw className="w-3 h-3 os-refresh-icon" />
+              Updated {lastUpdated.toLocaleTimeString()} · refreshing every 5s
             </p>
           )}
-        </div>
+        </section>
 
-        {/* Progress Steps (not shown for cancelled) */}
+        {/* ── Progress Stepper (not for cancelled) ── */}
         {order.status !== "cancelled" && (
-          <div className="bg-white rounded-2xl shadow-lg p-5">
-            <h2 className="font-black text-gray-900 mb-4 text-sm uppercase tracking-wide">
-              Order Progress
-            </h2>
-            <div className="flex items-center justify-between relative">
-              {/* Progress line */}
-              <div className="absolute top-4 left-4 right-4 h-1 bg-gray-200 rounded-full" />
+          <section className="os-card">
+            <h2 className="os-section-label"><Receipt className="w-4 h-4" /> Order Progress</h2>
+            <div className="os-stepper">
+              {/* Track line */}
+              <div className="os-track-bg" />
               <div
-                className="absolute top-4 left-4 h-1 bg-[#DA291C] rounded-full transition-all duration-700"
-                style={{ width: `${((currentStep - 1) / (STEPS.length - 1)) * 100}%` }}
+                className="os-track-fill"
+                style={{
+                  width: `${((currentStep - 1) / (STEPS.length - 1)) * 100}%`,
+                  background: cfg.color,
+                }}
               />
-
               {STEPS.map((step, i) => {
-                const stepNum = i + 1;
-                const done = stepNum <= currentStep;
+                const done = i + 1 <= currentStep;
+                const active = i + 1 === currentStep;
                 return (
-                  <div key={step.key} className="relative flex flex-col items-center gap-2 z-10">
+                  <div key={step.key} className="os-step">
                     <div
-                      className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-xs transition-all duration-500 ${
-                        done
-                          ? "bg-[#DA291C] text-white shadow-md shadow-red-300"
-                          : "bg-gray-200 text-gray-400"
-                      }`}
+                      className={"os-step-dot" + (done ? " os-step-done" : "") + (active ? " os-step-active" : "")}
+                      style={done ? { background: cfg.color, boxShadow: `0 0 12px ${cfg.color}60` } : {}}
                     >
-                      {done ? "✓" : stepNum}
+                      {done ? "✓" : i + 1}
                     </div>
-                    <span className="text-xs text-gray-600 font-medium text-center w-14 leading-tight">
+                    <span className={"os-step-label" + (done ? " os-step-label-done" : "")}>
                       {step.label}
                     </span>
                   </div>
                 );
               })}
             </div>
-          </div>
+          </section>
         )}
 
-        {/* Order Details */}
-        <div className="bg-white rounded-2xl shadow-lg p-5 space-y-3">
-          <h2 className="font-black text-gray-900 text-lg">📋 Order Details</h2>
+        {/* ── Order Details ── */}
+        <section className="os-card">
+          <h2 className="os-section-label"><Receipt className="w-4 h-4" /> Order Details</h2>
 
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            <div className="bg-gray-50 rounded-xl p-3">
-              <p className="text-gray-400 text-xs uppercase font-bold tracking-wide">Total</p>
-              <p className="font-black text-[#DA291C] text-lg">
-                {formatCurrency(order.total_amount ?? 0)}
-              </p>
+          <div className="os-meta-grid">
+            <div className="os-meta-item">
+              <span className="os-meta-label">Total</span>
+              <span className="os-meta-value os-meta-total">{formatCurrency(order.total_amount ?? 0)}</span>
             </div>
-            <div className="bg-gray-50 rounded-xl p-3">
-              <p className="text-gray-400 text-xs uppercase font-bold tracking-wide">Order ID</p>
-              <p className="font-bold text-gray-700 text-sm truncate">
-                {typeof order.id === "string" ? order.id.slice(-8).toUpperCase() : order.id}
-              </p>
+            <div className="os-meta-item">
+              <span className="os-meta-label">Order ID</span>
+              <span className="os-meta-value os-meta-id">
+                #{String(order.id ?? "").slice(-8).toUpperCase()}
+              </span>
             </div>
+            {order.payment_method && (
+              <div className="os-meta-item">
+                <span className="os-meta-label">Payment</span>
+                <span className="os-meta-value" style={{ textTransform:"capitalize" }}>
+                  {order.payment_method === "cash" ? "Cash on Delivery" : "Paystack"}
+                </span>
+              </div>
+            )}
+            {order.phone && (
+              <div className="os-meta-item">
+                <span className="os-meta-label">Phone</span>
+                <span className="os-meta-value">{order.phone}</span>
+              </div>
+            )}
           </div>
 
           {order.delivery_address && (
-            <div className="bg-gray-50 rounded-xl p-3">
-              <p className="text-gray-400 text-xs uppercase font-bold tracking-wide mb-1">
-                Delivery Address
-              </p>
-              <p className="text-gray-700 text-sm">{order.delivery_address}</p>
-            </div>
-          )}
-
-          {/* Items */}
-          {Array.isArray(order.items) && order.items.length > 0 && (
-            <div className="bg-gray-50 rounded-xl p-3">
-              <p className="text-gray-400 text-xs uppercase font-bold tracking-wide mb-2">Items</p>
-              <div className="space-y-1">
-                {order.items.map((item, i) => (
-                  <div key={i} className="flex justify-between text-sm text-gray-700">
-                    <span>
-                      {item.name ?? item.menu_item_id} ×{item.quantity}
-                    </span>
-                    {item.price != null && (
-                      <span className="font-bold">{formatCurrency(item.price * item.quantity)}</span>
-                    )}
-                  </div>
-                ))}
+            <div className="os-address-box">
+              <MapPin className="w-4 h-4 os-address-icon" />
+              <div>
+                <span className="os-meta-label">Delivery Address</span>
+                <p className="os-address-text">{order.delivery_address}</p>
               </div>
             </div>
           )}
-        </div>
 
-        {/* Cancelled message */}
+          {Array.isArray(order.items) && order.items.length > 0 && (
+            <div className="os-items-list">
+              <span className="os-meta-label" style={{ display:"block", marginBottom:8 }}>Items</span>
+              {order.items.map((item, i) => (
+                <div key={i} className="os-item-row">
+                  <span className="os-item-name">
+                    {item.name ?? item.menu_item_id}
+                    <span className="os-item-qty"> ×{item.quantity}</span>
+                  </span>
+                  {item.price != null && (
+                    <span className="os-item-price">{formatCurrency(item.price * item.quantity)}</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* ── Cancelled / Delivered CTA ── */}
         {order.status === "cancelled" && (
-          <div className="bg-red-50 border border-red-200 rounded-2xl p-5 text-center">
-            <p className="text-red-700 font-bold">This order has been cancelled.</p>
-            <button
-              onClick={() => navigate("/menu")}
-              className="mt-3 bg-[#DA291C] text-white font-black px-6 py-2 rounded-full hover:bg-red-700 transition"
-            >
-              Order Again
-            </button>
+          <div className="os-cta-card os-cta-red">
+            <XCircle className="w-5 h-5" />
+            <div>
+              <p className="os-cta-title">Order Cancelled</p>
+              <p className="os-cta-sub">This order was cancelled. Place a new one?</p>
+            </div>
+            <button className="os-cta-btn" onClick={() => navigate("/menu")}>Order Again</button>
           </div>
         )}
 
-        {/* Delivered message */}
         {order.status === "delivered" && (
-          <div className="bg-green-50 border border-green-200 rounded-2xl p-5 text-center">
-            <p className="text-green-700 font-bold text-lg">🎉 Enjoy your meal!</p>
-            <button
-              onClick={() => navigate("/menu")}
-              className="mt-3 bg-[#DA291C] text-white font-black px-6 py-2 rounded-full hover:bg-red-700 transition"
-            >
-              Order Again
-            </button>
+          <div className="os-cta-card os-cta-green">
+            <Truck className="w-5 h-5" />
+            <div>
+              <p className="os-cta-title">Enjoy your meal! 🎉</p>
+              <p className="os-cta-sub">Order another round?</p>
+            </div>
+            <button className="os-cta-btn os-cta-btn-green" onClick={() => navigate("/menu")}>Order Again</button>
           </div>
         )}
+
       </div>
     </div>
   );
 }
+
+const styles = `
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+  :root {
+    --red:#DA291C; --red2:#b91c1c; --gold:#FFC72C;
+    --dark:#0e0700; --card:#1a0e00;
+    --border:rgba(255,199,44,0.1); --text:#fff8e7;
+    --muted:rgba(255,248,231,0.42);
+  }
+
+  .os-root { min-height:100vh; background:radial-gradient(ellipse 80% 35% at 50% 0%,rgba(218,41,28,0.15) 0%,transparent 65%),var(--dark); font-family:'Plus Jakarta Sans',system-ui,sans-serif; color:var(--text); padding-bottom:60px; }
+
+  /* Loading */
+  .os-loading-screen { min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:20px; }
+  .os-spinner { width:44px; height:44px; border:3px solid rgba(255,199,44,0.15); border-top-color:var(--gold); border-radius:50%; animation:osSpin 0.8s linear infinite; }
+  @keyframes osSpin { to { transform:rotate(360deg); } }
+  .os-loading-text { font-size:14px; font-weight:600; color:var(--muted); }
+
+  /* Header */
+  .os-header { position:sticky; top:0; z-index:100; background:rgba(14,7,0,0.95); backdrop-filter:blur(20px); border-bottom:1px solid var(--border); }
+  .os-header-inner { max-width:680px; margin:0 auto; padding:13px 20px; display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  .os-header-left { display:flex; align-items:center; gap:10px; }
+  .os-header-right { display:flex; align-items:center; gap:8px; }
+  .os-back-btn { width:36px; height:36px; flex-shrink:0; background:rgba(255,248,231,0.05); border:1px solid var(--border); border-radius:10px; display:flex; align-items:center; justify-content:center; color:var(--muted); cursor:pointer; transition:all 0.2s; }
+  .os-back-btn:hover { color:var(--text); border-color:rgba(255,199,44,0.3); }
+  .os-brand { display:flex; align-items:center; gap:8px; }
+  .os-brand-badge { width:34px; height:34px; background:var(--gold); border-radius:9px; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 0 16px rgba(255,199,44,0.25); }
+  .os-brand-name { font-family:'Bebas Neue',sans-serif; font-size:17px; letter-spacing:3px; color:var(--text); line-height:1; display:block; }
+  .os-brand-id { font-size:10px; font-weight:800; color:var(--gold); letter-spacing:0.1em; margin-top:1px; }
+  .os-user-pill { background:rgba(255,199,44,0.08); border:1px solid rgba(255,199,44,0.18); border-radius:50px; padding:5px 11px; font-size:11px; font-weight:700; color:var(--muted); max-width:110px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .os-logout-btn { width:34px; height:34px; border-radius:10px; background:rgba(218,41,28,0.08); border:1px solid rgba(218,41,28,0.2); display:flex; align-items:center; justify-content:center; color:rgba(218,41,28,0.6); cursor:pointer; transition:all 0.2s; }
+  .os-logout-btn:hover { background:rgba(218,41,28,0.2); color:var(--red); border-color:rgba(218,41,28,0.4); }
+
+  /* Body */
+  .os-body { max-width:680px; margin:0 auto; padding:24px 16px; display:flex; flex-direction:column; gap:16px; }
+
+  /* Status hero */
+  .os-status-card { position:relative; overflow:hidden; background:var(--card); border:1px solid var(--border); border-radius:20px; padding:32px 24px; display:flex; flex-direction:column; align-items:center; gap:12px; text-align:center; }
+  .os-status-glow { position:absolute; inset:0; pointer-events:none; }
+  .os-status-icon-wrap { position:relative; width:70px; height:70px; border-radius:20px; border:1px solid; display:flex; align-items:center; justify-content:center; }
+  .os-status-label { font-family:'Bebas Neue',sans-serif; font-size:26px; letter-spacing:2px; position:relative; }
+  .os-status-updated { font-size:11px; color:var(--muted); display:flex; align-items:center; gap:5px; position:relative; }
+  .os-refresh-icon { animation:osSpin 3s linear infinite; opacity:0.6; }
+
+  /* Card */
+  .os-card { background:var(--card); border:1px solid var(--border); border-radius:18px; padding:20px; display:flex; flex-direction:column; gap:14px; }
+  .os-section-label { display:flex; align-items:center; gap:8px; font-size:11px; font-weight:800; letter-spacing:0.1em; text-transform:uppercase; color:var(--gold); }
+
+  /* Stepper */
+  .os-stepper { position:relative; display:flex; align-items:flex-start; justify-content:space-between; padding-top:16px; }
+  .os-track-bg { position:absolute; top:16px; left:16px; right:16px; height:2px; background:rgba(255,248,231,0.08); border-radius:2px; transform:translateY(-50%); }
+  .os-track-fill { position:absolute; top:16px; left:16px; height:2px; border-radius:2px; transform:translateY(-50%); transition:width 0.7s ease; }
+  .os-step { position:relative; display:flex; flex-direction:column; align-items:center; gap:8px; z-index:1; }
+  .os-step-dot { width:32px; height:32px; border-radius:50%; background:rgba(255,248,231,0.07); border:2px solid rgba(255,248,231,0.1); display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:900; color:var(--muted); transition:all 0.4s; }
+  .os-step-done { color:var(--dark)!important; border-color:transparent!important; }
+  .os-step-active { animation:osStepPulse 1.8s ease infinite; }
+  @keyframes osStepPulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.1)} }
+  .os-step-label { font-size:10px; font-weight:700; color:var(--muted); text-align:center; width:52px; line-height:1.3; }
+  .os-step-label-done { color:var(--text); }
+
+  /* Meta */
+  .os-meta-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .os-meta-item { background:rgba(255,248,231,0.03); border:1px solid var(--border); border-radius:12px; padding:12px 14px; }
+  .os-meta-label { font-size:9px; font-weight:800; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); display:block; margin-bottom:4px; }
+  .os-meta-value { font-size:13px; font-weight:700; color:var(--text); }
+  .os-meta-total { font-family:'Bebas Neue',sans-serif; font-size:22px; letter-spacing:1px; color:var(--red); }
+  .os-meta-id { font-family:monospace; font-size:13px; color:var(--gold); }
+
+  .os-address-box { display:flex; align-items:flex-start; gap:10px; background:rgba(255,248,231,0.03); border:1px solid var(--border); border-radius:12px; padding:12px 14px; }
+  .os-address-icon { color:var(--gold); flex-shrink:0; margin-top:2px; }
+  .os-address-text { font-size:13px; color:var(--text); margin-top:4px; line-height:1.5; }
+
+  .os-items-list { background:rgba(255,248,231,0.03); border:1px solid var(--border); border-radius:12px; padding:12px 14px; display:flex; flex-direction:column; gap:8px; }
+  .os-item-row { display:flex; justify-content:space-between; align-items:baseline; }
+  .os-item-name { font-size:13px; font-weight:600; color:var(--text); }
+  .os-item-qty { font-size:11px; color:var(--muted); }
+  .os-item-price { font-size:13px; font-weight:800; color:var(--gold); flex-shrink:0; }
+
+  /* CTA cards */
+  .os-cta-card { display:flex; align-items:center; gap:14px; border-radius:16px; padding:16px 18px; border:1px solid; }
+  .os-cta-red { background:rgba(218,41,28,0.08); border-color:rgba(218,41,28,0.25); color:var(--red); }
+  .os-cta-green { background:rgba(74,222,128,0.08); border-color:rgba(74,222,128,0.25); color:#4ade80; }
+  .os-cta-title { font-size:14px; font-weight:800; color:var(--text); }
+  .os-cta-sub { font-size:11px; color:var(--muted); margin-top:2px; }
+  .os-cta-btn { margin-left:auto; flex-shrink:0; background:var(--red); color:white; border:none; cursor:pointer; font-family:'Plus Jakarta Sans',sans-serif; font-weight:800; font-size:12px; padding:9px 18px; border-radius:50px; transition:background 0.2s; }
+  .os-cta-btn:hover { background:var(--red2); }
+  .os-cta-btn-green { background:rgba(74,222,128,0.2); color:#4ade80; border:1px solid rgba(74,222,128,0.3); }
+  .os-cta-btn-green:hover { background:rgba(74,222,128,0.3); }
+
+  /* State screen */
+  .os-state-screen { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:calc(100vh - 70px); gap:16px; padding:24px; text-align:center; }
+  .os-state-icon { width:72px; height:72px; background:rgba(255,199,44,0.08); border:1px solid rgba(255,199,44,0.18); border-radius:20px; display:flex; align-items:center; justify-content:center; color:var(--gold); }
+  .os-state-error { background:rgba(218,41,28,0.1)!important; border-color:rgba(218,41,28,0.25)!important; color:var(--red)!important; }
+  .os-state-title { font-family:'Bebas Neue',sans-serif; font-size:32px; letter-spacing:2px; }
+  .os-state-sub { color:var(--muted); font-size:14px; max-width:280px; line-height:1.6; }
+  .os-state-btn { display:flex; align-items:center; gap:8px; background:var(--red); color:white; border:none; cursor:pointer; font-family:'Plus Jakarta Sans',sans-serif; font-weight:800; font-size:14px; padding:12px 26px; border-radius:50px; margin-top:6px; }
+  .os-state-link { font-size:13px; color:var(--muted); background:none; border:none; cursor:pointer; transition:color 0.2s; }
+  .os-state-link:hover { color:var(--text); }
+
+  @media (max-width:600px) { .os-body { padding:16px 12px; } .os-meta-grid { grid-template-columns:1fr; } .os-user-pill { display:none; } }
+`;
