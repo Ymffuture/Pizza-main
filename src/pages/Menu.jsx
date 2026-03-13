@@ -6,15 +6,10 @@ import { useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { useToast } from "../components/Toast";
 import {
-  ShoppingCart,
-  RefreshCw,
-  UtensilsCrossed,
-  Zap,
-  ChevronRight,
-  Flame,
-  Search,
-  SlidersHorizontal,
+  ShoppingCart, RefreshCw, UtensilsCrossed, Zap,
+  ChevronRight, Flame, Search, SlidersHorizontal, LogOut,
 } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
 
 const CATEGORIES = ["All", "Kota", "Chips", "Drinks", "Extras"];
 
@@ -28,7 +23,14 @@ export default function Menu() {
   const [showSearch, setShowSearch] = useState(false);
   const navigate = useNavigate();
   const { addItem, count } = useCart();
+  const { logout, isAuth, user } = useAuth();
   const toast = useToast();
+
+  const handleLogout = () => {
+    logout();
+    toast.show({ type: "info", title: "Signed out", message: "See you next time!" });
+    navigate("/login");
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -169,6 +171,15 @@ export default function Menu() {
               <span>Cart</span>
               {count > 0 && <span className="cart-badge">{count}</span>}
             </button>
+            {isAuth ? (
+              <button className="menu-logout-btn" onClick={handleLogout} title={`Sign out (${user?.email ?? ""})`}>
+                <LogOut className="w-4 h-4" />
+              </button>
+            ) : (
+              <button className="menu-login-btn" onClick={() => navigate("/login")}>
+                Sign In
+              </button>
+            )}
           </div>
         </div>
 
@@ -384,6 +395,10 @@ const menuStyles = `
     box-shadow: 0 4px 16px rgba(218,41,28,0.35);
   }
   .cart-pill:hover { background: var(--red2); transform: scale(1.04); }
+  .menu-logout-btn { width:38px; height:38px; border-radius:10px; background:rgba(218,41,28,0.08); border:1px solid rgba(218,41,28,0.2); display:flex; align-items:center; justify-content:center; color:rgba(218,41,28,0.6); cursor:pointer; transition:all 0.2s; }
+  .menu-logout-btn:hover { background:rgba(218,41,28,0.2); color:var(--red); border-color:rgba(218,41,28,0.4); }
+  .menu-login-btn { padding:8px 14px; border-radius:10px; background:rgba(255,199,44,0.08); border:1px solid rgba(255,199,44,0.2); color:var(--gold); font-family:'Plus Jakarta Sans',sans-serif; font-size:12px; font-weight:800; cursor:pointer; transition:all 0.2s; }
+  .menu-login-btn:hover { background:rgba(255,199,44,0.15); }
   .cart-badge {
     background: var(--gold); color: #0e0700;
     font-weight: 900; font-size: 11px;
