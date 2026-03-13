@@ -3,10 +3,11 @@ import axios from "axios";
 const axiosClient = axios.create({
   baseURL: "https://kotabites.onrender.com",
   headers: { "Content-Type": "application/json" },
-  timeout: 60000, // Render free-tier cold start
+  timeout: 60000, // Render free-tier cold start can take up to 60s
+  withCredentials: false, // Must be false when backend uses allow_origins=["*"]
 });
 
-// Attach Bearer token from session on every request
+// Attach Bearer token from sessionStorage on every request
 axiosClient.interceptors.request.use((config) => {
   const token = sessionStorage.getItem("kb_token");
   if (token) {
@@ -18,7 +19,11 @@ axiosClient.interceptors.request.use((config) => {
 axiosClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    console.error("API Error:", error?.response || error.message);
+    if (error.code === "ERR_NETWORK") {
+      console.error("Network error — server may be sleeping (Render cold start)");
+    } else {
+      console.error("API Error:", error?.response?.status, error?.response?.data || error.message);
+    }
     return Promise.reject(error);
   }
 );
