@@ -37,7 +37,7 @@ function ToastItem({ toast, onRemove }) {
         maxWidth: "360px",
         position: "relative",
         overflow: "hidden",
-        animation: "toastIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards",
+        animation: "toastIn 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards",
       }}
     >
       {/* Glow blob */}
@@ -104,7 +104,7 @@ export function ToastProvider({ children }) {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
-  const show = useCallback(({ type = "info", title, message, sub, image, duration = 2500 }) => {
+  const show = useCallback(({ type = "info", title, message, sub, image, duration = 3500 }) => {
     const id = ++idRef.current;
     setToasts((prev) => [...prev.slice(-4), { id, type, title, message, sub, image, duration }]);
     setTimeout(() => dismiss(id), duration);
@@ -116,11 +116,19 @@ export function ToastProvider({ children }) {
       {children}
 
       {/* Toast container */}
-      <div style={{
-        position: "fixed", bottom: 24, right: 24,
-        display: "flex", flexDirection: "column-reverse", gap: 10,
-        zIndex: 9999, pointerEvents: "none",
-      }}>
+      <div
+  style={{
+    position: "fixed",
+    top: 24,
+    left: "50%",
+    transform: "translateX(-50%)",
+    display: "flex",
+    flexDirection: "column",
+    gap: 10,
+    zIndex: 9999,
+    pointerEvents: "none",
+  }}
+>
         {toasts.map((t) => (
           <div key={t.id} style={{ pointerEvents: "auto" }}>
             <ToastItem toast={t} onRemove={dismiss} />
