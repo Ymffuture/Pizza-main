@@ -4,7 +4,7 @@ const axiosClient = axios.create({
   baseURL: "https://kotabites.onrender.com",
   headers: { "Content-Type": "application/json" },
   timeout: 60000, // Render free-tier cold start can take up to 60s
-  withCredentials: false, // Must be false when backend uses allow_origins=["*"]
+  withCredentials: true, // Must be false when backend uses allow_origins=["*"]
 });
 
 // Attach Bearer token from sessionStorage on every request
