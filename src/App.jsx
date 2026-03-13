@@ -8,6 +8,7 @@ import Success from "./pages/Success";
 import ErrorPage from "./pages/ErrorPage";
 import { OrderProvider } from "./context/OrderContext";
 import { CartProvider } from "./context/CartContext";
+import { ToastProvider } from "./components/Toast";
 import ErrorBoundary from "./components/ErrorBoundary";
 
 export default function App() {
@@ -15,6 +16,7 @@ export default function App() {
     <ErrorBoundary>
       <OrderProvider>
         <CartProvider>
+          <ToastProvider>
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<Home />} />
@@ -26,6 +28,7 @@ export default function App() {
               <Route path="*" element={<ErrorPage />} />
             </Routes>
           </BrowserRouter>
+          </ToastProvider>
         </CartProvider>
       </OrderProvider>
     </ErrorBoundary>
