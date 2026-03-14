@@ -56,7 +56,7 @@ function parseError(err) {
 
   // Network / cold start
   if (err?.code === "ERR_NETWORK" || err?.code === "ECONNABORTED") {
-    return { type: "cold", msg: "Server is waking up (Render free tier). Please wait 30–60s and try again." };
+    return { type: "cold", msg: "Server is waking up ERR_NETWORK. Please wait 30–60s and try again." };
   }
 
   return { type: "error", msg: err?.message ?? "Something went wrong placing your order." };
@@ -260,13 +260,13 @@ export default function Checkout() {
           {payMethod === "cash" && (
             <div className="co-note co-note-gold">
               <Banknote className="w-4 h-4 co-note-icon" style={{ color: "#FFC72C" }} />
-              <p>Please have <strong>{formatCurrency(total)}</strong> ready when your order arrives.</p>
+              <p>Please have <strong>{formatCurrency(total)}</strong> ready when your order arrives. R12.00 Delivery fee. </p>
             </div>
           )}
           {payMethod === "paystack" && (
             <div className="co-note co-note-green">
               <CreditCard className="w-4 h-4 co-note-icon" style={{ color: "#4ade80" }} />
-              <p>You'll be redirected to <strong>Paystack</strong> to complete payment securely.</p>
+              <p>You'll be redirected to <strong>Paystack</strong> to complete payment securely. R13.00 Delivery fee. </p>
             </div>
           )}
         </section>
