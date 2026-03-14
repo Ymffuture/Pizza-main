@@ -207,8 +207,13 @@ export default function MenuCard({ item, onSelect }) {
               <span className="mc-price">{formatCurrency(item.price)}</span>
             </div>
 <div className="mc-stars">
-   <StarRating rating={item.rating || 0} onRating={() => {}} />
-</div>
+              {[...Array(5)].map((_, i) => (
+                <Star
+                  key={i}
+                  className={`mc-star${i < (item.rating || 4) ? " mc-star-on" : ""}`}
+                />
+              ))}
+            </div>
           </div>
 
           <button
