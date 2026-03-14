@@ -76,6 +76,7 @@ export default function Home() {
   };
 
   return (
+    <>
     <div className="min-h-screen bg-gradient-to-br from-red-600 via-red-500 to-yellow-400 relative overflow-hidden flex items-center justify-center">
       {/* Grid pattern */}
       <div className="absolute inset-0 opacity-10">
@@ -186,7 +187,9 @@ export default function Home() {
         }
         .animate-float { animation: float linear infinite; }
       `}</style>
-      <Footer />
+      
     </div>
+      <Footer />
+    </>
   );
 }
