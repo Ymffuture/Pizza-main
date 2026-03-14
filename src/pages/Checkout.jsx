@@ -10,13 +10,57 @@ import { formatCurrency } from "../utils/formatCurrency";
 import {
   ArrowLeft, CreditCard, Banknote, ShoppingBag,
   MapPin, Phone, ChevronRight, Loader2, CheckCircle2,
-  LogOut, Flame,
+  LogOut, Flame, Zap, AlertCircle,
 } from "lucide-react";
 
 const PAYMENT_METHODS = [
   { id: "cash",     label: "Cash on Delivery", sub: "Pay when your order arrives",           Icon: Banknote   },
   { id: "paystack", label: "Pay Online",        sub: "Card, EFT & Instant EFT via Paystack", Icon: CreditCard },
 ];
+
+/* ── Parse any axios / fetch error into a readable string ── */
+function parseError(err) {
+  // Console dump for debugging
+  console.error("[Checkout] Order error:", {
+    code:    err?.code,
+    status:  err?.response?.status,
+    data:    err?.response?.data,
+    message: err?.message,
+  });
+
+  const status = err?.response?.status;
+  const detail = err?.response?.data?.detail;
+
+  // 401 — token expired / not logged in
+  if (status === 401) return { type: "auth", msg: "Session expired — please sign in again." };
+
+  // 422 — validation error from FastAPI
+  if (status === 422) {
+    const msg = Array.isArray(detail)
+      ? detail.map((d) => `${d.loc?.slice(-1)?.[0] ?? ""}: ${d.msg}`).join(" · ")
+      : typeof detail === "string" ? detail
+      : JSON.stringify(detail);
+    return { type: "validation", msg };
+  }
+
+  // 404 — menu item not found (order_service lookup)
+  if (status === 404) {
+    return { type: "error", msg: typeof detail === "string" ? detail : "Item not found — please refresh the menu." };
+  }
+
+  // 500 — server error
+  if (status >= 500) {
+    const serverMsg = typeof detail === "string" ? detail : err?.response?.data?.message;
+    return { type: "error", msg: serverMsg ?? "Server error — please try again in a moment." };
+  }
+
+  // Network / cold start
+  if (err?.code === "ERR_NETWORK" || err?.code === "ECONNABORTED") {
+    return { type: "cold", msg: "Server is waking up (Render free tier). Please wait 30–60s and try again." };
+  }
+
+  return { type: "error", msg: err?.message ?? "Something went wrong placing your order." };
+}
 
 export default function Checkout() {
   const navigate = useNavigate();
@@ -27,9 +71,10 @@ export default function Checkout() {
   const { startPayment } = usePayment();
   const toast = useToast();
 
-  const [payMethod, setPayMethod] = useState("cash");
-  const [form, setForm]   = useState({ phone: "", delivery_address: "" });
-  const [errors, setErrors] = useState({});
+  const [payMethod, setPayMethod]   = useState("cash");
+  const [form, setForm]             = useState({ phone: "", delivery_address: "" });
+  const [errors, setErrors]         = useState({});
+  const [serverError, setServerError] = useState(null); // inline error below submit btn
 
   const handleLogout = () => {
     logout();
@@ -49,32 +94,41 @@ export default function Checkout() {
     );
   }
 
+  /* ── Validation ── */
   const validate = () => {
     const e = {};
-    if (!form.phone.trim()) e.phone = "Phone number is required";
-    else if (!/^0\d{9}$/.test(form.phone.replace(/\s/g, "")))
-      e.phone = "Must be 10 digits starting with 0";
+    const rawPhone = form.phone.replace(/[\s\-()]/g, "");
+    if (!rawPhone) {
+      e.phone = "Phone number is required";
+    } else if (!/^(0\d{9}|\+27\d{9})$/.test(rawPhone)) {
+      e.phone = "Must be 10 digits starting with 0 (e.g. 082 123 4567)";
+    }
     if (!form.delivery_address.trim()) e.delivery_address = "Delivery address is required";
     return e;
   };
 
   const handleChange = (field) => (e) => {
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
+    setServerError(null);
     if (errors[field]) setErrors((prev) => ({ ...prev, [field]: "" }));
   };
 
+  /* ── Submit ── */
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setServerError(null);
     const errs = validate();
     if (Object.keys(errs).length) { setErrors(errs); return; }
 
+    // Normalise phone to 0XXXXXXXXX
+    const rawPhone = form.phone.replace(/[\s\-()]/g, "");
+    const normPhone = rawPhone.startsWith("+27") ? "0" + rawPhone.slice(3) : rawPhone;
+
     try {
-      // ✅ FIX: include payment_method in payload — backend OrderCreate schema
-      // now accepts it, and order_service.py reads it to set Order.payment_method
       const payload = {
-        phone:            form.phone.replace(/\s/g, ""),
+        phone:            normPhone,
         delivery_address: form.delivery_address.trim(),
-        payment_method:   payMethod,           // "cash" | "paystack"
+        payment_method:   payMethod,
         items: items.map((i) => ({ menu_item_id: i.id, quantity: i.quantity })),
       };
 
@@ -82,43 +136,44 @@ export default function Checkout() {
       setOrder(order);
       clearCart();
 
+      // Beanie serialises id as string via field_serializer
       const orderId = String(order?.id ?? order?._id ?? order?.order_id ?? "");
 
       if (payMethod === "paystack") {
         try {
           await startPayment(orderId);
+          // startPayment redirects — code below only runs if redirect fails
         } catch (payErr) {
-          console.error("Paystack redirect failed:", payErr);
+          console.error("[Checkout] Paystack redirect failed:", payErr);
           toast.show({ type: "info", title: "Order placed", message: "Could not open Paystack — tracking your order." });
           navigate("/order/" + orderId);
         }
       } else {
-        toast.show({ type: "success", title: "Order confirmed!", message: "Pay on delivery 💵" });
+        toast.show({ type: "success", title: "Order confirmed!", message: "Cash on delivery — have R" + total.toFixed(2) + " ready. 💵" });
         navigate("/order/" + orderId);
       }
     } catch (err) {
-      const detail   = err?.response?.data?.detail;
-      const serverMsg =
-        typeof detail === "string" ? detail
-        : Array.isArray(detail)   ? detail.map((d) => d.msg).join(" · ")
-        : err?.response?.data?.message ?? null;
+      const { type, msg } = parseError(err);
 
-      const msg = serverMsg
-        ?? (err.code === "ERR_NETWORK"
-            ? "Cannot reach server — please try again in a moment."
-            : err.message ?? "Failed to place order.");
-
-      const status = err?.response?.status;
-      if (status === 401) {
-        toast.show({ type: "error", title: "Session expired", message: "Please sign in again." });
+      if (type === "auth") {
+        toast.show({ type: "error", title: "Session expired", message: msg });
         navigate("/login?redirect=/checkout");
-      } else {
-        toast.show({
-          type: "error",
-          title: status === 422 ? "Validation error" : "Order failed",
-          message: msg,
-        });
+        return;
       }
+
+      if (type === "cold") {
+        setServerError({ cold: true, msg });
+        toast.show({ type: "info", title: "Server waking up", message: "Please wait 30–60s and try again." });
+        return;
+      }
+
+      // Show inline error under the button + a toast
+      setServerError({ cold: false, msg });
+      toast.show({
+        type: "error",
+        title: type === "validation" ? "Validation error" : "Order failed",
+        message: msg,
+      });
     }
   };
 
@@ -203,14 +258,14 @@ export default function Checkout() {
             ))}
           </div>
           {payMethod === "cash" && (
-            <div className="co-cash-note">
-              <Banknote className="w-4 h-4 co-cash-icon" />
+            <div className="co-note co-note-gold">
+              <Banknote className="w-4 h-4 co-note-icon" style={{ color: "#FFC72C" }} />
               <p>Please have <strong>{formatCurrency(total)}</strong> ready when your order arrives.</p>
             </div>
           )}
           {payMethod === "paystack" && (
-            <div className="co-paystack-note">
-              <CreditCard className="w-4 h-4 co-paystack-icon" />
+            <div className="co-note co-note-green">
+              <CreditCard className="w-4 h-4 co-note-icon" style={{ color: "#4ade80" }} />
               <p>You'll be redirected to <strong>Paystack</strong> to complete payment securely.</p>
             </div>
           )}
@@ -241,6 +296,16 @@ export default function Checkout() {
               </div>
               {errors.delivery_address && <p className="co-error-msg">{errors.delivery_address}</p>}
             </div>
+
+            {/* ── Inline server error ── */}
+            {serverError && (
+              <div className={"co-server-error" + (serverError.cold ? " co-server-cold" : "")}>
+                {serverError.cold
+                  ? <Zap className="w-4 h-4" style={{ color: "#FFC72C", flexShrink: 0 }} />
+                  : <AlertCircle className="w-4 h-4" style={{ color: "#f87171", flexShrink: 0 }} />}
+                <p>{serverError.msg}</p>
+              </div>
+            )}
 
             <button type="submit" disabled={loading} className="co-submit-btn">
               {loading ? (
@@ -276,7 +341,6 @@ const styles = `
   .co-state-sub { color:var(--muted); font-size:14px; }
   .co-state-btn { background:var(--red); color:white; border:none; cursor:pointer; font-family:'Plus Jakarta Sans',sans-serif; font-weight:800; font-size:14px; padding:12px 26px; border-radius:50px; }
 
-  /* Header */
   .co-header { position:sticky; top:0; z-index:100; background:rgba(14,7,0,0.95); backdrop-filter:blur(20px); border-bottom:1px solid var(--border); }
   .co-header-inner { max-width:680px; margin:0 auto; padding:13px 20px; display:flex; align-items:center; justify-content:space-between; gap:12px; }
   .co-header-left { display:flex; align-items:center; gap:10px; }
@@ -296,7 +360,6 @@ const styles = `
   .co-card { background:var(--card); border:1px solid var(--border); border-radius:18px; padding:20px; display:flex; flex-direction:column; gap:14px; }
   .co-section-label { display:flex; align-items:center; gap:8px; font-size:11px; font-weight:800; letter-spacing:0.1em; text-transform:uppercase; color:var(--gold); }
 
-  /* Items */
   .co-items-list { display:flex; flex-direction:column; gap:10px; }
   .co-item-row { display:flex; align-items:center; gap:12px; }
   .co-item-img { width:44px; height:44px; border-radius:10px; flex-shrink:0; overflow:hidden; background:rgba(255,248,231,0.07); display:flex; align-items:center; justify-content:center; font-size:20px; }
@@ -308,7 +371,6 @@ const styles = `
   .co-total-row { display:flex; align-items:center; justify-content:space-between; padding-top:12px; border-top:1px solid var(--border); font-size:13px; font-weight:700; color:var(--muted); }
   .co-total-amount { font-size:20px; font-weight:900; color:var(--red); }
 
-  /* Payment */
   .co-pay-methods { display:flex; flex-direction:column; gap:10px; }
   .co-pay-option { display:flex; align-items:center; gap:14px; background:rgba(255,248,231,0.03); border:1.5px solid var(--border); border-radius:14px; padding:14px 16px; cursor:pointer; transition:all 0.22s; text-align:left; }
   .co-pay-option:hover { border-color:rgba(255,199,44,0.25); background:rgba(255,199,44,0.04); }
@@ -320,15 +382,14 @@ const styles = `
   .co-pay-sub { display:block; font-size:11px; color:var(--muted); margin-top:2px; }
   .co-pay-check { color:transparent; transition:color 0.2s; flex-shrink:0; }
   .co-pay-check-active { color:var(--gold); }
-  .co-cash-note, .co-paystack-note { display:flex; align-items:flex-start; gap:10px; border-radius:12px; padding:12px 14px; font-size:13px; color:var(--text); line-height:1.5; }
-  .co-cash-note { background:rgba(255,199,44,0.07); border:1px solid rgba(255,199,44,0.18); }
-  .co-paystack-note { background:rgba(0,180,100,0.07); border:1px solid rgba(0,180,100,0.2); }
-  .co-cash-icon { color:var(--gold); flex-shrink:0; margin-top:1px; }
-  .co-paystack-icon { color:#00b464; flex-shrink:0; margin-top:1px; }
-  .co-cash-note strong, .co-paystack-note strong { color:var(--gold); }
-  .co-paystack-note strong { color:#4ade80; }
 
-  /* Form */
+  .co-note { display:flex; align-items:flex-start; gap:10px; border-radius:12px; padding:12px 14px; font-size:13px; color:var(--text); line-height:1.5; }
+  .co-note-gold { background:rgba(255,199,44,0.07); border:1px solid rgba(255,199,44,0.18); }
+  .co-note-green { background:rgba(74,222,128,0.07); border:1px solid rgba(74,222,128,0.2); }
+  .co-note strong { color:var(--gold); }
+  .co-note-green strong { color:#4ade80; }
+  .co-note-icon { flex-shrink:0; margin-top:1px; }
+
   .co-form { display:flex; flex-direction:column; gap:14px; }
   .co-field { display:flex; flex-direction:column; gap:6px; }
   .co-label { font-size:11px; font-weight:800; letter-spacing:0.06em; text-transform:uppercase; color:var(--muted); }
@@ -344,7 +405,20 @@ const styles = `
   .co-input::placeholder { color:var(--muted); }
   .co-error-msg { font-size:11px; font-weight:700; color:#f87171; }
 
-  .co-submit-btn { display:flex; align-items:center; justify-content:center; gap:10px; background:var(--red); color:white; border:none; cursor:pointer; font-family:'Plus Jakarta Sans',sans-serif; font-weight:900; font-size:15px; padding:16px 28px; border-radius:14px; margin-top:6px; box-shadow:0 6px 24px rgba(218,41,28,0.4); transition:all 0.22s; }
+  /* Inline server error box */
+  .co-server-error {
+    display:flex; align-items:flex-start; gap:10px;
+    background:rgba(248,113,113,0.08); border:1px solid rgba(248,113,113,0.25);
+    border-radius:12px; padding:12px 14px;
+    font-size:13px; color:#fca5a5; line-height:1.5;
+    animation:coErrIn 0.3s ease;
+  }
+  .co-server-cold {
+    background:rgba(255,199,44,0.07)!important; border-color:rgba(255,199,44,0.25)!important; color:var(--gold)!important;
+  }
+  @keyframes coErrIn { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:none} }
+
+  .co-submit-btn { display:flex; align-items:center; justify-content:center; gap:10px; background:var(--red); color:white; border:none; cursor:pointer; font-family:'Plus Jakarta Sans',sans-serif; font-weight:900; font-size:15px; padding:16px 28px; border-radius:14px; margin-top:4px; box-shadow:0 6px 24px rgba(218,41,28,0.4); transition:all 0.22s; }
   .co-submit-btn:hover:not(:disabled) { background:var(--red2); transform:scale(1.02); }
   .co-submit-btn:disabled { opacity:0.55; cursor:not-allowed; }
   .co-arrow { opacity:0.65; margin-left:auto; }
