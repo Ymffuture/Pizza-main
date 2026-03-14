@@ -264,6 +264,7 @@ export default function OrderStatus() {
         )}
 
       </div>
+      <Footer />
     </div>
   );
 }
