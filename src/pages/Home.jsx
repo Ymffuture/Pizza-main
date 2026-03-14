@@ -186,6 +186,7 @@ export default function Home() {
         }
         .animate-float { animation: float linear infinite; }
       `}</style>
+      <Footer />
     </div>
   );
 }
