@@ -5,6 +5,7 @@ import Loader from "../components/Loader";
 import { useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { useToast } from "../components/Toast";
+import Footer from "../components/Footer";
 import {
   ShoppingCart, RefreshCw, UtensilsCrossed, Zap,
   ChevronRight, Flame, Search, SlidersHorizontal, LogOut,
@@ -258,6 +259,8 @@ export default function Menu() {
           <ChevronRight className="w-4 h-4 fab-arrow" />
         </button>
       )}
+
+      <Footer />
     </div>
   );
 }

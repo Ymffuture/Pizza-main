@@ -6,6 +6,7 @@ import {
   ShoppingBag, ChevronRight, Flame,
 } from "lucide-react";
 import Footer from "../components/Footer";
+
 export default function Cart() {
   const navigate = useNavigate();
   const { items, removeItem, updateQuantity, clearCart, total, count } = useCart();
