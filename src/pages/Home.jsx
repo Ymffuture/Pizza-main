@@ -2,7 +2,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import axiosClient from "../api/axiosClient";
-
+import Footer from "../components/Footer";
 export default function Home() {
   const [floatItems, setFloatItems] = useState([]);
   const [trackId, setTrackId]       = useState("");
