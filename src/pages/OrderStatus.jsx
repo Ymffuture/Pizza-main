@@ -10,7 +10,7 @@ import {
   Clock, CheckCircle2, ChefHat, Package, Truck,
   XCircle, MapPin, Receipt,
 } from "lucide-react";
-
+import Footer from "../components/Footer";
 /* ── Status config ── */
 const STATUS_CFG = {
   pending:   { label: "Order Placed",      Icon: Clock,         color: "#FFC72C", step: 1 },
