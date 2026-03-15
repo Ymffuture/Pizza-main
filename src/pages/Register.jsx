@@ -7,15 +7,48 @@ import {
   UserPlus, Loader2, Eye, EyeOff,
 } from "lucide-react";
 
+/* ── Field component OUTSIDE Register — prevents remount on every keystroke ── */
+function Field({ name, label, type = "text", placeholder, icon: Icon, autoComplete, value, onChange, error, showPw, onTogglePw }) {
+  return (
+    <div className="auth-field">
+      <label className="auth-label">{label}</label>
+      <div className={`auth-input-wrap${error ? " auth-input-error" : ""}`}>
+        <Icon className="auth-icon" />
+        <input
+          type={type === "password" ? (showPw ? "text" : "password") : type}
+          className="auth-input"
+          placeholder={placeholder}
+          value={value}
+          onChange={onChange}
+          autoComplete={autoComplete}
+        />
+        {type === "password" && (
+          <button
+            type="button"
+            className="auth-pw-toggle"
+            onClick={onTogglePw}
+            tabIndex={-1}
+          >
+            {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+          </button>
+        )}
+      </div>
+      {error && <p className="auth-error">{error}</p>}
+    </div>
+  );
+}
+
 export default function Register() {
-  const navigate  = useNavigate();
-  const { register } = useAuth();
-  const toast     = useToast();
+  const navigate      = useNavigate();
+  const { register }  = useAuth();
+  const toast         = useToast();
 
   const [form, setForm]       = useState({ full_name: "", email: "", phone: "", password: "", confirm: "" });
   const [errors, setErrors]   = useState({});
   const [loading, setLoading] = useState(false);
-  const [showPw, setShowPw]   = useState(false);
+  // ✅ FIX: separate show-states so toggling one doesn't affect the other
+  const [showPw, setShowPw]         = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const redirect = new URLSearchParams(window.location.search).get("redirect") || "/menu";
 
@@ -65,34 +98,6 @@ export default function Register() {
     }
   };
 
-  const Field = ({ name, label, type = "text", placeholder, icon: Icon, autoComplete }) => (
-    <div className="auth-field">
-      <label className="auth-label">{label}</label>
-      <div className={`auth-input-wrap${errors[name] ? " auth-input-error" : ""}`}>
-        <Icon className="auth-icon" />
-        <input
-          type={type === "password" ? (showPw ? "text" : "password") : type}
-          className="auth-input"
-          placeholder={placeholder}
-          value={form[name]}
-          onChange={handleChange(name)}
-          autoComplete={autoComplete}
-        />
-        {type === "password" && (
-          <button
-            type="button"
-            className="auth-pw-toggle"
-            onClick={() => setShowPw((s) => !s)}
-            tabIndex={-1}
-          >
-            {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-          </button>
-        )}
-      </div>
-      {errors[name] && <p className="auth-error">{errors[name]}</p>}
-    </div>
-  );
-
   return (
     <div className="auth-root">
       <style>{authStyles}</style>
@@ -112,11 +117,33 @@ export default function Register() {
         </div>
 
         <form onSubmit={handleSubmit} className="auth-form">
-          <Field name="full_name" label="Full Name"     placeholder="Kgomotso Nkosi"       icon={User}  autoComplete="name" />
-          <Field name="email"     label="Email"         placeholder="you@example.com"       icon={Mail}  autoComplete="email" />
-          <Field name="phone"     label="Phone Number"  placeholder="082 123 4567"          icon={Phone} autoComplete="tel" />
-          <Field name="password"  label="Password"      placeholder="Min. 6 characters"     icon={Lock}  type="password" autoComplete="new-password" />
-          <Field name="confirm"   label="Confirm Password" placeholder="Repeat password"    icon={Lock}  type="password" autoComplete="new-password" />
+          <Field
+            name="full_name" label="Full Name" placeholder="Kgomotso Nkosi"
+            icon={User} autoComplete="name"
+            value={form.full_name} onChange={handleChange("full_name")} error={errors.full_name}
+          />
+          <Field
+            name="email" label="Email" placeholder="you@example.com"
+            icon={Mail} autoComplete="email"
+            value={form.email} onChange={handleChange("email")} error={errors.email}
+          />
+          <Field
+            name="phone" label="Phone Number" placeholder="082 123 4567"
+            icon={Phone} autoComplete="tel"
+            value={form.phone} onChange={handleChange("phone")} error={errors.phone}
+          />
+          <Field
+            name="password" label="Password" placeholder="Min. 6 characters"
+            icon={Lock} type="password" autoComplete="new-password"
+            value={form.password} onChange={handleChange("password")} error={errors.password}
+            showPw={showPw} onTogglePw={() => setShowPw((s) => !s)}
+          />
+          <Field
+            name="confirm" label="Confirm Password" placeholder="Repeat password"
+            icon={Lock} type="password" autoComplete="new-password"
+            value={form.confirm} onChange={handleChange("confirm")} error={errors.confirm}
+            showPw={showConfirm} onTogglePw={() => setShowConfirm((s) => !s)}
+          />
 
           <button type="submit" disabled={loading} className="auth-submit">
             {loading ? (
