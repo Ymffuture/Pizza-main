@@ -1,3 +1,4 @@
+// src/App.jsx  (updated — add AiChat)
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Home        from "./pages/Home";
 import Menu        from "./pages/Menu";
@@ -15,6 +16,7 @@ import { AuthProvider }  from "./context/AuthContext";
 import { ToastProvider } from "./components/Toast";
 import RequireAuth       from "./components/RequireAuth";
 import ErrorBoundary     from "./components/ErrorBoundary";
+import AiChat            from "./components/AiChat";   // ← NEW
 
 export default function App() {
   return (
@@ -31,7 +33,6 @@ export default function App() {
                   <Route path="/login"    element={<Login />} />
                   <Route path="/register" element={<Register />} />
 
-                  {/* Protected — must be signed in */}
                   <Route
                     path="/checkout"
                     element={
@@ -52,6 +53,9 @@ export default function App() {
                   <Route path="/success"  element={<Success />} />
                   <Route path="*"         element={<ErrorPage />} />
                 </Routes>
+
+                {/* ✅ KotaBot floating chat — renders on every page */}
+                <AiChat />
               </BrowserRouter>
             </ToastProvider>
           </CartProvider>
