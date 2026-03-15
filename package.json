@@ -40,7 +40,7 @@
     "antd": "^5.26.2",
     "uuid": "^9.0.1",
     "ogl": "^0.0.83",
-    "prop-types": "^15.8.1", 
+    "prop-types": "^15.8.1"
   },
 
   "devDependencies": {
