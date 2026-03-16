@@ -107,36 +107,41 @@ export default function AiChat() {
     if (pageOrderId) setCtxId(pageOrderId);
   }, [pageOrderId]);
 
+  
   const handleSend = async () => {
-    const text = input.trim();
-    if (!text || loading) return;
+  const text = input.trim();
+  if (!text || loading) return;
 
-    const detectedId = extractOrderId(text);
-    if (detectedId) setCtxId(detectedId);
+  const detectedId = extractOrderId(text);
+  if (detectedId) setCtxId(detectedId);
 
-    const userMsg = { role: "user", content: text };
-    const updated = [...messages, userMsg];
-    setMessages(updated);
-    setInput("");
-    setLoading(true);
+  const userMsg = { role: "user", content: text };
+  const updated = [...messages, userMsg];
+  setMessages(updated);
+  setInput("");
+  setLoading(true);
 
-    try {
-      const { data } = await axiosClient.post("/ai/chat", {
-        messages: updated,
-        order_id: detectedId || contextId || null,
-      });
-      setMessages([...updated, { role: "assistant", content: data.reply }]);
-      if (!open) setUnread((u) => u + 1);
-    } catch (err) {
-      const errMsg =
-        err?.response?.status === 401
-          ? "Please **sign in** to chat with KotaBot."
-          : "Eish, something went wrong. Try again in a moment.";
-      setMessages([...updated, { role: "assistant", content: errMsg }]);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Strip leading assistant messages before sending — Gemini requires user first
+  const firstUserIdx = updated.findIndex(m => m.role === "user");
+  const apiMessages = firstUserIdx >= 0 ? updated.slice(firstUserIdx) : updated;
+
+  try {
+    const { data } = await axiosClient.post("/ai/chat", {
+      messages: apiMessages,   // ← use apiMessages, not updated
+      order_id: detectedId || contextId || null,
+    });
+    setMessages([...updated, { role: "assistant", content: data.reply }]);
+    if (!open) setUnread((u) => u + 1);
+  } catch (err) {
+    const errMsg =
+      err?.response?.status === 401
+        ? "Please **sign in** to chat with KotaBot."
+        : "Eish, something went wrong. Try again in a moment.";
+    setMessages([...updated, { role: "assistant", content: errMsg }]);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleOpen = () => { setOpen(true); setMin(false); setUnread(0); };
 
