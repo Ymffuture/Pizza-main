@@ -151,7 +151,7 @@ export default function Menu() {
         <div className="menu-header-inner">
           <div className="menu-brand">
             <div className="brand-badge">
-              <Flame className="w-5 h-5 brand-flame" />
+              <img src="/copilot_image_1772714931398.jpeg" alt="Logo" className="h-4 w-4" />
             </div>
             <div>
               <h1 className="brand-name">KOTABITES</h1>
@@ -169,7 +169,6 @@ export default function Menu() {
             </button>
             <button className="cart-pill" onClick={() => navigate("/cart")}>
               <ShoppingCart className="w-4 h-4" />
-              <span>Cart</span>
               {count > 0 && <span className="cart-badge">{count}</span>}
             </button>
             {isAuth ? (
