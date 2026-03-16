@@ -6,6 +6,8 @@ import remarkGfm from "remark-gfm";
 import axiosClient from "../api/axiosClient";
 import { useAuth } from "../context/AuthContext";
 import { useParams } from "react-router-dom";
+import { getBusinessHoursStatus } from "../utils/businessHours";
+
 
 function extractOrderId(text) {
   const full = text.match(/\b([0-9a-fA-F]{24})\b/);
@@ -130,7 +132,8 @@ export default function AiChat() {
   const { isAuth } = useAuth();
   const params = useParams();
   const pageOrderId = params?.id || null;
-
+  
+  const [hoursStatus, setHoursStatus]     = useState(null);
   const [open, setOpen]           = useState(false);
   const [minimised, setMin]       = useState(false);
   const [input, setInput]         = useState("");
@@ -154,6 +157,14 @@ export default function AiChat() {
   useEffect(() => { if (open && !minimised) inputRef.current?.focus(); }, [open, minimised]);
   useEffect(() => { if (pageOrderId) setCtxId(pageOrderId); }, [pageOrderId]);
 
+    // Refresh hours every minute
+  useEffect(() => {
+    const update = () => setHoursStatus(getBusinessHoursStatus());
+    update();
+    const id = setInterval(update, 60_000);
+    return () => clearInterval(id);
+  }, []);
+  
   /* ── Handle cancel confirmation from bubble button ── */
   const handleCancelConfirm = async (orderId) => {
     if (!orderId) {
