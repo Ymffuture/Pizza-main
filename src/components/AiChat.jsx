@@ -1,6 +1,6 @@
 // src/components/AiChat.jsx
 import { useState, useRef, useEffect } from "react";
-import { MessageCircle, X, Send, Bot, User, Loader2, Minimize2, Maximize2 } from "lucide-react";
+import { MessageCircle, X, Send, Bot, User, Loader2, Minimize2, Maximize2, XCircle, CheckCircle } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import axiosClient from "../api/axiosClient";
@@ -12,7 +12,7 @@ function extractOrderId(text) {
   return full ? full[1] : null;
 }
 
-/* ── Markdown components — scoped to chat bubble styles ── */
+/* ── Markdown components ── */
 const markdownComponents = {
   p:      ({ children }) => <p className="kb-md-p">{children}</p>,
   strong: ({ children }) => <strong className="kb-md-strong">{children}</strong>,
@@ -40,8 +40,37 @@ const markdownComponents = {
   hr: () => <hr className="kb-md-hr" />,
 };
 
+/* ── Cancel confirmation card shown inside chat ── */
+function CancelCard({ cancelResult, onDismiss }) {
+  if (!cancelResult) return null;
+
+  if (cancelResult.success) {
+    return (
+      <div className="kb-cancel-card kb-cancel-success">
+        <CheckCircle className="w-4 h-4" style={{ color: "#4ade80", flexShrink: 0 }} />
+        <div style={{ flex: 1 }}>
+          <p className="kb-cancel-title">Order Cancelled</p>
+          <p className="kb-cancel-sub">Order #{cancelResult.short_id} has been cancelled successfully.</p>
+        </div>
+        <button className="kb-cancel-dismiss" onClick={onDismiss}>×</button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="kb-cancel-card kb-cancel-fail">
+      <XCircle className="w-4 h-4" style={{ color: "#f87171", flexShrink: 0 }} />
+      <div style={{ flex: 1 }}>
+        <p className="kb-cancel-title">Couldn&apos;t Cancel</p>
+        <p className="kb-cancel-sub">{cancelResult.reason ?? "Something went wrong."}</p>
+      </div>
+      <button className="kb-cancel-dismiss" onClick={onDismiss}>×</button>
+    </div>
+  );
+}
+
 /* ── Message bubble ── */
-function Bubble({ msg }) {
+function Bubble({ msg, onCancelConfirm, cancellingId }) {
   const isUser = msg.role === "user";
   return (
     <div className={`kb-ai-bubble-row ${isUser ? "kb-ai-bubble-user" : "kb-ai-bubble-bot"}`}>
@@ -52,16 +81,39 @@ function Bubble({ msg }) {
       )}
       <div className={`kb-ai-bubble ${isUser ? "kb-ai-bubble-u" : "kb-ai-bubble-b"}`}>
         {isUser ? (
-          // User messages: plain text
           msg.content
         ) : (
-          // Bot messages: rendered markdown
-          <ReactMarkdown
-            remarkPlugins={[remarkGfm]}
-            components={markdownComponents}
-          >
-            {msg.content}
-          </ReactMarkdown>
+          <>
+            <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+              {msg.content}
+            </ReactMarkdown>
+
+            {/* Cancel confirmation button — shown when bot asks to confirm */}
+            {msg.pendingCancelId && (
+              <div className="kb-confirm-row">
+                <p className="kb-confirm-text">Confirm cancellation?</p>
+                <div className="kb-confirm-btns">
+                  <button
+                    className="kb-confirm-yes"
+                    disabled={cancellingId === msg.pendingCancelId}
+                    onClick={() => onCancelConfirm(msg.pendingCancelId)}
+                  >
+                    {cancellingId === msg.pendingCancelId ? (
+                      <Loader2 className="w-3 h-3 kb-ai-spin" />
+                    ) : (
+                      "Yes, cancel it"
+                    )}
+                  </button>
+                  <button
+                    className="kb-confirm-no"
+                    onClick={() => onCancelConfirm(null)}
+                  >
+                    No, keep it
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
       {isUser && (
@@ -79,69 +131,136 @@ export default function AiChat() {
   const params = useParams();
   const pageOrderId = params?.id || null;
 
-  const [open, setOpen]         = useState(false);
-  const [minimised, setMin]     = useState(false);
-  const [input, setInput]       = useState("");
-  const [loading, setLoading]   = useState(false);
-  const [unread, setUnread]     = useState(0);
-  const [contextId, setCtxId]   = useState(pageOrderId);
-  const [messages, setMessages] = useState([
+  const [open, setOpen]           = useState(false);
+  const [minimised, setMin]       = useState(false);
+  const [input, setInput]         = useState("");
+  const [loading, setLoading]     = useState(false);
+  const [unread, setUnread]       = useState(0);
+  const [contextId, setCtxId]     = useState(pageOrderId);
+  const [cancellingId, setCancellingId] = useState(null);
+  const [cancelResult, setCancelResult] = useState(null);
+  const [messages, setMessages]   = useState([
     {
       role: "assistant",
-      content: "Yebo! 👋 I'm **KotaBot**. I can help you:\n- 🔍 Track an order\n- 🍔 Suggest something lekker\n- 💬 Pass on feedback\n\nWhat can I do for you?",
+      content:
+        "Yebo! 👋 I'm **KotaBot**. I can help you:\n- 🔍 Track an order\n- ❌ Cancel an order\n- 🍔 Suggest something lekker\n- 💬 Pass on feedback\n\nWhat can I do for you?",
     },
   ]);
 
   const bottomRef = useRef(null);
   const inputRef  = useRef(null);
 
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, loading]);
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, loading]);
+  useEffect(() => { if (open && !minimised) inputRef.current?.focus(); }, [open, minimised]);
+  useEffect(() => { if (pageOrderId) setCtxId(pageOrderId); }, [pageOrderId]);
 
-  useEffect(() => {
-    if (open && !minimised) inputRef.current?.focus();
-  }, [open, minimised]);
+  /* ── Handle cancel confirmation from bubble button ── */
+  const handleCancelConfirm = async (orderId) => {
+    if (!orderId) {
+      // User clicked "No, keep it" — just remove pendingCancelId from all messages
+      setMessages((prev) =>
+        prev.map((m) => ({ ...m, pendingCancelId: undefined }))
+      );
+      return;
+    }
 
-  useEffect(() => {
-    if (pageOrderId) setCtxId(pageOrderId);
-  }, [pageOrderId]);
+    setCancellingId(orderId);
+    try {
+      const { data } = await axiosClient.post("/ai/cancel-order", { order_id: orderId });
+      setCancelResult(data);
+      setMessages((prev) =>
+        prev.map((m) => ({ ...m, pendingCancelId: undefined }))
+      );
+      // Add a bot confirmation message
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: `✅ Done! Order **#${data.short_id}** has been cancelled. Sorry to see it go — hope to serve you again soon! 🙏`,
+        },
+      ]);
+    } catch (err) {
+      const reason =
+        err?.response?.data?.detail ??
+        err?.response?.data?.message ??
+        "Could not cancel order. Please try again.";
+      setCancelResult({ success: false, reason });
+      setMessages((prev) =>
+        prev.map((m) => ({ ...m, pendingCancelId: undefined }))
+      );
+    } finally {
+      setCancellingId(null);
+    }
+  };
 
-  
   const handleSend = async () => {
-  const text = input.trim();
-  if (!text || loading) return;
+    const text = input.trim();
+    if (!text || loading) return;
 
-  const detectedId = extractOrderId(text);
-  if (detectedId) setCtxId(detectedId);
+    const detectedId = extractOrderId(text);
+    if (detectedId) setCtxId(detectedId);
 
-  const userMsg = { role: "user", content: text };
-  const updated = [...messages, userMsg];
-  setMessages(updated);
-  setInput("");
-  setLoading(true);
+    const userMsg = { role: "user", content: text };
+    const updated = [...messages, userMsg];
+    setMessages(updated);
+    setInput("");
+    setLoading(true);
+    setCancelResult(null);
 
-  // Strip leading assistant messages before sending — Gemini requires user first
-  const firstUserIdx = updated.findIndex(m => m.role === "user");
-  const apiMessages = firstUserIdx >= 0 ? updated.slice(firstUserIdx) : updated;
+    // Strip leading assistant messages before sending — Gemini requires user first
+    const firstUserIdx = updated.findIndex((m) => m.role === "user");
+    const apiMessages = firstUserIdx >= 0 ? updated.slice(firstUserIdx) : updated;
 
-  try {
-    const { data } = await axiosClient.post("/ai/chat", {
-      messages: apiMessages,   // ← use apiMessages, not updated
-      order_id: detectedId || contextId || null,
-    });
-    setMessages([...updated, { role: "assistant", content: data.reply }]);
-    if (!open) setUnread((u) => u + 1);
-  } catch (err) {
-    const errMsg =
-      err?.response?.status === 401
-        ? "Please **sign in** to chat with KotaBot."
-        : "Eish, something went wrong. Try again in a moment.";
-    setMessages([...updated, { role: "assistant", content: errMsg }]);
-  } finally {
-    setLoading(false);
-  }
-};
+    try {
+      const { data } = await axiosClient.post("/ai/chat", {
+        messages: apiMessages,
+        order_id: detectedId || contextId || null,
+      });
+
+      const botMsg = {
+        role: "assistant",
+        content: data.reply,
+      };
+
+      // If the backend auto-cancelled (KotaBot used the [CANCEL_ORDER:...] tag),
+      // surface the result directly.
+      if (data.cancel_result) {
+        setCancelResult(data.cancel_result);
+      }
+
+      // If the reply asks the user to confirm, attach the pending cancel ID
+      // so the bubble renders the confirm/deny buttons.
+      // We detect confirmation intent by checking if cancel_result is absent but
+      // the reply mentions confirming a cancel — use the contextId or detectedId.
+      const pendingId = !data.cancel_result
+        ? (() => {
+            // Look for "confirm" + cancel intent phrasing + a known order ID
+            const lowerReply = data.reply.toLowerCase();
+            const wantConfirm =
+              (lowerReply.includes("cancel") && lowerReply.includes("confirm")) ||
+              lowerReply.includes("sure you want to cancel");
+            if (!wantConfirm) return undefined;
+            // Use the order ID the user mentioned or the active context
+            return detectedId || contextId || undefined;
+          })()
+        : undefined;
+
+      if (pendingId) {
+        botMsg.pendingCancelId = pendingId;
+      }
+
+      setMessages([...updated, botMsg]);
+      if (!open) setUnread((u) => u + 1);
+    } catch (err) {
+      const errMsg =
+        err?.response?.status === 401
+          ? "Please **sign in** to chat with KotaBot."
+          : "Eish, something went wrong. Try again in a moment.";
+      setMessages([...updated, { role: "assistant", content: errMsg }]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleOpen = () => { setOpen(true); setMin(false); setUnread(0); };
 
@@ -190,9 +309,24 @@ export default function AiChat() {
 
           {!minimised && (
             <>
+              {/* Cancel result banner */}
+              {cancelResult && (
+                <CancelCard
+                  cancelResult={cancelResult}
+                  onDismiss={() => setCancelResult(null)}
+                />
+              )}
+
               {/* Messages */}
               <div className="kb-ai-messages">
-                {messages.map((m, i) => <Bubble key={i} msg={m} />)}
+                {messages.map((m, i) => (
+                  <Bubble
+                    key={i}
+                    msg={m}
+                    onCancelConfirm={handleCancelConfirm}
+                    cancellingId={cancellingId}
+                  />
+                ))}
                 {loading && (
                   <div className="kb-ai-bubble-row kb-ai-bubble-bot">
                     <div className="kb-ai-avatar kb-ai-avatar-bot">
@@ -209,9 +343,17 @@ export default function AiChat() {
               {/* Quick chips */}
               {messages.length === 1 && (
                 <div className="kb-ai-quick-row">
-                  {["Track my order", "What's on the menu?", "Recommend something", "Leave feedback"].map((q) => (
-                    <button key={q} className="kb-ai-quick-chip"
-                      onClick={() => { setInput(q); setTimeout(() => inputRef.current?.focus(), 50); }}>
+                  {[
+                    "Track my order",
+                    "Cancel an order",
+                    "What's on the menu?",
+                    "Leave feedback",
+                  ].map((q) => (
+                    <button
+                      key={q}
+                      className="kb-ai-quick-chip"
+                      onClick={() => { setInput(q); setTimeout(() => inputRef.current?.focus(), 50); }}
+                    >
                       {q}
                     </button>
                   ))}
@@ -229,8 +371,12 @@ export default function AiChat() {
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
                 />
-                <button className="kb-ai-send-btn" onClick={handleSend}
-                  disabled={loading || !input.trim()} aria-label="Send">
+                <button
+                  className="kb-ai-send-btn"
+                  onClick={handleSend}
+                  disabled={loading || !input.trim()}
+                  aria-label="Send"
+                >
                   {loading
                     ? <Loader2 className="w-4 h-4 kb-ai-spin" />
                     : <Send className="w-4 h-4" />}
@@ -309,6 +455,39 @@ const styles = `
   .kb-ai-icon-btn:hover { color:#fff8e7; border-color:rgba(255,199,44,0.3); }
   .kb-ai-close-btn:hover { background:rgba(218,41,28,0.25); color:#DA291C; border-color:rgba(218,41,28,0.3); }
 
+  /* ── Cancel result banner ── */
+  .kb-cancel-card {
+    display:flex; align-items:flex-start; gap:10px;
+    margin:10px 12px 0; padding:10px 13px; border-radius:12px;
+    border:1px solid; flex-shrink:0; animation:kbWindowIn 0.25s ease;
+  }
+  .kb-cancel-success { background:rgba(74,222,128,0.08); border-color:rgba(74,222,128,0.25); }
+  .kb-cancel-fail    { background:rgba(248,113,113,0.08); border-color:rgba(248,113,113,0.25); }
+  .kb-cancel-title   { font-size:12px; font-weight:800; color:#fff8e7; }
+  .kb-cancel-sub     { font-size:11px; color:rgba(255,248,231,0.55); margin-top:2px; }
+  .kb-cancel-dismiss { background:none; border:none; color:rgba(255,248,231,0.4); cursor:pointer; font-size:16px; line-height:1; padding:0 0 0 4px; flex-shrink:0; }
+  .kb-cancel-dismiss:hover { color:#fff8e7; }
+
+  /* ── Cancel confirm buttons inside bubble ── */
+  .kb-confirm-row { margin-top:10px; padding-top:10px; border-top:1px solid rgba(255,199,44,0.12); }
+  .kb-confirm-text { font-size:11px; font-weight:700; color:rgba(255,248,231,0.6); margin-bottom:8px; }
+  .kb-confirm-btns { display:flex; gap:8px; }
+  .kb-confirm-yes {
+    flex:1; display:flex; align-items:center; justify-content:center; gap:5px;
+    background:#DA291C; color:white; border:none; cursor:pointer;
+    font-family:'Plus Jakarta Sans',sans-serif; font-weight:800; font-size:11px;
+    padding:8px 12px; border-radius:8px; transition:all 0.18s;
+  }
+  .kb-confirm-yes:hover:not(:disabled) { background:#b91c1c; }
+  .kb-confirm-yes:disabled { opacity:0.55; cursor:not-allowed; }
+  .kb-confirm-no {
+    flex:1; background:rgba(255,248,231,0.06); border:1px solid rgba(255,199,44,0.15);
+    color:rgba(255,248,231,0.6); cursor:pointer;
+    font-family:'Plus Jakarta Sans',sans-serif; font-weight:700; font-size:11px;
+    padding:8px 12px; border-radius:8px; transition:all 0.18s;
+  }
+  .kb-confirm-no:hover { color:#fff8e7; border-color:rgba(255,199,44,0.3); }
+
   /* ── Messages scroll area ── */
   .kb-ai-messages {
     flex:1; overflow-y:auto; padding:14px 14px 6px;
@@ -323,87 +502,46 @@ const styles = `
   .kb-ai-bubble-row { display:flex; align-items:flex-end; gap:7px; }
   .kb-ai-bubble-user { flex-direction:row-reverse; }
   .kb-ai-bubble-bot  { flex-direction:row; }
-
   .kb-ai-avatar {
     width:26px; height:26px; border-radius:8px; flex-shrink:0;
     display:flex; align-items:center; justify-content:center;
   }
   .kb-ai-avatar-bot  { background:rgba(255,199,44,0.15); color:#FFC72C; }
   .kb-ai-avatar-user { background:rgba(218,41,28,0.2);  color:#DA291C; }
-
   .kb-ai-bubble {
     max-width:80%; padding:10px 14px; border-radius:14px;
-    font-size:13px; font-weight:500; line-height:1.6;
-    word-break:break-word;
+    font-size:13px; font-weight:500; line-height:1.6; word-break:break-word;
   }
   .kb-ai-bubble-b {
-    background:rgba(255,248,231,0.06);
-    border:1px solid rgba(255,199,44,0.1);
+    background:rgba(255,248,231,0.06); border:1px solid rgba(255,199,44,0.1);
     color:#fff8e7; border-bottom-left-radius:4px;
   }
   .kb-ai-bubble-u {
-    background:#DA291C; color:white;
-    border-bottom-right-radius:4px;
+    background:#DA291C; color:white; border-bottom-right-radius:4px;
     box-shadow:0 2px 10px rgba(218,41,28,0.3);
   }
 
-  /* ── Markdown styles (bot bubbles only) ── */
+  /* ── Markdown styles ── */
   .kb-md-p  { margin:0 0 6px 0; }
   .kb-md-p:last-child { margin-bottom:0; }
-
   .kb-md-strong { color:#FFC72C; font-weight:800; }
   .kb-md-em     { color:rgba(255,248,231,0.75); font-style:italic; }
-
-  .kb-md-ul, .kb-md-ol {
-    margin:6px 0 6px 0; padding-left:18px;
-    display:flex; flex-direction:column; gap:3px;
-  }
+  .kb-md-ul, .kb-md-ol { margin:6px 0; padding-left:18px; display:flex; flex-direction:column; gap:3px; }
   .kb-md-li { font-size:13px; line-height:1.5; color:#fff8e7; }
   .kb-md-ul .kb-md-li { list-style:disc; }
   .kb-md-ol .kb-md-li { list-style:decimal; }
-
-  .kb-md-a {
-    color:#FFC72C; text-decoration:underline;
-    text-underline-offset:2px; font-weight:600;
-  }
+  .kb-md-a { color:#FFC72C; text-decoration:underline; text-underline-offset:2px; font-weight:600; }
   .kb-md-a:hover { color:#fff8e7; }
-
-  .kb-md-code-inline {
-    background:rgba(255,199,44,0.12);
-    border:1px solid rgba(255,199,44,0.2);
-    color:#FFC72C; font-family:monospace;
-    font-size:12px; padding:1px 5px; border-radius:5px;
-  }
-
-  .kb-md-pre {
-    background:rgba(0,0,0,0.35);
-    border:1px solid rgba(255,199,44,0.12);
-    border-radius:8px; padding:10px 12px; margin:6px 0;
-    overflow-x:auto; font-size:11px; font-family:monospace;
-    color:#fff8e7; line-height:1.6;
-  }
-
-  .kb-md-blockquote {
-    border-left:3px solid #FFC72C;
-    padding:4px 10px; margin:6px 0;
-    background:rgba(255,199,44,0.06);
-    border-radius:0 6px 6px 0;
-    color:rgba(255,248,231,0.75);
-    font-style:italic; font-size:12px;
-  }
-
+  .kb-md-code-inline { background:rgba(255,199,44,0.12); border:1px solid rgba(255,199,44,0.2); color:#FFC72C; font-family:monospace; font-size:12px; padding:1px 5px; border-radius:5px; }
+  .kb-md-pre { background:rgba(0,0,0,0.35); border:1px solid rgba(255,199,44,0.12); border-radius:8px; padding:10px 12px; margin:6px 0; overflow-x:auto; font-size:11px; font-family:monospace; color:#fff8e7; line-height:1.6; }
+  .kb-md-blockquote { border-left:3px solid #FFC72C; padding:4px 10px; margin:6px 0; background:rgba(255,199,44,0.06); border-radius:0 6px 6px 0; color:rgba(255,248,231,0.75); font-style:italic; font-size:12px; }
   .kb-md-h  { font-weight:800; color:#FFC72C; font-size:14px; margin:4px 0 2px; }
   .kb-md-h3 { font-weight:700; color:#fff8e7; font-size:13px; margin:4px 0 2px; }
   .kb-md-hr { border:none; border-top:1px solid rgba(255,199,44,0.15); margin:8px 0; }
 
   /* ── Typing dots ── */
-  .kb-ai-typing-bubble {
-    display:flex; align-items:center; gap:5px; padding:10px 14px;
-  }
-  .kb-ai-typing-bubble span {
-    width:6px; height:6px; border-radius:50%;
-    background:rgba(255,199,44,0.6); animation:kbDot 1.2s ease infinite;
-  }
+  .kb-ai-typing-bubble { display:flex; align-items:center; gap:5px; padding:10px 14px; }
+  .kb-ai-typing-bubble span { width:6px; height:6px; border-radius:50%; background:rgba(255,199,44,0.6); animation:kbDot 1.2s ease infinite; }
   .kb-ai-typing-bubble span:nth-child(2) { animation-delay:0.2s; }
   .kb-ai-typing-bubble span:nth-child(3) { animation-delay:0.4s; }
   @keyframes kbDot { 0%,80%,100%{transform:scale(0.6);opacity:0.5} 40%{transform:scale(1);opacity:1} }
@@ -413,24 +551,20 @@ const styles = `
   .kb-ai-quick-chip {
     padding:5px 11px; border-radius:50px;
     background:rgba(255,199,44,0.07); border:1px solid rgba(255,199,44,0.2);
-    color:rgba(255,248,231,0.7);
-    font-size:11px; font-weight:700; cursor:pointer;
+    color:rgba(255,248,231,0.7); font-size:11px; font-weight:700; cursor:pointer;
     transition:all 0.18s; font-family:'Plus Jakarta Sans',sans-serif; white-space:nowrap;
   }
   .kb-ai-quick-chip:hover { background:rgba(255,199,44,0.15); color:#fff8e7; border-color:rgba(255,199,44,0.4); }
 
   /* ── Input row ── */
   .kb-ai-input-row {
-    display:flex; align-items:center; gap:8px;
-    padding:10px 12px 14px; flex-shrink:0;
+    display:flex; align-items:center; gap:8px; padding:10px 12px 14px; flex-shrink:0;
     border-top:1px solid rgba(255,199,44,0.08);
   }
   .kb-ai-input {
-    flex:1; background:rgba(255,248,231,0.05);
-    border:1.5px solid rgba(255,199,44,0.12); border-radius:12px;
-    padding:9px 13px; color:#fff8e7;
-    font-size:13px; font-weight:500;
-    font-family:'Plus Jakarta Sans',sans-serif;
+    flex:1; background:rgba(255,248,231,0.05); border:1.5px solid rgba(255,199,44,0.12);
+    border-radius:12px; padding:9px 13px; color:#fff8e7;
+    font-size:13px; font-weight:500; font-family:'Plus Jakarta Sans',sans-serif;
     outline:none; transition:border-color 0.2s;
   }
   .kb-ai-input:focus { border-color:rgba(255,199,44,0.4); }
@@ -440,8 +574,7 @@ const styles = `
     width:38px; height:38px; border-radius:11px; flex-shrink:0;
     background:#DA291C; border:none; cursor:pointer;
     display:flex; align-items:center; justify-content:center;
-    color:white; transition:all 0.18s;
-    box-shadow:0 3px 12px rgba(218,41,28,0.4);
+    color:white; transition:all 0.18s; box-shadow:0 3px 12px rgba(218,41,28,0.4);
   }
   .kb-ai-send-btn:hover:not(:disabled) { background:#b91c1c; transform:scale(1.05); }
   .kb-ai-send-btn:disabled { opacity:0.45; cursor:not-allowed; transform:none; }
