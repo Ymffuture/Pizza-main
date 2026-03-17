@@ -393,7 +393,7 @@ const menuStyles = `
     border: none; cursor: pointer;
     font-family: 'Plus Jakarta Sans', sans-serif;
     font-weight: 700; font-size: 13px;
-    padding: 8px 16px; border-radius: 50px;
+    padding: 8px 16px; border-radius: 10px;
     transition: all 0.2s;
     box-shadow: 0 4px 16px rgba(218,41,28,0.35);
   }
