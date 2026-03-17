@@ -367,11 +367,11 @@ const menuStyles = `
   .brand-flame { color: #0e0700; }
   .brand-name {
     font-family: 'Bebas Neue', sans-serif;
-    font-size: 22px; letter-spacing: 3px;
+    font-size: 22px; letter-spacing: 2px;
     color: var(--text); line-height: 1;
   }
   .brand-tagline {
-    font-size: 10px; font-weight: 700;
+    font-size: 6px; font-weight: 800;
     color: var(--gold); letter-spacing: 0.18em;
     text-transform: uppercase; margin-top: 1px;
   }
