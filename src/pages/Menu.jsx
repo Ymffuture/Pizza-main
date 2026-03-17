@@ -155,7 +155,7 @@ export default function Menu() {
             </div>
             <div>
               <h1 className="brand-name">KotaGO</h1>
-              <p className="brand-tagline">Fresh · Fast · Fire</p>
+              <p className="brand-tagline text-sm">Fresh · Fast · Fire</p>
             </div>
           </div>
 
