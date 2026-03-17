@@ -11,7 +11,6 @@ import { useAuth } from "../context/AuthContext";
 import { useParams } from "react-router-dom";
 import { getBusinessHoursStatus } from "../utils/businessHours";
 import { Tooltip } from "antd";
-";
 
 function extractOrderId(text) {
   const full = text.match(/\b([0-9a-fA-F]{24})\b/);
