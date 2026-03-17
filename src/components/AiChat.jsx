@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect } from "react";
 import {
   MessageCircle, X, Send, Bot, User,
-  Loader2, Minimize2, Maximize2, XCircle, CheckCircle, Clock,
+  Loader2, Minimize2, Maximize2, XCircle, CheckCircle, Clock,CircleFadingPlus, 
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -10,6 +10,8 @@ import axiosClient from "../api/axiosClient";
 import { useAuth } from "../context/AuthContext";
 import { useParams } from "react-router-dom";
 import { getBusinessHoursStatus } from "../utils/businessHours";
+import { Tooltip } from "antd";
+";
 
 function extractOrderId(text) {
   const full = text.match(/\b([0-9a-fA-F]{24})\b/);
@@ -278,18 +280,28 @@ export default function AiChat() {
       <style>{styles}</style>
 
       {/* ── FAB ── */}
-      {!open && (
-        <button className="kb-ai-fab" onClick={handleOpen} aria-label="Open KotaBot">
-          <MessageCircle className="w-6 h-6" />
-          <span className="kb-ai-fab-label">KotaBot</span>
-          {/* Green dot = open, red dot = closed */}
-          <span
-            className="kb-fab-status-dot"
-            style={{ background: isOpen ? "#4ade80" : "#f87171" }}
-          />
-          {unread > 0 && <span className="kb-ai-unread">{unread}</span>}
-        </button>
+      
+{!open && (
+  <Tooltip title="KotaBot" placement="left">
+    <button
+      className="kb-ai-fab"
+      onClick={handleOpen}
+      aria-label="Open KotaBot"
+    >
+      <CircleFadingPlus className="w-6 h-6" />
+
+      {/* Green dot = open, red dot = closed */}
+      <span
+        className="kb-fab-status-dot"
+        style={{ background: isOpen ? "#4ade80" : "#f87171" }}
+      />
+
+      {unread > 0 && (
+        <span className="kb-ai-unread">{unread}</span>
       )}
+    </button>
+  </Tooltip>
+)}
 
       {/* ── Chat window ── */}
       {open && (
