@@ -7,7 +7,7 @@ import { useCart } from "../context/CartContext";
 import { useToast } from "../components/Toast";
 import Footer from "../components/Footer";
 import {
-  ShoppingCart, RefreshCw, UtensilsCrossed, Zap,
+  ShoppingBag, ShoppingCart, RefreshCw, UtensilsCrossed, Zap,
   ChevronRight, Flame, Search, SlidersHorizontal, LogOut,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
@@ -151,7 +151,7 @@ export default function Menu() {
         <div className="menu-header-inner">
           <div className="menu-brand">
             <div className="brand-badge">
-              <img src="/copilot_image_1772714931398.jpeg" alt="Logo" className="h-8 w-8" />
+              <img src="/copilot_image_1772714931398.jpeg" alt="Logo" className="h-10 w-10 rounded" />
             </div>
             <div>
               <h1 className="brand-name">KOTABITES</h1>
@@ -167,8 +167,8 @@ export default function Menu() {
             >
               <Search className="w-5 h-5" />
             </button>
-            <button className="cart-pill" onClick={() => navigate("/cart")}>
-              <ShoppingCart className="w-4 h-4" />
+            <button className="cart-pill2 icon-btn" onClick={() => navigate("/cart")}>
+              <ShoppingBag className="w-5 h-5" />
               {count > 0 && <span className="cart-badge">{count}</span>}
             </button>
             {isAuth ? (
@@ -252,7 +252,7 @@ export default function Menu() {
       {/* ── FAB ── */}
       {count > 0 && (
         <button className="fab" onClick={() => navigate("/cart")}>
-          <ShoppingCart className="w-5 h-5" />
+          <ShoppingBag className="w-5 h-5" />
           <span>View Cart</span>
           <span className="fab-badge">{count}</span>
           <ChevronRight className="w-4 h-4 fab-arrow" />
