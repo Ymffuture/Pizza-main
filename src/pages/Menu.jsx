@@ -402,13 +402,23 @@ const menuStyles = `
   .menu-login-btn { padding:8px 14px; border-radius:10px; background:rgba(255,199,44,0.08); border:1px solid rgba(255,199,44,0.2); color:var(--gold); font-family:'Plus Jakarta Sans',sans-serif; font-size:12px; font-weight:800; cursor:pointer; transition:all 0.2s; }
   .menu-login-btn:hover { background:rgba(255,199,44,0.15); }
   .cart-badge {
-    background: var(--gold); color: #0e0700;
-    font-weight: 900; font-size: 11px;
-    min-width: 20px; height: 20px;
-    border-radius: 50px; padding: 0 5px;
-    display: flex; align-items: center; justify-content: center;
-    animation: popIn 0.3s cubic-bezier(0.34,1.56,0.64,1);
-  }
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 50px;
+  background: var(--gold);
+  color: #0e0700;
+  font-weight: 900;
+  font-size: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  border: 2px solid var(--dark);
+  animation: popIn 0.3s cubic-bezier(0.34,1.56,0.64,1);
+}
   @keyframes popIn { from { transform: scale(0); } to { transform: scale(1); } }
 
   /* Search */
