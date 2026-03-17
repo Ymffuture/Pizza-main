@@ -151,10 +151,10 @@ export default function Menu() {
         <div className="menu-header-inner">
           <div className="menu-brand">
             <div className="brand-badge">
-              <img src="/copilot_image_1772714931398.jpeg" alt="Logo" className="h-10 w-10 rounded" />
+              <img src="/kota.jpeg" alt="Logo" className="h-10 w-10 rounded" />
             </div>
             <div>
-              <h1 className="brand-name">KOTABITES</h1>
+              <h1 className="brand-name">KotaGO</h1>
               <p className="brand-tagline">Fresh · Fast · Fire</p>
             </div>
           </div>
