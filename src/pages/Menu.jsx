@@ -167,7 +167,7 @@ export default function Menu() {
             >
               <Search className="w-5 h-5" />
             </button>
-            <button className="cart-pill2 icon-btn" onClick={() => navigate("/cart")}>
+            <button className="cart-pill" onClick={() => navigate("/cart")}>
               <ShoppingBag className="w-5 h-5" />
               {count > 0 && <span className="cart-badge">{count}</span>}
             </button>
@@ -387,6 +387,7 @@ const menuStyles = `
   }
   .icon-btn:hover { color: var(--text); border-color: rgba(255,199,44,0.3); background: rgba(255,199,44,0.07); }
   .cart-pill {
+    position: relative;
     display: flex; align-items: center; gap: 7px;
     background: var(--red); color: white;
     border: none; cursor: pointer;
@@ -397,6 +398,7 @@ const menuStyles = `
     box-shadow: 0 4px 16px rgba(218,41,28,0.35);
   }
   .cart-pill:hover { background: var(--red2); transform: scale(1.04); }
+  
   .menu-logout-btn { width:38px; height:38px; border-radius:10px; background:rgba(218,41,28,0.08); border:1px solid rgba(218,41,28,0.2); display:flex; align-items:center; justify-content:center; color:rgba(218,41,28,0.6); cursor:pointer; transition:all 0.2s; }
   .menu-logout-btn:hover { background:rgba(218,41,28,0.2); color:var(--red); border-color:rgba(218,41,28,0.4); }
   .menu-login-btn { padding:8px 14px; border-radius:10px; background:rgba(255,199,44,0.08); border:1px solid rgba(255,199,44,0.2); color:var(--gold); font-family:'Plus Jakarta Sans',sans-serif; font-size:12px; font-weight:800; cursor:pointer; transition:all 0.2s; }
