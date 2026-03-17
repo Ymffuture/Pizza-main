@@ -1,0 +1,1 @@
+Sitemap: https://foodsorder.vercel.app/sitemap.xml
