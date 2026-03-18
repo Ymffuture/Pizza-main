@@ -759,7 +759,7 @@ const styles = `
   /* ── Quick chips ── */
   .kb-ai-quick-row { display:flex; flex-wrap:wrap; gap:6px; padding:6px 14px 10px; flex-shrink:0; }
   .kb-ai-quick-chip {
-    padding:5px 11px; border-radius:50px;
+    padding:5px 11px; border-radius:10px;
     background:rgba(255,199,44,0.07); border:1px solid rgba(255,199,44,0.2);
     color:rgba(255,248,231,0.7); font-size:11px; font-weight:700; cursor:pointer;
     transition:all 0.18s; font-family:'Plus Jakarta Sans',sans-serif; white-space:nowrap;
