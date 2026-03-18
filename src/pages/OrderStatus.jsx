@@ -227,7 +227,7 @@ export default function OrderStatus() {
             <div className="os-cancel-content">
               <p className="os-cancel-title">Cancellation Support</p>
               <p className="os-cancel-text">
-                Cancellations can only be processed through KataBot. 
+                Cancellations can only be processed through Katabot AI-Powered. 
                 For any issues or refunds, please contact:
               </p>
               <a href="tel:0653935339" className="os-cancel-phone">
@@ -300,7 +300,7 @@ export default function OrderStatus() {
         </section>
 
         {/* ── Cancelled / Delivered CTA ── */}
-        {order.status === "cancelled" && (
+        {order.status === "cancelled" || "paid" && (
           <div className="os-cta-card os-cta-red">
             <XCircle className="w-5 h-5" />
             <div>
@@ -310,7 +310,17 @@ export default function OrderStatus() {
             <button className="os-cta-btn" onClick={() => navigate("/menu")}>Order Again</button>
           </div>
         )}
-
+        
+{order.status === "preparing" || "ready" && (
+          <div className="os-cta-card os-cta-warn">
+            <XCircle className="w-5 h-5" />
+            <div>
+              <p className="os-cta-title">Order Cancelled</p>
+              <p className="os-cta-sub">This order was cancelled. Place a new one?</p>
+            </div>
+            <button className="os-cta-btn" onClick={() => navigate("/menu")}>Order Again</button>
+          </div>
+        )}
         {order.status === "delivered" && (
           <div className="os-cta-card os-cta-green">
             <Truck className="w-5 h-5" />
@@ -423,6 +433,7 @@ const styles = `
   /* CTA cards */
   .os-cta-card { display:flex; align-items:center; gap:14px; border-radius:16px; padding:16px 18px; border:1px solid; }
   .os-cta-red { background:rgba(218,41,28,0.08); border-color:rgba(218,41,28,0.25); color:var(--red); }
+  .os-cta-warn { background:rgba(218,41,28,0.08); border-color:rgba(218,41,28,0.25); color:orange; }
   .os-cta-green { background:rgba(74,222,128,0.08); border-color:rgba(74,222,128,0.25); color:#4ade80; }
   .os-cta-title { font-size:14px; font-weight:800; color:var(--text); }
   .os-cta-sub { font-size:11px; color:var(--muted); margin-top:2px; }
