@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { formatCurrency } from "../utils/formatCurrency";
-import { ShoppingCart, ZoomIn, X, Star, Tag } from "lucide-react";
+import { ShoppingBag, ZoomIn, X, CircleStar, Tags } from "lucide-react";
 import StarRating from "./StarRating";
 /* ─────────────────────────────────────────────
    3-D Lightbox — full-screen image viewer with
@@ -183,7 +183,7 @@ export default function MenuCard({ item, onSelect }) {
           {/* Category tag */}
           {item.category && (
             <div className="mc-cat-tag">
-              <Tag className="w-3 h-3" />
+              <Tags className="w-3 h-3" />
               {item.category}
             </div>
           )}
@@ -208,7 +208,7 @@ export default function MenuCard({ item, onSelect }) {
             </div>
 <div className="mc-stars">
               {[...Array(5)].map((_, i) => (
-                <Star
+                <CircleStar
                   key={i}
                   className={`mc-star${i < (item.rating || 4) ? " mc-star-on" : ""}`}
                 />
@@ -222,8 +222,8 @@ export default function MenuCard({ item, onSelect }) {
           >
             {/* Shimmer sweep */}
             <span className={`mc-shimmer${hovering ? " mc-shimmer-sweep" : ""}`} />
-            <ShoppingCart className="w-4 h-4" style={{ position: "relative" }} />
-            <span style={{ position: "relative" }}>Add to Cart</span>
+            <ShoppingBag className="w-4 h-4" style={{ position: "relative" }} />
+            <span style={{ position: "relative" }}>Add to Order</span>
           </button>
         </div>
       </div>
