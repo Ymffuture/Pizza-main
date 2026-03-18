@@ -2,17 +2,23 @@ import { useEffect, useState, useCallback } from "react";
 import { getMenu } from "../api/menu.api";
 import MenuCard from "../components/MenuCard";
 import Loader from "../components/Loader";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { useToast } from "../components/Toast";
 import Footer from "../components/Footer";
 import {
   ShoppingBag, ShoppingCart, RefreshCw, UtensilsCrossed, Zap,
   ChevronRight, Flame, Search, SlidersHorizontal, LogOut,
+  Menu as MenuIcon, X, Info, Home, FileText, Phone
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
-const CATEGORIES = ["All", "Kota", "Chips", "Drinks", "Extras"];
+// Sorted categories alphabetically with "All" first
+const CATEGORIES = ["All", "Chips", "Drinks", "Extras", "Kota"].sort((a, b) => {
+  if (a === "All") return -1;
+  if (b === "All") return 1;
+  return a.localeCompare(b);
+});
 
 export default function Menu() {
   const [menu, setMenu] = useState([]);
@@ -21,7 +27,7 @@ export default function Menu() {
   const [wakingUp, setWakingUp] = useState(false);
   const [activeCategory, setActiveCategory] = useState("All");
   const [search, setSearch] = useState("");
-  const [showSearch, setShowSearch] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const navigate = useNavigate();
   const { addItem, count } = useCart();
   const { logout, isAuth, user } = useAuth();
@@ -49,7 +55,13 @@ export default function Menu() {
         : Array.isArray(raw?.menu)
         ? raw.menu
         : [];
-      setMenu(items);
+      // Sort items by category then by name
+      const sortedItems = items.sort((a, b) => {
+        const catCompare = (a.category || "").localeCompare(b.category || "");
+        if (catCompare !== 0) return catCompare;
+        return (a.name || "").localeCompare(b.name || "");
+      });
+      setMenu(sortedItems);
     } catch (err) {
       const msg =
         err.code === "ECONNABORTED"
@@ -79,12 +91,19 @@ export default function Menu() {
     });
   };
 
+  // Improved search: searches name, description, and category
   const filtered = menu.filter((item) => {
     const matchCat =
       activeCategory === "All" ||
       item.category?.toLowerCase() === activeCategory.toLowerCase();
+    
+    const searchLower = search.toLowerCase().trim();
     const matchSearch =
-      !search || item.name?.toLowerCase().includes(search.toLowerCase());
+      !searchLower || 
+      item.name?.toLowerCase().includes(searchLower) ||
+      item.description?.toLowerCase().includes(searchLower) ||
+      item.category?.toLowerCase().includes(searchLower);
+    
     return matchCat && matchSearch;
   });
 
@@ -146,117 +165,185 @@ export default function Menu() {
     <div className="menu-root">
       <style>{menuStyles}</style>
 
-      {/* ── Navbar ── */}
-      <header className="menu-header">
-        <div className="menu-header-inner">
-          <div className="menu-brand">
+      {/* ── Sidebar ── */}
+      <aside className={`sidebar ${sidebarOpen ? "sidebar-open" : ""}`}>
+        <div className="sidebar-inner">
+          {/* Logo Section */}
+          <div className="sidebar-logo">
             <div className="brand-badge">
-              <img src="/kota.jpeg" alt="Logo" className="h-10 w-10 rounded" />
+              <Flame className="w-6 h-6" style={{ color: "#0e0700" }} />
             </div>
-            <div>
+            <div className="sidebar-logo-text">
               <h1 className="brand-name">KotaGO</h1>
-              <p className="brand-tagline text-sm">Fresh · Fast · Fire</p>
+              <p className="brand-tagline">Fresh · Fast · Fire</p>
+            </div>
+            <button 
+              className="sidebar-close-btn"
+              onClick={() => setSidebarOpen(false)}
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Search in Sidebar */}
+          <div className="sidebar-search">
+            <Search className="sidebar-search-icon" />
+            <input
+              type="text"
+              placeholder="Search menu..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="sidebar-search-input"
+            />
+            {search && (
+              <button 
+                className="sidebar-search-clear"
+                onClick={() => setSearch("")}
+              >
+                <X className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+
+          {/* Categories */}
+          <div className="sidebar-section">
+            <h3 className="sidebar-section-title">Categories</h3>
+            <div className="sidebar-categories">
+              {CATEGORIES.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setActiveCategory(cat)}
+                  className={`sidebar-cat-btn ${activeCategory === cat ? "active" : ""}`}
+                >
+                  {cat}
+                  {activeCategory === cat && <ChevronRight className="w-4 h-4" />}
+                </button>
+              ))}
             </div>
           </div>
 
-          <div className="header-actions">
-            <button
-              className="icon-btn"
-              onClick={() => setShowSearch((s) => !s)}
-              aria-label="Search"
-            >
-              <Search className="w-5 h-5" />
-            </button>
-            <button className="cart-pill" onClick={() => navigate("/cart")}>
-              <ShoppingBag className="w-5 h-5" />
-              {count > 0 && <span className="cart-badge">{count}</span>}
-            </button>
+          {/* Navigation Links */}
+          <div className="sidebar-section">
+            <h3 className="sidebar-section-title">Navigation</h3>
+            <nav className="sidebar-nav">
+              <Link to="/" className="sidebar-nav-link">
+                <Home className="w-4 h-4" />
+                <span>Home</span>
+              </Link>
+              <Link to="/info" className="sidebar-nav-link">
+                <Info className="w-4 h-4" />
+                <span>Policies & Info</span>
+              </Link>
+              <Link to="/cart" className="sidebar-nav-link">
+                <ShoppingCart className="w-4 h-4" />
+                <span>Cart ({count})</span>
+              </Link>
+            </nav>
+          </div>
+
+          {/* Contact Info */}
+          <div className="sidebar-contact">
+            <Phone className="w-4 h-4" />
+            <span>065 393 5339</span>
+          </div>
+
+          {/* User Section */}
+          <div className="sidebar-footer">
             {isAuth ? (
-              <button className="menu-logout-btn" onClick={handleLogout} title={`Sign out (${user?.email ?? ""})`}>
-                <LogOut className="w-4 h-4" />
-              </button>
+              <div className="sidebar-user">
+                <span className="sidebar-user-email">{user?.email?.split("@")[0]}</span>
+                <button className="sidebar-logout-btn" onClick={handleLogout}>
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </div>
             ) : (
-              <button className="menu-login-btn" onClick={() => navigate("/login")}>
+              <button className="sidebar-login-btn" onClick={() => navigate("/login")}>
                 Sign In
               </button>
             )}
           </div>
         </div>
+      </aside>
 
-        {showSearch && (
-          <div className="search-bar-wrap">
-            <Search className="search-bar-icon" />
-            <input
-              autoFocus
-              className="search-bar-input"
-              placeholder="Search the menu…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-            {search && (
-              <button className="search-clear" onClick={() => setSearch("")}>
-                ×
-              </button>
-            )}
+      {/* ── Main Content ── */}
+      <div className="main-content">
+        {/* ── Top Bar ── */}
+        <header className="top-bar">
+          <button 
+            className="menu-toggle-btn"
+            onClick={() => setSidebarOpen(true)}
+          >
+            <MenuIcon className="w-6 h-6" />
+          </button>
+
+          <div className="top-bar-center">
+            <span className="top-bar-category">{activeCategory}</span>
+            <span className="top-bar-count">{filtered.length} items</span>
           </div>
+
+          <button className="cart-pill" onClick={() => navigate("/cart")}>
+            <ShoppingBag className="w-5 h-5" />
+            {count > 0 && <span className="cart-badge">{count}</span>}
+          </button>
+        </header>
+
+        {/* ── Info Strip ── */}
+        <div className="hero-strip">
+          <div className="hero-strip-inner">
+            <span className="hero-strip-text">
+              <Flame className="w-4 h-4 inline mr-1" style={{ color: "#fbbf24" }} />
+              Today&apos;s picks — freshly updated
+            </span>
+            <span className="hero-strip-count">
+              {filtered.length} item{filtered.length !== 1 ? "s" : ""} found
+            </span>
+          </div>
+        </div>
+
+        {/* ── Grid ── */}
+        <main className="menu-grid-wrap">
+          {filtered.length === 0 ? (
+            <div className="no-results">
+              <SlidersHorizontal className="w-8 h-8 opacity-40" />
+              <p>Nothing matches — try a different filter.</p>
+              {search && (
+                <button 
+                  className="clear-search-btn"
+                  onClick={() => { setSearch(""); setActiveCategory("All"); }}
+                >
+                  Clear all filters
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="menu-grid">
+              {filtered.map((item, i) => (
+                <div
+                  key={item.id ?? i}
+                  className="menu-card-wrap"
+                  style={{ "--i": i }}
+                >
+                  <MenuCard item={item} onSelect={handleAddToCart} />
+                </div>
+              ))}
+            </div>
+          )}
+        </main>
+
+        {/* ── FAB ── */}
+        {count > 0 && (
+          <button className="fab" onClick={() => navigate("/cart")}>
+            <ShoppingBag className="w-5 h-5" />
+            <span>View Cart</span>
+            <span className="fab-badge">{count}</span>
+            <ChevronRight className="w-4 h-4 fab-arrow" />
+          </button>
         )}
-
-        <div className="category-row">
-          {CATEGORIES.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setActiveCategory(cat)}
-              className={`cat-chip${activeCategory === cat ? " cat-chip-active" : ""}`}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
-      </header>
-
-      {/* ── Info strip ── */}
-      <div className="hero-strip">
-        <div className="hero-strip-inner">
-          <span className="hero-strip-text">
-            <Flame className="w-4 h-4 inline mr-1" style={{ color: "#fbbf24" }} />
-            Today&apos;s picks — freshly updated
-          </span>
-          <span className="hero-strip-count">
-            {filtered.length} item{filtered.length !== 1 ? "s" : ""}
-          </span>
-        </div>
       </div>
 
-      {/* ── Grid ── */}
-      <main className="menu-grid-wrap">
-        {filtered.length === 0 ? (
-          <div className="no-results">
-            <SlidersHorizontal className="w-8 h-8 opacity-40" />
-            <p>Nothing matches — try a different filter.</p>
-          </div>
-        ) : (
-          <div className="menu-grid">
-            {filtered.map((item, i) => (
-              <div
-                key={item.id ?? i}
-                className="menu-card-wrap"
-                style={{ "--i": i }}
-              >
-                <MenuCard item={item} onSelect={handleAddToCart} />
-              </div>
-            ))}
-          </div>
-        )}
-      </main>
-
-      {/* ── FAB ── */}
-      {count > 0 && (
-        <button className="fab" onClick={() => navigate("/cart")}>
-          <ShoppingBag className="w-5 h-5" />
-          <span>View Cart</span>
-          <span className="fab-badge">{count}</span>
-          <ChevronRight className="w-4 h-4 fab-arrow" />
-        </button>
+      {/* ── Overlay ── */}
+      {sidebarOpen && (
+        <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />
       )}
 
       <Footer />
@@ -272,9 +359,11 @@ const menuStyles = `
     --red2:   #b91c1c;
     --gold:   #FFC72C;
     --dark:   #0e0700;
+    --card:   #1a0e00;
     --border: rgba(255,199,44,0.1);
     --text:   #fff8e7;
     --muted:  rgba(255,248,231,0.42);
+    --sidebar-width: 280px;
   }
 
   .menu-root {
@@ -284,7 +373,7 @@ const menuStyles = `
       var(--dark);
     font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
     color: var(--text);
-    padding-bottom: 100px;
+    display: flex;
   }
 
   /* Loading */
@@ -341,22 +430,76 @@ const menuStyles = `
   }
   .state-btn:hover { background: var(--red2); transform: scale(1.03); }
 
-  /* Header */
-  .menu-header {
-    position: sticky; top: 0; z-index: 100;
-    background: rgba(14,7,0,0.94);
-    backdrop-filter: blur(20px) saturate(1.4);
+  /* Sidebar */
+  .sidebar {
+    width: var(--sidebar-width);
+    background: rgba(14, 7, 0, 0.98);
+    border-right: 1px solid var(--border);
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 1000;
+    transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--gold) transparent;
+  }
+
+  .sidebar::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .sidebar::-webkit-scrollbar-thumb {
+    background: var(--gold);
+    border-radius: 3px;
+  }
+
+  .sidebar-open {
+    transform: translateX(0);
+  }
+
+  .sidebar-inner {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+  }
+
+  .sidebar-logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+    padding-bottom: 20px;
     border-bottom: 1px solid var(--border);
   }
-  .menu-header-inner {
-    max-width: 1200px; margin: 0 auto;
-    padding: 14px 20px;
-    display: flex; align-items: center; justify-content: space-between;
-    gap: 12px;
+
+  .sidebar-logo-text {
+    flex: 1;
+  }
+
+  .sidebar-close-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: rgba(255, 248, 231, 0.05);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .sidebar-close-btn:hover {
+    color: var(--text);
+    border-color: rgba(255, 199, 44, 0.3);
   }
 
   /* Brand */
-  .menu-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
   .brand-badge {
     width: 40px; height: 40px;
     background: var(--gold); border-radius: 11px;
@@ -364,28 +507,300 @@ const menuStyles = `
     flex-shrink: 0;
     box-shadow: 0 0 24px rgba(255,199,44,0.35);
   }
-  .brand-flame { color: #0e0700; }
   .brand-name {
     font-family: 'Bebas Neue', sans-serif;
     font-size: 22px; letter-spacing: 2px;
     color: var(--text); line-height: 1;
   }
   .brand-tagline {
-    font-size: 6px; font-weight: 800;
+    font-size: 10px; font-weight: 800;
     color: var(--gold); letter-spacing: 0.18em;
-    text-transform: uppercase; margin-top: 1px;
+    text-transform: uppercase; margin-top: 2px;
+  }
+
+  /* Sidebar Search */
+  .sidebar-search {
+    position: relative;
+    margin-bottom: 24px;
+  }
+
+  .sidebar-search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 16px;
+    height: 16px;
+    color: var(--muted);
+  }
+
+  .sidebar-search-input {
+    width: 100%;
+    padding: 12px 12px 12px 40px;
+    background: rgba(255, 248, 231, 0.05);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    color: var(--text);
+    font-size: 14px;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    transition: all 0.2s;
+  }
+
+  .sidebar-search-input::placeholder {
+    color: var(--muted);
+  }
+
+  .sidebar-search-input:focus {
+    outline: none;
+    border-color: rgba(255, 199, 44, 0.4);
+    background: rgba(255, 248, 231, 0.08);
+  }
+
+  .sidebar-search-clear {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: rgba(255, 199, 44, 0.1);
+    border: none;
+    color: var(--gold);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+
+  /* Sidebar Sections */
+  .sidebar-section {
+    margin-bottom: 24px;
+  }
+
+  .sidebar-section-title {
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 12px;
+  }
+
+  /* Categories */
+  .sidebar-categories {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .sidebar-cat-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    background: rgba(255, 248, 231, 0.03);
+    border: 1px solid transparent;
+    border-radius: 10px;
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: left;
+  }
+
+  .sidebar-cat-btn:hover {
+    background: rgba(255, 248, 231, 0.06);
+    color: var(--text);
+    border-color: var(--border);
+  }
+
+  .sidebar-cat-btn.active {
+    background: var(--gold);
+    color: #0e0700;
+    border-color: var(--gold);
+    font-weight: 700;
+  }
+
+  /* Navigation */
+  .sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .sidebar-nav-link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: rgba(255, 248, 231, 0.03);
+    border: 1px solid transparent;
+    border-radius: 10px;
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s;
+  }
+
+  .sidebar-nav-link:hover {
+    background: rgba(255, 248, 231, 0.06);
+    color: var(--text);
+    border-color: var(--border);
+  }
+
+  /* Contact */
+  .sidebar-contact {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px;
+    background: rgba(255, 199, 44, 0.08);
+    border: 1px solid rgba(255, 199, 44, 0.2);
+    border-radius: 10px;
+    color: var(--gold);
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 16px;
+  }
+
+  /* Footer */
+  .sidebar-footer {
+    margin-top: auto;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+  }
+
+  .sidebar-user {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .sidebar-user-email {
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .sidebar-logout-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: rgba(218, 41, 28, 0.08);
+    border: 1px solid rgba(218, 41, 28, 0.2);
+    color: rgba(218, 41, 28, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .sidebar-logout-btn:hover {
+    background: rgba(218, 41, 28, 0.2);
+    color: var(--red);
+    border-color: rgba(218, 41, 28, 0.4);
+  }
+
+  .sidebar-login-btn {
+    width: 100%;
+    padding: 12px;
+    background: rgba(255, 199, 44, 0.08);
+    border: 1px solid rgba(255, 199, 44, 0.2);
+    border-radius: 10px;
+    color: var(--gold);
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .sidebar-login-btn:hover {
+    background: rgba(255, 199, 44, 0.15);
+  }
+
+  /* Overlay */
+  .sidebar-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    z-index: 999;
+  }
+
+  /* Main Content */
+  .main-content {
+    flex: 1;
+    margin-left: 0;
+    min-height: 100vh;
+    transition: margin-left 0.3s;
+    padding-bottom: 100px;
+  }
+
+  /* Top Bar */
+  .top-bar {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(14, 7, 0, 0.94);
+    backdrop-filter: blur(20px) saturate(1.4);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .menu-toggle-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: rgba(255, 248, 231, 0.05);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .menu-toggle-btn:hover {
+    color: var(--text);
+    border-color: rgba(255, 199, 44, 0.3);
+    background: rgba(255, 199, 44, 0.07);
+  }
+
+  .top-bar-center {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+  }
+
+  .top-bar-category {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px;
+    letter-spacing: 2px;
+    color: var(--text);
+  }
+
+  .top-bar-count {
+    font-size: 11px;
+    color: var(--muted);
+    font-weight: 600;
   }
 
   /* Actions */
-  .header-actions { display: flex; align-items: center; gap: 8px; }
-  .icon-btn {
-    width: 38px; height: 38px;
-    background: rgba(255,248,231,0.05);
-    border: 1px solid var(--border); border-radius: 10px;
-    display: flex; align-items: center; justify-content: center;
-    color: var(--muted); cursor: pointer; transition: all 0.2s;
-  }
-  .icon-btn:hover { color: var(--text); border-color: rgba(255,199,44,0.3); background: rgba(255,199,44,0.07); }
   .cart-pill {
     position: relative;
     display: flex; align-items: center; gap: 7px;
@@ -399,64 +814,25 @@ const menuStyles = `
   }
   .cart-pill:hover { background: var(--red2); transform: scale(1.04); }
   
-  .menu-logout-btn { width:38px; height:38px; border-radius:10px; background:rgba(218,41,28,0.08); border:1px solid rgba(218,41,28,0.2); display:flex; align-items:center; justify-content:center; color:rgba(218,41,28,0.6); cursor:pointer; transition:all 0.2s; }
-  .menu-logout-btn:hover { background:rgba(218,41,28,0.2); color:var(--red); border-color:rgba(218,41,28,0.4); }
-  .menu-login-btn { padding:8px 14px; border-radius:10px; background:rgba(255,199,44,0.08); border:1px solid rgba(255,199,44,0.2); color:var(--gold); font-family:'Plus Jakarta Sans',sans-serif; font-size:12px; font-weight:800; cursor:pointer; transition:all 0.2s; }
-  .menu-login-btn:hover { background:rgba(255,199,44,0.15); }
   .cart-badge {
-  position: absolute;
-  top: -7px;
-  right: -7px;
-  min-width: 18px;
-  height: 18px;
-  border-radius: 50px;
-  background: var(--gold);
-  color: #0e0700;
-  font-weight: 900;
-  font-size: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 4px;
-  border: 2px solid var(--dark);
-  animation: popIn 0.3s cubic-bezier(0.34,1.56,0.64,1);
-}
+    position: absolute;
+    top: -7px;
+    right: -7px;
+    min-width: 18px;
+    height: 18px;
+    border-radius: 50px;
+    background: var(--gold);
+    color: #0e0700;
+    font-weight: 900;
+    font-size: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+    border: 2px solid var(--dark);
+    animation: popIn 0.3s cubic-bezier(0.34,1.56,0.64,1);
+  }
   @keyframes popIn { from { transform: scale(0); } to { transform: scale(1); } }
-
-  /* Search */
-  .search-bar-wrap {
-    display: flex; align-items: center; gap: 10px;
-    padding: 10px 20px; border-top: 1px solid var(--border);
-  }
-  .search-bar-icon { width: 15px; height: 15px; color: var(--muted); flex-shrink: 0; }
-  .search-bar-input {
-    flex: 1; background: none; border: none; outline: none;
-    color: var(--text); font-size: 14px; font-weight: 500;
-    font-family: 'Plus Jakarta Sans', sans-serif;
-  }
-  .search-bar-input::placeholder { color: var(--muted); }
-  .search-clear { color: var(--muted); background: none; border: none; cursor: pointer; font-size: 20px; }
-
-  /* Category chips */
-  .category-row {
-    display: flex; gap: 7px;
-    padding: 10px 20px 14px;
-    overflow-x: auto; scrollbar-width: none;
-  }
-  .category-row::-webkit-scrollbar { display: none; }
-  .cat-chip {
-    flex-shrink: 0; padding: 6px 16px; border-radius: 50px;
-    font-size: 11px; font-weight: 700; letter-spacing: 0.06em;
-    text-transform: uppercase; cursor: pointer; transition: all 0.2s;
-    background: rgba(255,248,231,0.04);
-    border: 1px solid var(--border); color: var(--muted);
-  }
-  .cat-chip:hover { color: var(--text); border-color: rgba(255,199,44,0.25); }
-  .cat-chip-active {
-    background: var(--gold); color: #0e0700;
-    border-color: var(--gold);
-    box-shadow: 0 0 18px rgba(255,199,44,0.28);
-  }
 
   /* Hero strip */
   .hero-strip {
@@ -493,6 +869,25 @@ const menuStyles = `
     align-items: center; gap: 12px; font-size: 14px; font-weight: 500;
   }
 
+  .clear-search-btn {
+    margin-top: 12px;
+    padding: 10px 20px;
+    background: var(--gold);
+    color: #0e0700;
+    border: none;
+    border-radius: 50px;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .clear-search-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 16px rgba(255, 199, 44, 0.3);
+  }
+
   /* FAB */
   .fab {
     position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
@@ -519,8 +914,31 @@ const menuStyles = `
     to   { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
   }
 
+  /* Desktop Sidebar */
+  @media (min-width: 1024px) {
+    .sidebar {
+      transform: translateX(0);
+      position: fixed;
+    }
+    
+    .main-content {
+      margin-left: var(--sidebar-width);
+    }
+    
+    .menu-toggle-btn {
+      display: none;
+    }
+    
+    .sidebar-close-btn {
+      display: none;
+    }
+    
+    .sidebar-overlay {
+      display: none;
+    }
+  }
+
   @media (max-width: 600px) {
-    .brand-name { font-size: 19px; }
     .menu-grid  { grid-template-columns: 1fr; }
     .fab        { width: calc(100% - 40px); justify-content: center; }
   }
