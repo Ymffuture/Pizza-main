@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect } from "react";
 import {
   MessageCircle, X, Send, BotMessageSquare, User,Forward, CornerRightUp, 
-  Loader2, Minimize2, Maximize2, XCircle, CheckCircle, Clock,CircleFadingPlus, CircleUser, Bot, 
+  Loader, Minimize2, Maximize2, XCircle, CheckCircle, Clock,CircleFadingPlus, CircleUser, Bot, 
   Copy, Check, Link as LinkIcon
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
@@ -464,7 +464,7 @@ export default function AiChat() {
                       className="kb-ai-quick-chip flex gap-2 "
                       onClick={() => { setInput(q); setTimeout(() => inputRef.current?.focus(), 50); }}
                     >
-                      <Forward className="w-2.5 h-2.5" /> {q}
+                      <Forward className="w-3 h-3" /> {q}
                     </button>
                   ))}
                 </div>
@@ -492,7 +492,7 @@ export default function AiChat() {
                   aria-label="Send"
                 >
                   {loading
-                    ? <Loader2 className="w-4 h-4 kb-ai-spin" />
+                    ? <Loader className="w-4 h-4 kb-ai-spin" />
                     : <CornerRightUp className="w-4 h-4" />}
                 </button>
               </div>
