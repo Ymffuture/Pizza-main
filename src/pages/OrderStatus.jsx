@@ -219,7 +219,7 @@ export default function OrderStatus() {
         )}
 
         {/* ── Cancellation Info Banner ── */}
-        {order.status === "cancelled" && (
+        {order.status === "pending" && (
           <section className="os-cancel-info">
             <div className="os-cancel-icon">
               <Phone className="w-4 h-4" />
