@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from "react";
 import {
   MessageCircle, X, Send, Bot, User,
   Loader2, Minimize2, Maximize2, XCircle, CheckCircle, Clock,CircleFadingPlus, 
+  Copy, Check, Link as LinkIcon
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -15,6 +16,44 @@ import { Tooltip } from "antd";
 function extractOrderId(text) {
   const full = text.match(/\b([0-9a-fA-F]{24})\b/);
   return full ? full[1] : null;
+}
+
+/* ── Copy Order ID Button ── */
+function CopyOrderId({ orderId }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(orderId);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      // Fallback for older browsers
+      const textArea = document.createElement("textarea");
+      textArea.value = orderId;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textArea);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  return (
+    <button
+      className="kb-copy-order-btn"
+      onClick={handleCopy}
+      title="Copy Order ID"
+    >
+      {copied ? (
+        <Check className="w-3 h-3" style={{ color: "#4ade80" }} />
+      ) : (
+        <Copy className="w-3 h-3" />
+      )}
+      <span className="kb-copy-text">{copied ? "Copied!" : "Copy ID"}</span>
+    </button>
+  );
 }
 
 /* ── Markdown components ── */
@@ -105,9 +144,37 @@ function CancelCard({ cancelResult, onDismiss }) {
   );
 }
 
+/* ── Sign In Prompt ── */
+function SignInPrompt() {
+  return (
+    <div className="kb-signin-prompt">
+      <div className="kb-signin-icon">
+        <LinkIcon style={{ width: 18, height: 18, color: "#FFC72C" }} />
+      </div>
+      <div className="kb-signin-content">
+        <p className="kb-signin-title">Sign in required</p>
+        <p className="kb-signin-text">
+          Please{" "}
+          <a 
+            href="https://foodsorder.vercel.app/login" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="kb-signin-link"
+          >
+            sign in here 🔗
+          </a>
+          {" "}to chat with KotaBot
+        </p>
+      </div>
+    </div>
+  );
+}
+
 /* ── Message bubble ── */
 function Bubble({ msg, onCancelConfirm, cancellingId }) {
   const isUser = msg.role === "user";
+  const orderId = !isUser ? extractOrderId(msg.content) : null;
+
   return (
     <div className={`kb-ai-bubble-row ${isUser ? "kb-ai-bubble-user" : "kb-ai-bubble-bot"}`}>
       {!isUser && (
@@ -121,6 +188,13 @@ function Bubble({ msg, onCancelConfirm, cancellingId }) {
             <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
               {msg.content}
             </ReactMarkdown>
+            {/* Copy Order ID button if order ID found */}
+            {orderId && (
+              <div className="kb-order-id-row">
+                <span className="kb-order-id-label">Order ID detected:</span>
+                <CopyOrderId orderId={orderId} />
+              </div>
+            )}
             {msg.pendingCancelId && (
               <div className="kb-confirm-row">
                 <p className="kb-confirm-text">Confirm cancellation?</p>
@@ -349,6 +423,9 @@ export default function AiChat() {
                 <CancelCard cancelResult={cancelResult} onDismiss={() => setCancelResult(null)} />
               )}
 
+              {/* Sign In Prompt for unauthenticated users */}
+              {!isAuth && <SignInPrompt />}
+
               {/* Messages area */}
               <div className="kb-ai-messages">
                 {/* Show closed notice instead of messages on first open when closed */}
@@ -377,8 +454,8 @@ export default function AiChat() {
                 <div ref={bottomRef} />
               </div>
 
-              {/* Quick chips — only when open + no conversation yet */}
-              {isOpen && messages.length === 1 && (
+              {/* Quick chips — only when open + no conversation yet + authenticated */}
+              {isAuth && isOpen && messages.length === 1 && (
                 <div className="kb-ai-quick-row">
                   {["Track my order", "Cancel an order", "What's on the menu?", "Leave feedback"].map((q) => (
                     <button
@@ -403,14 +480,14 @@ export default function AiChat() {
                     : "Ask KotaBot anything…"
                   }
                   value={input}
-                  disabled={loading}
+                  disabled={loading || !isAuth}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
                 />
                 <button
                   className="kb-ai-send-btn"
                   onClick={handleSend}
-                  disabled={loading || !input.trim()}
+                  disabled={loading || !input.trim() || !isAuth}
                   aria-label="Send"
                 >
                   {loading
@@ -499,6 +576,36 @@ const styles = `
   .kb-ai-icon-btn:hover { color:#fff8e7; border-color:rgba(255,199,44,0.3); }
   .kb-ai-close-btn:hover { background:rgba(218,41,28,0.25); color:#DA291C; border-color:rgba(218,41,28,0.3); }
 
+  /* ── Sign In Prompt ── */
+  .kb-signin-prompt {
+    display:flex; align-items:center; gap:12px;
+    margin:10px 12px 0; padding:12px 14px;
+    background:linear-gradient(135deg,rgba(218,41,28,0.12) 0%,rgba(255,199,44,0.08) 100%);
+    border:1px solid rgba(255,199,44,0.2); border-radius:12px;
+    animation:kbWindowIn 0.25s ease; flex-shrink:0;
+  }
+  .kb-signin-icon {
+    width:36px; height:36px; border-radius:10px;
+    background:rgba(255,199,44,0.15); border:1px solid rgba(255,199,44,0.25);
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .kb-signin-content { flex:1; }
+  .kb-signin-title {
+    font-family:'Bebas Neue',sans-serif; font-size:14px; letter-spacing:1.5px;
+    color:#fff8e7; margin-bottom:2px;
+  }
+  .kb-signin-text {
+    font-size:11px; color:rgba(255,248,231,0.6); line-height:1.4;
+  }
+  .kb-signin-link {
+    color:#FFC72C; font-weight:700; text-decoration:none;
+    border-bottom:1px solid rgba(255,199,44,0.4);
+    transition:all 0.18s;
+  }
+  .kb-signin-link:hover {
+    color:#fff8e7; border-bottom-color:#FFC72C;
+  }
+
   /* ── Hours banner ── */
   .kb-hours-banner {
     display:flex; align-items:center; gap:6px;
@@ -549,6 +656,28 @@ const styles = `
     cursor:pointer; font-size:16px; line-height:1; padding:0 0 0 4px; flex-shrink:0;
   }
   .kb-cancel-dismiss:hover { color:#fff8e7; }
+
+  /* ── Copy Order ID ── */
+  .kb-order-id-row {
+    display:flex; align-items:center; gap:8px;
+    margin-top:10px; padding-top:10px;
+    border-top:1px solid rgba(255,199,44,0.12);
+  }
+  .kb-order-id-label {
+    font-size:10px; color:rgba(255,248,231,0.4); font-weight:600;
+  }
+  .kb-copy-order-btn {
+    display:flex; align-items:center; gap:5px;
+    padding:5px 10px; border-radius:8px;
+    background:rgba(255,199,44,0.1); border:1px solid rgba(255,199,44,0.25);
+    color:rgba(255,248,231,0.7); font-size:10px; font-weight:700;
+    cursor:pointer; transition:all 0.18s; font-family:'Plus Jakarta Sans',sans-serif;
+  }
+  .kb-copy-order-btn:hover {
+    background:rgba(255,199,44,0.2); border-color:rgba(255,199,44,0.4);
+    color:#fff8e7;
+  }
+  .kb-copy-text { white-space:nowrap; }
 
   /* ── Cancel confirm inside bubble ── */
   .kb-confirm-row { margin-top:10px; padding-top:10px; border-top:1px solid rgba(255,199,44,0.12); }
