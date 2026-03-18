@@ -236,8 +236,8 @@ export default function Menu() {
                 <span>Policies & Info</span>
               </Link>
               <Link to="/cart" className="sidebar-nav-link">
-                <ShoppingCart className="w-4 h-4" />
-                <span>Cart ({count})</span>
+                <ShoppingBag className="w-4 h-4" />
+                <span>Bag ({count})</span>
               </Link>
             </nav>
           </div>
