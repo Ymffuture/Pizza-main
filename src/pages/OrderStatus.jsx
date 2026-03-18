@@ -1,3 +1,4 @@
+
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import useOrder from "../hooks/useOrder";
@@ -217,7 +218,18 @@ export default function OrderStatus() {
             </div>
           </section>
         )}
-
+        
+{order.status === "preparing" || "ready" && (
+          <div className="os-cta-card os-cta-warn">
+            <XCircle className="w-5 h-5" />
+            <div>
+              <p className="os-cta-title">Important Note:</p>
+              <p className="os-cta-sub">This order can not be cancelled or refundable.</p>
+            </div>
+            <button className="os-cta-btn" onClick={() => navigate("/info")}>Learn more</button>
+          </div>
+        )}
+        
         {/* ── Cancellation Info Banner ── */}
         {order.status === "pending" && (
           <section className="os-cancel-info">
@@ -300,7 +312,7 @@ export default function OrderStatus() {
         </section>
 
         {/* ── Cancelled / Delivered CTA ── */}
-        {order.status === "cancelled" || "paid" && (
+        {order.status === "cancelled" && (
           <div className="os-cta-card os-cta-red">
             <XCircle className="w-5 h-5" />
             <div>
@@ -311,16 +323,7 @@ export default function OrderStatus() {
           </div>
         )}
         
-{order.status === "preparing" || "ready" && (
-          <div className="os-cta-card os-cta-warn">
-            <XCircle className="w-5 h-5" />
-            <div>
-              <p className="os-cta-title">Order Cancelled</p>
-              <p className="os-cta-sub">This order was cancelled. Place a new one?</p>
-            </div>
-            <button className="os-cta-btn" onClick={() => navigate("/menu")}>Order Again</button>
-          </div>
-        )}
+
         {order.status === "delivered" && (
           <div className="os-cta-card os-cta-green">
             <Truck className="w-5 h-5" />
