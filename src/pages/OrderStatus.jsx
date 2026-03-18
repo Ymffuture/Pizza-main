@@ -8,7 +8,7 @@ import { formatCurrency } from "../utils/formatCurrency";
 import {
   ArrowLeft, Flame, LogOut, RefreshCw,
   Clock, CheckCircle2, ChefHat, Package, Truck,
-  XCircle, MapPin, Receipt,
+  XCircle, MapPin, Receipt, Copy, Check, Phone
 } from "lucide-react";
 import Footer from "../components/Footer";
 
@@ -40,6 +40,7 @@ export default function OrderStatus() {
   const [order, setOrder]         = useState(null);
   const [loadError, setLoadError] = useState(null);
   const [lastUpdated, setLast]    = useState(null);
+  const [copiedId, setCopiedId]   = useState(false);
 
   const load = async () => {
     try {
@@ -66,6 +67,31 @@ export default function OrderStatus() {
     logout();
     toast.show({ type: "info", title: "Signed out", message: "See you next time!" });
     navigate("/login");
+  };
+
+  const copyOrderId = async () => {
+    if (!order?.id) return;
+    const orderIdStr = String(order.id).slice(-8).toUpperCase();
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(orderIdStr);
+      } else {
+        // Fallback for non-HTTPS contexts
+        const textarea = document.createElement("textarea");
+        textarea.value = orderIdStr;
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
+      }
+      setCopiedId(true);
+      toast.show({ type: "success", title: "Copied!", message: "Order ID copied to clipboard" });
+      setTimeout(() => setCopiedId(false), 2000);
+    } catch (err) {
+      toast.show({ type: "error", title: "Failed to copy", message: "Please try again" });
+    }
   };
 
   /* ── Error (no order yet) ── */
@@ -105,6 +131,7 @@ export default function OrderStatus() {
   }
 
   const StatusIcon = cfg.Icon;
+  const orderIdShort = String(order.id ?? "").slice(-8).toUpperCase();
 
   return (
     <div className="os-root">
@@ -119,7 +146,16 @@ export default function OrderStatus() {
               <div className="os-brand-badge"><Flame className="w-4 h-4" style={{ color:"#0e0700" }} /></div>
               <div>
                 <span className="os-brand-name">TRACK ORDER</span>
-                <p className="os-brand-id">#{String(id).slice(-8).toUpperCase()}</p>
+                <div className="os-brand-id-row">
+                  <p className="os-brand-id">#{orderIdShort}</p>
+                  <button 
+                    className="os-copy-btn" 
+                    onClick={copyOrderId}
+                    title="Copy Order ID"
+                  >
+                    {copiedId ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -182,6 +218,25 @@ export default function OrderStatus() {
           </section>
         )}
 
+        {/* ── Cancellation Info Banner ── */}
+        {order.status === "cancelled" && (
+          <section className="os-cancel-info">
+            <div className="os-cancel-icon">
+              <Phone className="w-4 h-4" />
+            </div>
+            <div className="os-cancel-content">
+              <p className="os-cancel-title">Cancellation Support</p>
+              <p className="os-cancel-text">
+                Cancellations can only be processed through KataBot. 
+                For any issues or refunds, please contact:
+              </p>
+              <a href="tel:0653935339" className="os-cancel-phone">
+                065 393 5339
+              </a>
+            </div>
+          </section>
+        )}
+
         {/* ── Order Details ── */}
         <section className="os-card">
           <h2 className="os-section-label"><Receipt className="w-4 h-4" /> Order Details</h2>
@@ -193,9 +248,12 @@ export default function OrderStatus() {
             </div>
             <div className="os-meta-item">
               <span className="os-meta-label">Order ID</span>
-              <span className="os-meta-value os-meta-id">
-                #{String(order.id ?? "").slice(-8).toUpperCase()}
-              </span>
+              <div className="os-meta-value-row">
+                <span className="os-meta-value os-meta-id">#{orderIdShort}</span>
+                <button className="os-copy-btn-sm" onClick={copyOrderId} title="Copy Order ID">
+                  {copiedId ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                </button>
+              </div>
             </div>
             {order.payment_method && (
               <div className="os-meta-item">
@@ -297,7 +355,10 @@ const styles = `
   .os-brand { display:flex; align-items:center; gap:8px; }
   .os-brand-badge { width:34px; height:34px; background:var(--gold); border-radius:9px; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 0 16px rgba(255,199,44,0.25); }
   .os-brand-name { font-family:'Bebas Neue',sans-serif; font-size:17px; letter-spacing:3px; color:var(--text); line-height:1; display:block; }
-  .os-brand-id { font-size:10px; font-weight:800; color:var(--gold); letter-spacing:0.1em; margin-top:1px; }
+  .os-brand-id-row { display:flex; align-items:center; gap:6px; margin-top:1px; }
+  .os-brand-id { font-size:10px; font-weight:800; color:var(--gold); letter-spacing:0.1em; }
+  .os-copy-btn { width:20px; height:20px; border-radius:5px; background:rgba(255,199,44,0.1); border:1px solid rgba(255,199,44,0.2); display:flex; align-items:center; justify-content:center; color:var(--gold); cursor:pointer; transition:all 0.2s; }
+  .os-copy-btn:hover { background:rgba(255,199,44,0.2); border-color:rgba(255,199,44,0.4); transform:scale(1.1); }
   .os-user-pill { background:rgba(255,199,44,0.08); border:1px solid rgba(255,199,44,0.18); border-radius:50px; padding:5px 11px; font-size:11px; font-weight:700; color:var(--muted); max-width:110px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .os-logout-btn { width:34px; height:34px; border-radius:10px; background:rgba(218,41,28,0.08); border:1px solid rgba(218,41,28,0.2); display:flex; align-items:center; justify-content:center; color:rgba(218,41,28,0.6); cursor:pointer; transition:all 0.2s; }
   .os-logout-btn:hover { background:rgba(218,41,28,0.2); color:var(--red); border-color:rgba(218,41,28,0.4); }
@@ -329,13 +390,25 @@ const styles = `
   .os-step-label { font-size:10px; font-weight:700; color:var(--muted); text-align:center; width:52px; line-height:1.3; }
   .os-step-label-done { color:var(--text); }
 
+  /* Cancellation Info Banner */
+  .os-cancel-info { display:flex; align-items:flex-start; gap:12px; background:rgba(218,41,28,0.08); border:1px solid rgba(218,41,28,0.25); border-radius:16px; padding:16px 18px; }
+  .os-cancel-icon { width:36px; height:36px; background:rgba(218,41,28,0.15); border-radius:10px; display:flex; align-items:center; justify-content:center; color:var(--red); flex-shrink:0; }
+  .os-cancel-content { flex:1; }
+  .os-cancel-title { font-size:13px; font-weight:800; color:var(--text); margin-bottom:4px; }
+  .os-cancel-text { font-size:12px; color:var(--muted); line-height:1.5; margin-bottom:8px; }
+  .os-cancel-phone { display:inline-flex; align-items:center; gap:6px; font-size:14px; font-weight:800; color:var(--gold); text-decoration:none; padding:6px 12px; background:rgba(255,199,44,0.1); border:1px solid rgba(255,199,44,0.2); border-radius:50px; transition:all 0.2s; }
+  .os-cancel-phone:hover { background:rgba(255,199,44,0.2); border-color:rgba(255,199,44,0.4); transform:translateY(-1px); }
+
   /* Meta */
   .os-meta-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
   .os-meta-item { background:rgba(255,248,231,0.03); border:1px solid var(--border); border-radius:12px; padding:12px 14px; }
   .os-meta-label { font-size:9px; font-weight:800; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); display:block; margin-bottom:4px; }
   .os-meta-value { font-size:13px; font-weight:700; color:var(--text); }
+  .os-meta-value-row { display:flex; align-items:center; gap:8px; }
   .os-meta-total { font-family:'Bebas Neue',sans-serif; font-size:22px; letter-spacing:1px; color:var(--red); }
   .os-meta-id { font-family:monospace; font-size:13px; color:var(--gold); }
+  .os-copy-btn-sm { width:24px; height:24px; border-radius:6px; background:rgba(255,199,44,0.08); border:1px solid rgba(255,199,44,0.15); display:flex; align-items:center; justify-content:center; color:var(--gold); cursor:pointer; transition:all 0.2s; }
+  .os-copy-btn-sm:hover { background:rgba(255,199,44,0.15); border-color:rgba(255,199,44,0.3); transform:scale(1.05); }
 
   .os-address-box { display:flex; align-items:flex-start; gap:10px; background:rgba(255,248,231,0.03); border:1px solid var(--border); border-radius:12px; padding:12px 14px; }
   .os-address-icon { color:var(--gold); flex-shrink:0; margin-top:2px; }
