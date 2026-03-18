@@ -172,11 +172,11 @@ export default function Checkout() {
         } catch (payErr) {
           console.error("[Checkout] Paystack redirect failed:", payErr);
           toast.show({ type: "info", title: "Order placed", message: "Could not open Paystack — tracking your order." });
-          navigate("/order/" + orderId);
+          navigate("/checkout");
         }
       } else {
         toast.show({ type: "success", title: "Order confirmed!", message: "Cash on delivery — have R" + total.toFixed(2) + " ready." });
-        navigate("/order/" + orderId);
+        navigate("/success");
       }
     } catch (err) {
       const { type, msg } = parseError(err);
