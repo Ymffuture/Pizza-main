@@ -1,7 +1,7 @@
 // src/components/AiChat.jsx
 import { useState, useRef, useEffect } from "react";
 import {
-  MessageCircle, X, Send, BotMessageSquare, User,Forward, 
+  MessageCircle, X, Send, BotMessageSquare, User,Forward, CornerRightUp, 
   Loader2, Minimize2, Maximize2, XCircle, CheckCircle, Clock,CircleFadingPlus, CircleUser, Bot, 
   Copy, Check, Link as LinkIcon
 } from "lucide-react";
@@ -458,13 +458,13 @@ export default function AiChat() {
               {/* Quick chips — only when open + no conversation yet + authenticated */}
               {isAuth && isOpen && messages.length === 1 && (
                 <div className="kb-ai-quick-row">
-                  {["Track my order", "Cancel an order", "What's on the menu?","Change Language", "Leave feedback"].map((q) => (
+                  {["Track my order", "Cancel an order", "What's on the menu?","Change Language", "View all orders ", "Leave feedback"].map((q) => (
                     <button
                       key={q}
                       className="kb-ai-quick-chip flex gap-2 "
                       onClick={() => { setInput(q); setTimeout(() => inputRef.current?.focus(), 50); }}
                     >
-                      <Forward/> {q}
+                      <Forward className="w-2.5 h-2.5" /> {q}
                     </button>
                   ))}
                 </div>
@@ -493,7 +493,7 @@ export default function AiChat() {
                 >
                   {loading
                     ? <Loader2 className="w-4 h-4 kb-ai-spin" />
-                    : <Send className="w-4 h-4" />}
+                    : <CornerRightUp className="w-4 h-4" />}
                 </button>
               </div>
             </>
