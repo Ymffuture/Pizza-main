@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../components/Toast";
-import { Flame, Mail, Lock, LogIn, Loader2, Eye, EyeOff } from "lucide-react";
+import { Flame, Mail, Lock, LogIn, Loader, Eye, EyeOff } from "lucide-react";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -115,7 +115,7 @@ export default function Login() {
 
           <button type="submit" disabled={loading} className="auth-submit">
             {loading ? (
-              <><Loader2 className="w-5 h-5 auth-spin" /> Signing in…</>
+              <><Loader className="w-5 h-5 auth-spin" /> Signing in…</>
             ) : (
               <><LogIn className="w-5 h-5" /> Sign In</>
             )}
