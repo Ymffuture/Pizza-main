@@ -17,7 +17,9 @@ import { ToastProvider } from "./components/Toast";
 import RequireAuth       from "./components/RequireAuth";
 import ErrorBoundary     from "./components/ErrorBoundary";
 import AiChat            from "./components/AiChat";   // ← NEW
-import OrderTracker      from "./components/OrderTracker";
+import Info              from "./components/Info";
+
+
 export default function App() {
   return (
     <ErrorBoundary>
@@ -32,7 +34,7 @@ export default function App() {
                   <Route path="/cart"     element={<Cart />} />
                   <Route path="/login"    element={<Login />} />
                   <Route path="/register" element={<Register />} />
-                  <Route path="/track-order-info" element={<OrderTracker />} />
+                  <Route path="/info" element={<Info />} />
                   <Route
                     path="/checkout"
                     element={
