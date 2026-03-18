@@ -1,8 +1,8 @@
 // src/components/AiChat.jsx
 import { useState, useRef, useEffect } from "react";
 import {
-  MessageCircle, X, Send, botMessageSquare, User,forward, 
-  Loader2, Minimize2, Maximize2, XCircle, CheckCircle, Clock,CircleFadingPlus, circleUser, Bot, 
+  MessageCircle, X, Send, BotMessageSquare, User,Forward, 
+  Loader2, Minimize2, Maximize2, XCircle, CheckCircle, Clock,CircleFadingPlus, CircleUser, Bot, 
   Copy, Check, Link as LinkIcon
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
@@ -178,7 +178,7 @@ function Bubble({ msg, onCancelConfirm, cancellingId }) {
   return (
     <div className={`kb-ai-bubble-row ${isUser ? "kb-ai-bubble-user" : "kb-ai-bubble-bot"}`}>
       {!isUser && (
-        <div className="kb-ai-avatar kb-ai-avatar-bot"><botMessageSquare className="w-3.5 h-3.5" /></div>
+        <div className="kb-ai-avatar kb-ai-avatar-bot"><BotMessageSquare className="w-3.5 h-3.5" /></div>
       )}
       <div className={`kb-ai-bubble ${isUser ? "kb-ai-bubble-u" : "kb-ai-bubble-b"}`}>
         {isUser ? (
@@ -218,7 +218,7 @@ function Bubble({ msg, onCancelConfirm, cancellingId }) {
         )}
       </div>
       {isUser && (
-        <div className="kb-ai-avatar kb-ai-avatar-user"><circleUser className="w-3.5 h-3.5" /></div>
+        <div className="kb-ai-avatar kb-ai-avatar-user"><CircleUser className="w-3.5 h-3.5" /></div>
       )}
     </div>
   );
@@ -384,7 +384,7 @@ export default function AiChat() {
           <div className="kb-ai-header">
             <div className="kb-ai-header-left">
               <div className="kb-ai-header-icon">
-                <botMessageSquare className="w-4 h-4" style={{ color: "#0e0700" }} />
+                <BotMessageSquare className="w-4 h-4" style={{ color: "#0e0700" }} />
               </div>
               <div>
                 <p className="kb-ai-header-name">KotaBot</p>
@@ -445,7 +445,7 @@ export default function AiChat() {
                 {loading && (
                   <div className="kb-ai-bubble-row kb-ai-bubble-bot">
                     <div className="kb-ai-avatar kb-ai-avatar-bot">
-                      <botMessageSquare className="w-3.5 h-3.5" />
+                      <BotMessageSquare className="w-3.5 h-3.5" />
                     </div>
                     <div className="kb-ai-bubble kb-ai-bubble-b kb-ai-typing-bubble">
                       <span /><span /><span />
@@ -464,7 +464,7 @@ export default function AiChat() {
                       className="kb-ai-quick-chip flex gap-2 "
                       onClick={() => { setInput(q); setTimeout(() => inputRef.current?.focus(), 50); }}
                     >
-                      <forward/> {q}
+                      <Forward/> {q}
                     </button>
                   ))}
                 </div>
