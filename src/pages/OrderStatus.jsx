@@ -219,15 +219,18 @@ export default function OrderStatus() {
           </section>
         )}
         
-{order.status === "preparing" || "ready" && (
-          <div className="os-cta-card os-cta-warn">
+{order.status === "preparing" && (
+  <div className="os-cta-warn">
+  <div className="os-cta-card os-cta-warn">
             <XCircle className="w-5 h-5" />
             <div>
               <p className="os-cta-title">Important Note:</p>
-              <p className="os-cta-sub">This order can not be cancelled or refundable.</p>
+              <p className="os-cta-sub">From this step this order can not be cancelled or refundable wait until delivered.</p>
             </div>
             <button className="os-cta-btn" onClick={() => navigate("/info")}>Learn more</button>
           </div>
+  </div>
+          
         )}
         
         {/* ── Cancellation Info Banner ── */}
