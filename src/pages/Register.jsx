@@ -4,7 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import { useToast } from "../components/Toast";
 import {
   Flame, Mail, Lock, User, Phone,
-  UserPlus, Loader2, Eye, EyeOff,
+  UserPlus, Loader, Eye, EyeOff,
 } from "lucide-react";
 
 /* ── Field component OUTSIDE Register — prevents remount on every keystroke ── */
@@ -147,7 +147,7 @@ export default function Register() {
 
           <button type="submit" disabled={loading} className="auth-submit">
             {loading ? (
-              <><Loader2 className="w-5 h-5 auth-spin" /> Creating account…</>
+              <><Loader className="w-5 h-5 auth-spin" /> Creating account…</>
             ) : (
               <><UserPlus className="w-5 h-5" /> Create Account</>
             )}
