@@ -162,6 +162,7 @@ export default function Menu() {
 
   /* ── Main ── */
   return (
+    <>
     <div className="menu-root">
       <style>{menuStyles}</style>
 
@@ -346,8 +347,10 @@ export default function Menu() {
         <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />
       )}
 
-      <Footer />
+      
     </div>
+      <Footer />
+    </>
   );
 }
 
