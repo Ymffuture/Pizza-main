@@ -259,7 +259,7 @@ const styles = `
   .cart-count-pill {
     background: var(--gold); color: #0e0700;
     font-weight: 900; font-size: 11px;
-    padding: 5px 12px; border-radius: 50px;
+    padding: 5px 12px; border-radius: 10px;
     letter-spacing: 0.03em;
   }
 
