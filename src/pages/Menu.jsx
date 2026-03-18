@@ -9,7 +9,7 @@ import Footer from "../components/Footer";
 import {
   ShoppingBag, ShoppingCart, RefreshCw, UtensilsCrossed, Zap,
   ChevronRight, Flame, Search, SlidersHorizontal, LogOut,
-  Menu as MenuIcon, X, Info, Home, FileText, Phone
+  PanelLeftOpen, X, Info, Home, FileText, Phone
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
@@ -274,7 +274,7 @@ export default function Menu() {
             className="menu-toggle-btn"
             onClick={() => setSidebarOpen(true)}
           >
-            <MenuIcon className="w-6 h-6" />
+            <PanelLeftOpen className="w-6 h-6" />
           </button>
 
           <div className="top-bar-center">
@@ -768,7 +768,7 @@ const menuStyles = `
     height: 40px;
     border-radius: 10px;
     background: rgba(255, 248, 231, 0.05);
-    border: 1px solid var(--border);
+    
     color: var(--muted);
     display: flex;
     align-items: center;
