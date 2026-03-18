@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { formatCurrency } from "../utils/formatCurrency";
-import { ShoppingBag, ZoomIn, X, CircleStar, Tags } from "lucide-react";
+import { ShoppingBag, ZoomIn, X,Star, Tags } from "lucide-react";
 import StarRating from "./StarRating";
 /* ─────────────────────────────────────────────
    3-D Lightbox — full-screen image viewer with
@@ -208,7 +208,7 @@ export default function MenuCard({ item, onSelect }) {
             </div>
 <div className="mc-stars">
               {[...Array(5)].map((_, i) => (
-                <CircleStar
+                <Star
                   key={i}
                   className={`mc-star${i < (item.rating || 4) ? " mc-star-on" : ""}`}
                 />
