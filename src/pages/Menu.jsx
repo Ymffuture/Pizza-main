@@ -252,7 +252,7 @@ export default function Menu() {
           <div className="sidebar-footer">
             {isAuth ? (
               <div className="sidebar-user">
-                <span className="sidebar-user-email">{user?.email?.split("@")[0]}</span>
+                <span className="sidebar-user-email">{user?.email}</span>
                 <button className="sidebar-logout-btn" onClick={handleLogout}>
                   <LogOut className="w-4 h-4" />
                 </button>
