@@ -217,8 +217,8 @@ function Bubble({ msg, onCancelConfirm, cancellingId }) {
       </div>
       {isUser && (
   <div className="kb-ai-avatar kb-ai-avatar-user">
-    {isUser.user?.picture
-      ? <Avatar picture={isUser.user.picture} size={22} />
+    {user?.picture                          {/* ✅ user from useAuth, not isUser */}
+      ? <Avatar picture={user.picture} name={user?.full_name || user?.email} size={22} />
       : <CircleUser className="w-3.5 h-3.5" />}
   </div>
 )}
@@ -228,7 +228,7 @@ function Bubble({ msg, onCancelConfirm, cancellingId }) {
 
 /* ── Main component ── */
 export default function AiChat() {
-  const { isAuth } = useAuth();
+  const { isAuth, user } = useAuth(); 
   const params = useParams();
   const pageOrderId = params?.id || null;
 
@@ -441,6 +441,7 @@ export default function AiChat() {
                       msg={m}
                       onCancelConfirm={handleCancelConfirm}
                       cancellingId={cancellingId}
+                      user={user}
                     />
                   ))
                 )}
