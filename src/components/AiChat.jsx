@@ -169,7 +169,7 @@ function SignInPrompt() {
 }
 
 /* ── Message bubble ── */
-function Bubble({ msg, onCancelConfirm, cancellingId }) {
+function Bubble({ msg, onCancelConfirm, cancellingId, user}) {
   const isUser = msg.role === "user";
   const orderId = !isUser ? extractOrderId(msg.content) : null;
 
