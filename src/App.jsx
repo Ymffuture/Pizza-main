@@ -26,6 +26,10 @@ const ErrorPage = lazy(() => import("./pages/ErrorPage"));
 const Login = lazy(() => import("./pages/Login"));
 const Register = lazy(() => import("./pages/Register"));
 const Info = lazy(() => import("./components/Info"));
+// Add lazy imports:
+const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
+const ResetPassword  = lazy(() => import("./pages/ResetPassword"));
+const VerifyEmail    = lazy(() => import("./pages/VerifyEmail"));
 
 
 export default function App() {
