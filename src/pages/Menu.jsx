@@ -235,9 +235,9 @@ export default function Menu() {
                 <Info className="w-4 h-4" />
                 <span>Policies & Info</span>
               </Link>
-              <Link to="/cart" className="sidebar-nav-link">
+              <Link to="/cart" className="sidebar-nav-link flex gap-2 ">
                 <ShoppingBag className="w-4 h-4" />
-                <span>Bag <span className="text-gray-600 bg-white rounded-full bold p-1" >{count}</span></span>
+                <span>Bag <span className="text-white bold" >{count}</span></span>
               </Link>
             </nav>
           </div>
