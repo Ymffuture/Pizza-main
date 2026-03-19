@@ -1,20 +1,19 @@
-
-import ReactDOM from 'react-dom/client'
-import App from './App.jsx'
-import './index.css'
+import ReactDOM from "react-dom/client";
+import { GoogleOAuthProvider } from "@react-oauth/google";
+import App from "./App.jsx";
+import "./index.css";
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
     navigator.serviceWorker
       .register("/sw.js")
-      .then(reg => console.log("Service Worker registered", reg))
-      .catch(err => console.log("Service Worker registration failed:", err));
+      .then((reg) => console.log("SW registered", reg))
+      .catch((err) => console.log("SW failed:", err));
   });
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(
-  <>
+ReactDOM.createRoot(document.getElementById("root")).render(
+  <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
     <App />
-    
-  </>
-)
+  </GoogleOAuthProvider>
+);
