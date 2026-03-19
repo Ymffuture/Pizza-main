@@ -9,7 +9,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import axiosClient from "../api/axiosClient";
 import { useAuth } from "../context/AuthContext";
-import { useParams } from "react-router-dom";
+import { useParams, Link} from "react-router-dom";
 import { getBusinessHoursStatus } from "../utils/businessHours";
 import { Tooltip } from "antd";
 
@@ -155,14 +155,12 @@ function SignInPrompt() {
         <p className="kb-signin-title">Sign in required</p>
         <p className="kb-signin-text">
           Please{" "}
-          <a 
-            href="https://foodsorder.vercel.app/login" 
-            target="_blank" 
-            rel="noopener noreferrer"
+          <Link
+            to="/login" 
             className="kb-signin-link"
           >
-            sign in here 🔗
-          </a>
+            sign in
+          </Link>
           {" "}to chat with KotaBot
         </p>
       </div>
