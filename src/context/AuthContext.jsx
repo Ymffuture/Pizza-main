@@ -1,12 +1,11 @@
 import { createContext, useContext, useState, useCallback } from "react";
-import { login as apiLogin, register as apiRegister } from "../api/auth.api";
+import { login as apiLogin, register as apiRegister, googleAuth } from "../api/auth.api";
 
 const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
-  // Try to seed from sessionStorage so a page refresh doesn't force re-login
   const [token, setToken] = useState(() => sessionStorage.getItem("kb_token") || null);
-  const [user, setUser]   = useState(() => {
+  const [user,  setUser]  = useState(() => {
     try { return JSON.parse(sessionStorage.getItem("kb_user")); } catch { return null; }
   });
 
@@ -23,11 +22,25 @@ export function AuthProvider({ children }) {
     return res.data;
   }, []);
 
+  // Google OAuth — access_token comes from @react-oauth/google hook
+  const googleLogin = useCallback(async (access_token) => {
+    const res = await googleAuth(access_token);
+    const { access_token: jwt, user: googleUser } = res.data;
+    saveSession(jwt, {
+      email:     googleUser.email,
+      full_name: googleUser.full_name,
+      picture:   googleUser.picture || "",
+    });
+    return res.data;
+  }, []);
+
   const register = useCallback(async (data) => {
     await apiRegister(data);
-    // Auto-login after registration
     const res = await apiLogin({ email: data.email, password: data.password });
-    saveSession(res.data.access_token, { email: data.email, full_name: data.full_name });
+    saveSession(res.data.access_token, {
+      email:     data.email,
+      full_name: data.full_name,
+    });
     return res.data;
   }, []);
 
@@ -39,7 +52,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ token, user, login, register, logout, isAuth: !!token }}>
+    <AuthContext.Provider value={{ token, user, login, googleLogin, register, logout, isAuth: !!token }}>
       {children}
     </AuthContext.Provider>
   );
