@@ -2,7 +2,8 @@ import ReactDOM from "react-dom/client";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import App from "./App.jsx";
 import "./index.css";
-
+// src/main.jsx or src/index.jsx
+import "antd/dist/reset.css";
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
     navigator.serviceWorker
