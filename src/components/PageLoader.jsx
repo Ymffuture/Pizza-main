@@ -1,6 +1,6 @@
 export default function PageLoader() {
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-orange-50 via-white to-orange-50">
+    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-orange-50 via-black to-orange-50">
       <div className="flex flex-col items-center gap-6">
         
         {/* Animated Logo Mark */}
