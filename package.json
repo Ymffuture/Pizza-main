@@ -28,7 +28,6 @@
     "react-toastify": "^11.0.5",
     "socket.io-client": "^4.7.5",
     "zustand": "^4.5.2", 
-          "framer-motion": "^11.2.6",
     "react-markdown": "^8.0.7",
     "remark-gfm": "^3.0.1",
     
