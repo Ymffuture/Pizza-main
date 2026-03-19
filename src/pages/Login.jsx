@@ -3,7 +3,9 @@ import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../components/Toast";
 import { Flame, Mail, Lock, LogIn, Loader, Eye, EyeOff } from "lucide-react";
-
+// Add these imports at the top:
+import GoogleButton from "../components/GoogleButton";
+// Also import useToast (already there) 
 export default function Login() {
   const navigate = useNavigate();
   const { login } = useAuth();
@@ -25,6 +27,16 @@ export default function Login() {
     return e;
   };
 
+// Inside the component, add after the existing handleSubmit:
+const handleGoogle = (data) => {
+  toast.show({ type: "success", title: "Welcome!", message: data.user?.full_name || data.user?.email });
+  navigate(redirect, { replace: true });
+};
+const handleGoogleError = (err) => {
+  toast.show({ type: "error", title: "Google sign-in failed", message: err?.message || "Try again" });
+};
+
+// In the JSX, BEFORE the closing </div> of auth-card, add after the form:
   const handleChange = (field) => (ev) => {
     setForm((p) => ({ ...p, [field]: ev.target.value }));
     if (errors[field]) setErrors((p) => ({ ...p, [field]: "" }));
@@ -121,7 +133,22 @@ export default function Login() {
             )}
           </button>
         </form>
+{/* Divider */}
+<div className="auth-divider">
+  <div className="auth-divider-line" />
+  <span className="auth-divider-text">OR</span>
+  <div className="auth-divider-line" />
+</div>
 
+{/* Google */}
+<GoogleButton onSuccess={handleGoogle} onError={handleGoogleError} />
+
+{/* Forgot password */}
+<p style={{ textAlign: "center", marginTop: 14 }}>
+  <Link to="/forgot-password" className="auth-link" style={{ fontSize: 13 }}>
+    Forgot your password?
+  </Link>
+</p>
         <p className="auth-switch">
           Don&apos;t have an account?{" "}
           <Link
