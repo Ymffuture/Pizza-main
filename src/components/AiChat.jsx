@@ -12,7 +12,7 @@ import { useAuth } from "../context/AuthContext";
 import { useParams, Link} from "react-router-dom";
 import { getBusinessHoursStatus } from "../utils/businessHours";
 import { Tooltip } from "antd";
-
+import Avatar from "./Avatar";
 function extractOrderId(text) {
   const full = text.match(/\b([0-9a-fA-F]{24})\b/);
   return full ? full[1] : null;
@@ -216,8 +216,12 @@ function Bubble({ msg, onCancelConfirm, cancellingId }) {
         )}
       </div>
       {isUser && (
-        <div className="kb-ai-avatar kb-ai-avatar-user"><CircleUser className="w-3.5 h-3.5" /></div>
-      )}
+  <div className="kb-ai-avatar kb-ai-avatar-user">
+    {auth.user?.picture
+      ? <Avatar picture={auth.user.picture} size={22} />
+      : <CircleUser className="w-3.5 h-3.5" />}
+  </div>
+)}
     </div>
   );
 }
