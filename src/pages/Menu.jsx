@@ -6,6 +6,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { useToast } from "../components/Toast";
 import Footer from "../components/Footer";
+import Avatar from "../components/Avatar" ;
 import {
   ShoppingBag, ShoppingCart, RefreshCw, UtensilsCrossed, Zap,
   ChevronRight, Flame, Search, SlidersHorizontal, LogOut,
@@ -251,11 +252,12 @@ export default function Menu() {
           {/* User Section */}
           <div className="sidebar-footer">
             {isAuth ? (
-              <div className="sidebar-user">
+              <div className="sidebar-user flex gap-2 ">
                 <span className="sidebar-user-email">{user?.email}</span>
                 <button className="sidebar-logout-btn" onClick={handleLogout}>
                   <LogOut className="w-4 h-4" />
-                </button>
+                </button> 
+            <Avatar picture={user?.picture} name={user?.full_name || user?.email} size={30} />
               </div>
             ) : (
               <button className="sidebar-login-btn" onClick={() => navigate("/login")}>
