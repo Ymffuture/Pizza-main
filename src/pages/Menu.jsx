@@ -292,7 +292,7 @@ export default function Menu() {
             {count > 0 && <span className="cart-badge">{count}</span>}
           </button>
           <Tooltip title={user?.full_name} >
-          <Avatar picture={user?.picture} name={user?.full_name || user?.email} size={50} />
+          <Avatar picture={user?.picture} name={user?.full_name || user?.email} size={40} />
                 
           </Tooltip>
           
