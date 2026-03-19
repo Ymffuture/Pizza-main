@@ -253,11 +253,13 @@ export default function Menu() {
           <div className="sidebar-footer">
             {isAuth ? (
               <div className="sidebar-user flex gap-2 ">
+                <Avatar picture={user?.picture} name={user?.full_name || user?.email} size={30} />
+                
                 <span className="sidebar-user-email">{user?.email}</span>
                 <button className="sidebar-logout-btn" onClick={handleLogout}>
                   <LogOut className="w-4 h-4" />
                 </button> 
-            <Avatar picture={user?.picture} name={user?.full_name || user?.email} size={30} />
+            
               </div>
             ) : (
               <button className="sidebar-login-btn" onClick={() => navigate("/login")}>
@@ -288,6 +290,9 @@ export default function Menu() {
             <ShoppingBag className="w-5 h-5" />
             {count > 0 && <span className="cart-badge">{count}</span>}
           </button>
+          
+          <Avatar picture={user?.picture} name={user?.full_name || user?.email} size={30} />
+                
         </header>
 
         {/* ── Info Strip ── */}
