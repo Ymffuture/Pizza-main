@@ -13,6 +13,7 @@ import {
   PanelLeftOpen, X, Info, Home, FileText, Phone
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import {Tooltip} from "antd" ;
 
 // Sorted categories alphabetically with "All" first
 const CATEGORIES = ["All", "Chips", "Drinks", "Extras", "Kota"].sort((a, b) => {
@@ -290,9 +291,11 @@ export default function Menu() {
             <ShoppingBag className="w-5 h-5" />
             {count > 0 && <span className="cart-badge">{count}</span>}
           </button>
-          
-          <Avatar picture={user?.picture} name={user?.full_name || user?.email} size={30} />
+          <Tooltip title={user?.full_name} >
+          <Avatar picture={user?.picture} name={user?.full_name || user?.email} size={50} />
                 
+          </Tooltip>
+          
         </header>
 
         {/* ── Info Strip ── */}
