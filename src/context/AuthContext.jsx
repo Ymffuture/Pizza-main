@@ -24,7 +24,18 @@ export function AuthProvider({ children }) {
 
   const login = useCallback(async ({ email, password }) => {
     const res = await apiLogin({ email, password });
-    saveSession(res.data.access_token, { email });
+    
+    // ✅ CRITICAL: Check if email is verified before allowing login
+    if (res.data.email_verified === false) {
+      throw new Error("Please verify your email before logging in. Check your inbox for the verification link.");
+    }
+    
+    saveSession(res.data.access_token, { 
+      email,
+      email_verified: res.data.email_verified,
+      full_name: res.data.full_name,
+      picture: res.data.picture
+    });
     return res.data;
   }, []);
 
@@ -35,6 +46,7 @@ export function AuthProvider({ children }) {
       email:     googleUser.email,
       full_name: googleUser.full_name,
       picture:   googleUser.picture || "",
+      email_verified: true // Google emails are pre-verified
     });
     return res.data;
   }, []);
@@ -63,13 +75,9 @@ export function AuthProvider({ children }) {
       }
     }
 
-    // 3. Auto-login after registration
-    const loginRes = await apiLogin({ email: data.email, password: data.password });
-    saveSession(loginRes.data.access_token, {
-      email:     data.email,
-      full_name: data.full_name,
-    });
-    return loginRes.data;
+    // 3. ⚠️ DON'T auto-login after registration - user must verify email first
+    // Instead, redirect them to verify email page
+    return regRes.data;
   }, []);
 
   const logout = useCallback(() => {
