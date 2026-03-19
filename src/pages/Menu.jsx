@@ -291,7 +291,7 @@ export default function Menu() {
             <ShoppingBag className="w-5 h-5" />
             {count > 0 && <span className="cart-badge">{count}</span>}
           </button>
-          <Tooltip title={user?.full_name} >
+          <Tooltip title={user?.full_name} placement="topLeft">
           <Avatar picture={user?.picture} name={user?.full_name || user?.email} size={40} />
                 
           </Tooltip>
