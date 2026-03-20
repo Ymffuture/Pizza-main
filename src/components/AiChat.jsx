@@ -298,57 +298,69 @@ export default function AiChat() {
   };
 
   /* ── Send ── */
-  const handleSend = async () => {
-    const text = input.trim();
-    if (!text || loading) return;
+  // Key section of fixes in handleSend function:
 
-    const detectedId = extractOrderId(text);
-    if (detectedId) setCtxId(detectedId);
+/* ── Send ── */
+const handleSend = async () => {
+  const text = input.trim();
+  if (!text || loading) return;
 
-    const userMsg = { role: "user", content: text };
-    const updated = [...messages, userMsg];
-    setMessages(updated);
-    setInput("");
-    setLoading(true);
-    setCancelResult(null);
+  const detectedId = extractOrderId(text);
+  if (detectedId) setCtxId(detectedId);
 
-    const firstUserIdx = updated.findIndex((m) => m.role === "user");
-    const apiMessages  = firstUserIdx >= 0 ? updated.slice(firstUserIdx) : updated;
+  const userMsg = { role: "user", content: text };
+  const updated = [...messages, userMsg];
+  setMessages(updated);
+  setInput("");
+  setLoading(true);
+  setCancelResult(null);
 
-    try {
-      const { data } = await axiosClient.post("/ai/chat", {
-        messages: apiMessages,
-        order_id: detectedId || contextId || null,
-      });
+  const firstUserIdx = updated.findIndex((m) => m.role === "user");
+  const apiMessages  = firstUserIdx >= 0 ? updated.slice(firstUserIdx) : updated;
 
-      const botMsg = { role: "assistant", content: data.reply };
+  try {
+    const { data } = await axiosClient.post("/ai/chat", {
+      messages: apiMessages,
+      order_id: detectedId || contextId || null,
+    });
 
-      if (data.cancel_result) setCancelResult(data.cancel_result);
+    const botMsg = { role: "assistant", content: data.reply };
 
-      const pendingId = !data.cancel_result
-        ? (() => {
-            const lowerReply = (data.reply || "").toLowerCase();
-            const wantConfirm =
-              (lowerReply.includes("cancel") && lowerReply.includes("confirm")) ||
-              lowerReply.includes("sure you want to cancel");
-            return wantConfirm ? (detectedId || contextId || undefined) : undefined;
-          })()
-        : undefined;
+    if (data.cancel_result) setCancelResult(data.cancel_result);
 
-      if (pendingId) botMsg.pendingCancelId = pendingId;
+    // ── IMPROVED: Better keyword detection for confirmation prompts ──
+    const pendingId = !data.cancel_result
+      ? (() => {
+          const lowerReply = (data.reply || "").toLowerCase();
+          
+          // More flexible keyword matching
+          const wantConfirm =
+            lowerReply.includes("confirm") ||
+            lowerReply.includes("are you sure") ||
+            lowerReply.includes("proceed") ||
+            lowerReply.includes("confirm cancellation") ||
+            (lowerReply.includes("cancel") && lowerReply.includes("?")) ||
+            lowerReply.includes("sure you want to cancel");
+          
+          const orderId = detectedId || contextId;
+          return wantConfirm && orderId ? orderId : undefined;
+        })()
+      : undefined;
 
-      setMessages([...updated, botMsg]);
-      if (!open) setUnread((u) => u + 1);
-    } catch (err) {
-      const errMsg =
-        err?.response?.status === 401
-          ? "Please **sign in** to chat with KotaBot."
-          : "Eish, something went wrong. Try again in a moment.";
-      setMessages([...updated, { role: "assistant", content: errMsg }]);
-    } finally {
-      setLoading(false);
-    }
-  };
+    if (pendingId) botMsg.pendingCancelId = pendingId;
+
+    setMessages([...updated, botMsg]);
+    if (!open) setUnread((u) => u + 1);
+  } catch (err) {
+    const errMsg =
+      err?.response?.status === 401
+        ? "Please **sign in** to chat with KotaBot."
+        : "Eish, something went wrong. Try again in a moment.";
+    setMessages([...updated, { role: "assistant", content: errMsg }]);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleOpen = () => { setOpen(true); setMin(false); setUnread(0); };
 
