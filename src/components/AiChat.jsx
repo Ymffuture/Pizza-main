@@ -176,7 +176,7 @@ function Bubble({ msg, onCancelConfirm, cancellingId, user}) {
   return (
     <div className={`kb-ai-bubble-row ${isUser ? "kb-ai-bubble-user" : "kb-ai-bubble-bot"}`}>
       {!isUser && (
-        <div className="kb-ai-avatar kb-ai-avatar-bot"><BotMessageSquare className="w-3.5 h-3.5" /></div>
+        <div className="kb-ai-avatar kb-ai-avatar-bot"><img src="https://api.dicebear.com/9.x/avataaars/svg?seed=ai" alt="profile picture" className="w-5 h-5" /></div>
       )}
       <div className={`kb-ai-bubble ${isUser ? "kb-ai-bubble-u" : "kb-ai-bubble-b"}`}>
         {isUser ? (
@@ -193,6 +193,8 @@ function Bubble({ msg, onCancelConfirm, cancellingId, user}) {
                 <CopyOrderId orderId={orderId} />
               </div>
             )}
+
+            
             {msg.pendingCancelId && (
               <div className="kb-confirm-row">
                 <p className="kb-confirm-text">Confirm cancellation?</p>
@@ -219,7 +221,7 @@ function Bubble({ msg, onCancelConfirm, cancellingId, user}) {
         <div className="kb-ai-avatar kb-ai-avatar-user">
           {user?.picture || user?.avatar                       
             ? <Avatar picture={user?.picture || user?.avatar} name={user?.full_name} email={user?.email} size={24} />
-            : <CircleUser className="w-3.5 h-3.5" />}
+            : <CircleUser className="w-4 h-4" />}
         </div>
       )}
     </div>
@@ -371,7 +373,7 @@ export default function AiChat() {
         style={{ background: isOpen ? "#4ade80" : "#f87171" }}
       />
 
-      {unread > 0 && (
+      {unread >0 || loading  && (
         <span className="kb-ai-unread">{unread}</span>
       )}
     </button>
@@ -448,7 +450,7 @@ export default function AiChat() {
                 {loading && (
                   <div className="kb-ai-bubble-row kb-ai-bubble-bot">
                     <div className="kb-ai-avatar kb-ai-avatar-bot">
-                      <img src="https://api.dicebear.com/9.x/avataaars/svg?seed=bot" alt="profile picture" className="w-3.5 h-3.5" />
+                      <img src="https://api.dicebear.com/9.x/avataaars/svg?seed=ai" alt="profile picture" className="w-3.5 h-3.5" />
                     </div>
                     <div className="kb-ai-bubble kb-ai-bubble-b kb-ai-typing-bubble">
                       <span /><span /><span />
