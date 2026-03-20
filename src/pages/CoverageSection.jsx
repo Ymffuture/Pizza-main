@@ -24,7 +24,7 @@ function haversine(lat1, lng1, lat2, lng2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-function CoverageSection() {
+export default function CoverageSection() {
   const mapRef      = useRef(null);
   const mapInstance = useRef(null);
   const markerRef   = useRef(null);
