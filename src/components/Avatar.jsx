@@ -1,6 +1,13 @@
 import { useMemo, useState } from "react";
+import md5 from "blueimp-md5";
 
-export default function Avatar({ picture, name, size = 32, style = {} }) {
+export default function Avatar({
+  picture,
+  email,
+  name,
+  size = 32,
+  style = {},
+}) {
   const [error, setError] = useState(false);
 
   const initials = name
@@ -12,11 +19,13 @@ export default function Avatar({ picture, name, size = 32, style = {} }) {
         .toUpperCase()
     : "U";
 
-  // AI avatar
-  const aiAvatar = useMemo(() => {
-    const seed = encodeURIComponent(name || "user");
-    return `https://api.dicebear.com/7.x/bottts/svg?seed=${seed}`;
-  }, [name]);
+  // Gravatar avatar
+  const gravatar = useMemo(() => {
+    if (!email) return null;
+
+    const hash = md5(email.trim().toLowerCase());
+    return `https://www.gravatar.com/avatar/${hash}?s=${size}&d=robohash`;
+  }, [email, size]);
 
   // Random local avatar
   const randomAvatar = useMemo(() => {
@@ -34,7 +43,7 @@ export default function Avatar({ picture, name, size = 32, style = {} }) {
     ...style,
   };
 
-  const src = picture || aiAvatar || randomAvatar;
+  const src = picture || gravatar || randomAvatar;
 
   if (error) {
     return (
