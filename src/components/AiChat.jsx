@@ -217,7 +217,7 @@ function Bubble({ msg, onCancelConfirm, cancellingId, user}) {
       </div>
       {isUser && (
   <div className="kb-ai-avatar kb-ai-avatar-user">
-    {user?.picture                        
+    {user?.avatar                       
       ? <Avatar picture={user?.avatar} name={user?.full_name } email={user?.email} size={24} />
       : <CircleUser className="w-3.5 h-3.5" />}
   </div>
