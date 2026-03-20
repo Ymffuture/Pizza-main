@@ -21,7 +21,7 @@ export default function Login() {
   const validate = () => {
     const e = {};
     if (!form.email.trim())    e.email    = "Email is required";
-    else if (!/\S+@\S+\.\S+/.test(form.email)) e.email = "Invalid email";
+    else if (!/\S+@\S+\.\S+/.test(form.email.trim().toLowerCase())) e.email = "Invalid email";
     if (!form.password.trim()) e.password = "Password is required";
     return e;
   };
@@ -120,7 +120,7 @@ export default function Login() {
                 type="email"
                 className="auth-input"
                 placeholder="you@example.com"
-                value={form.email}
+                value={form.email.trim().toLowerCase()}
                 onChange={handleChange("email")}
                 autoComplete="email"
               />
