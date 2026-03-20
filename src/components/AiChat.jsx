@@ -217,8 +217,8 @@ function Bubble({ msg, onCancelConfirm, cancellingId, user}) {
       </div>
       {isUser && (
   <div className="kb-ai-avatar kb-ai-avatar-user">
-    {user?.picture                          
-      ? <Avatar picture={user.picture} name={user?.full_name || user?.email} size={22} />
+    {user?.avatar                         
+      ? <Avatar picture={user.avatar} name={user?.full_name || user?.email} email={user?.email} size={24} />
       : <CircleUser className="w-3.5 h-3.5" />}
   </div>
 )}
@@ -448,7 +448,7 @@ export default function AiChat() {
                 {loading && (
                   <div className="kb-ai-bubble-row kb-ai-bubble-bot">
                     <div className="kb-ai-avatar kb-ai-avatar-bot">
-                      <BotMessageSquare className="w-3.5 h-3.5" />
+                      <img src="https://api.dicebear.com/9.x/avataaars/svg?seed=bot" alt="profile picture" className="w-3.5 h-3.5" />
                     </div>
                     <div className="kb-ai-bubble kb-ai-bubble-b kb-ai-typing-bubble">
                       <span /><span /><span />
