@@ -357,7 +357,7 @@ export default function AiChat() {
       {/* ── FAB ── */}
       
 {!open && (
-  <Tooltip title="KotaBot" placement="topLeft">
+  <Tooltip title="KotaBot" placement="topLeft" overlayStyle={{ zIndex: 9999 }}>
     <button
       className="kb-ai-fab"
       onClick={handleOpen}
