@@ -203,7 +203,7 @@ function Bubble({ msg, onCancelConfirm, cancellingId, user}) {
                     onClick={() => onCancelConfirm(msg.pendingCancelId)}
                   >
                     {cancellingId === msg.pendingCancelId
-                      ? <Loader2 className="w-3 h-3 kb-ai-spin" />
+                      ? <Loader className="w-3 h-3 kb-ai-spin" />
                       : "Yes, cancel it"}
                   </button>
                   <button className="kb-confirm-no" onClick={() => onCancelConfirm(null)}>
@@ -216,12 +216,12 @@ function Bubble({ msg, onCancelConfirm, cancellingId, user}) {
         )}
       </div>
       {isUser && (
-  <div className="kb-ai-avatar kb-ai-avatar-user">
-    {user?.avatar                       
-      ? <Avatar picture={user?.avatar} name={user?.full_name } email={user?.email} size={24} />
-      : <CircleUser className="w-3.5 h-3.5" />}
-  </div>
-)}
+        <div className="kb-ai-avatar kb-ai-avatar-user">
+          {user?.picture || user?.avatar                       
+            ? <Avatar picture={user?.picture || user?.avatar} name={user?.full_name} email={user?.email} size={24} />
+            : <CircleUser className="w-3.5 h-3.5" />}
+        </div>
+      )}
     </div>
   );
 }
@@ -357,7 +357,7 @@ export default function AiChat() {
       {/* ── FAB ── */}
       
 {!open && (
-  <Tooltip title="KotaBot" placement="topLeft" overlayStyle={{ zIndex: 9999 }}>
+  <Tooltip title="KotaBot" placement="topLeft">
     <button
       className="kb-ai-fab"
       onClick={handleOpen}
