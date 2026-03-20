@@ -299,7 +299,28 @@ export default function AiChat() {
 
   /* ── Send ── */
   // Key section of fixes in handleSend function:
+/* ── Detect if bot reply needs cancel confirmation ── */
+function shouldShowCancelConfirm(userText, botReply, cancelResult) {
+  if (cancelResult) return false;
 
+  const lowerText  = userText.toLowerCase();
+  const lowerReply = (botReply || "").toLowerCase();
+
+  const userWantsCancel =
+    lowerText.includes("cancel") ||
+    lowerText.includes("cancel my order") ||
+    lowerText.includes("cancel order");
+
+  const botConfirming =
+    lowerReply.includes("confirm") ||
+    lowerReply.includes("are you sure") ||
+    lowerReply.includes("proceed") ||
+    lowerReply.includes("sure you want") ||
+    lowerReply.includes("cancel") ||
+    lowerReply.includes("?");
+
+  return userWantsCancel || botConfirming;
+}
 /* ── Send ── */
 const handleSend = async () => {
   const text = input.trim();
@@ -328,36 +349,16 @@ const handleSend = async () => {
 
     if (data.cancel_result) setCancelResult(data.cancel_result);
 
-    // ── IMPROVED: Better keyword detection for confirmation prompts ──
-    // ── DETECT cancel intent from the USER's message (more reliable) ──
-const userWantsCancel = (() => {
-  const lowerText = text.toLowerCase();
-  return (
-    lowerText.includes("cancel") ||
-    lowerText.includes("cancel my order") ||
-    lowerText.includes("cancel order")
-  );
+/* ── Detect if bot reply needs cancel confirmation ── */
+const pendingId = (() => {
+  const orderId = detectedId || contextId;
+  return shouldShowCancelConfirm(text, data.reply, data.cancel_result) && orderId
+    ? orderId
+    : undefined;
 })();
 
-const pendingId = !data.cancel_result
-  ? (() => {
-      const lowerReply = (data.reply || "").toLowerCase();
-
-      const botConfirming =
-        lowerReply.includes("confirm") ||
-        lowerReply.includes("are you sure") ||
-        lowerReply.includes("proceed") ||
-        lowerReply.includes("sure you want") ||
-        lowerReply.includes("cancel") ||
-        lowerReply.includes("?");
-
-      const orderId = detectedId || contextId;
-      return (userWantsCancel || botConfirming) && orderId ? orderId : undefined;
-    })()
-  : undefined;
-
 if (pendingId) botMsg.pendingCancelId = pendingId;
-
+    
     setMessages([...updated, botMsg]);
     if (!open) setUnread((u) => u + 1);
   } catch (err) {
