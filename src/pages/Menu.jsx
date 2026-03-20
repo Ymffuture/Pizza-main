@@ -17,7 +17,7 @@ import {Tooltip} from "antd" ;
 
 
 // Sorted categories alphabetically with "All" first
-const CATEGORIES = ["All", "Chips", "Drinks", "Extras", "Kota"].sort((a, b) => {
+const CATEGORIES = ["All", "Kota"].sort((a, b) => {
   if (a === "All") return -1;
   if (b === "All") return 1;
   return a.localeCompare(b);
