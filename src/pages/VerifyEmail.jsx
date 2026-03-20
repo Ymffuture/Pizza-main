@@ -24,7 +24,7 @@ export default function VerifyEmail() {
     if (!token) return;
     setState("loading");
     verifyEmail(token)
-      .then(() => { setState("success"); setTimeout(() => navigate("/menu"), 2000); })
+      .then(() => { setState("success"); setTimeout(() => navigate("/login"), 3000); })
       .catch((err) => {
         setState("error");
         setMsg(err?.response?.data?.detail || "Verification failed — link may have expired.");
