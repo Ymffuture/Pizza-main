@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import {Tooltip} from "antd" ;
-import "antd/dist/antd.css";
+
 
 // Sorted categories alphabetically with "All" first
 const CATEGORIES = ["All", "Chips", "Drinks", "Extras", "Kota"].sort((a, b) => {
