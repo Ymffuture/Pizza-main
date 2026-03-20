@@ -1,10 +1,11 @@
 import { Link, useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
 import axiosClient from "../api/axiosClient";
 import Footer from "../components/Footer";
 import { Info, AlertCircle, XCircle, Phone, FileText, ChevronRight } from "lucide-react";
-
+import CoverageSection from "./CoverageSection";
+import { MapPin, CheckCircle, XCircle, Bike } from "lucide-react";
 export default function Home() {
   const [floatItems, setFloatItems] = useState([]);
   const [trackId, setTrackId]       = useState("");
@@ -244,6 +245,7 @@ export default function Home() {
       `}</style>
       
     </div>
+      <CoverageSection />
       <Footer />
     </>
   );
