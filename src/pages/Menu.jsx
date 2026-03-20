@@ -8,7 +8,7 @@ import { useToast } from "../components/Toast";
 import Footer from "../components/Footer";
 import Avatar from "../components/Avatar" ;
 import {
-  ShoppingBag, ShoppingCart, RefreshCw, UtensilsCrossed, Zap,
+  ShoppingBag, ShoppingCart, RefreshCw, UtensilsCrossed, Zap,PanelLeftClose, 
   ChevronRight, Flame, Search, SlidersHorizontal, LogOut,
   PanelLeftOpen, X, Info, Home, FileText, Phone
 } from "lucide-react";
@@ -184,7 +184,7 @@ export default function Menu() {
               className="sidebar-close-btn"
               onClick={() => setSidebarOpen(false)}
             >
-              <X className="w-5 h-5" />
+              <PanelLeftClose className="w-5 h-5" />
             </button>
           </div>
 
