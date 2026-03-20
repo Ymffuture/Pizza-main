@@ -172,8 +172,9 @@ export default function Login() {
         </div>
 
         {/* Google */}
+        {!loading? 
         <GoogleButton onSuccess={handleGoogle} onError={handleGoogleError} disabled={loading} />
-
+        : <span className="text-gray-600 animate-pulse text-sm" >Log in with email </span>} 
         {/* Forgot password */}
         <p style={{ textAlign: "center", marginTop: 14 }}>
           <Link to="/forgot-password" className="auth-link" style={{ fontSize: 13 }}>
