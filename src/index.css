@@ -2,4 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Reset Ant Design styles */
 @import "antd/dist/reset.css";
+
+/* Import specific Ant Design component styles */
+@import "antd/es/tooltip/style";
+@import "antd/es/popover/style";
+
+/* Or import the full theme (but adds more CSS): */
+/* @import "antd/dist/antd.css"; */
