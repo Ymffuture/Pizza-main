@@ -3,7 +3,7 @@ import { useEffect, useState, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
 import axiosClient from "../api/axiosClient";
 import Footer from "../components/Footer";
-import { Info, AlertCircle, XCircle, Phone, FileText, ChevronRight } from "lucide-react";
+import { Info, AlertCircle, Phone, FileText, ChevronRight } from "lucide-react";
 import CoverageSection from "./CoverageSection";
 import { MapPin, CheckCircle, XCircle, Bike } from "lucide-react";
 export default function Home() {
