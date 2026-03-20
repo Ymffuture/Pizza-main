@@ -80,7 +80,7 @@ export default function Register() {
     try {
       await register({
         full_name: form.full_name.trim(),
-        email:     form.email.trim(),
+        email:     form.email.trim().toLowerCase(),
         phone:     form.phone.replace(/\s/g, ""),
         password:  form.password,
       });
