@@ -4,7 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import { useToast } from "../components/Toast";
 import {
   Flame, Mail, Lock, User, Phone,
-  UserPlus, Loader, Eye, EyeOff,
+  UserPlus, Loader, Eye, EyeOff, CheckCircle2
 } from "lucide-react";
 
 /* ── Field component OUTSIDE Register — prevents remount on every keystroke ── */
@@ -46,9 +46,9 @@ export default function Register() {
   const [form, setForm]       = useState({ full_name: "", email: "", phone: "", password: "", confirm: "" });
   const [errors, setErrors]   = useState({});
   const [loading, setLoading] = useState(false);
-  // ✅ FIX: separate show-states so toggling one doesn't affect the other
   const [showPw, setShowPw]         = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [registered, setRegistered] = useState(false);
 
   const redirect = new URLSearchParams(window.location.search).get("redirect") || "/menu";
 
@@ -84,8 +84,19 @@ export default function Register() {
         phone:     form.phone.replace(/\s/g, ""),
         password:  form.password,
       });
-      toast.show({ type: "success", title: "Account created!", message: "You're signed in." });
-      navigate(redirect, { replace: true });
+      
+      // ✅ Show success message and verification instructions
+      toast.show({ 
+        type: "success", 
+        title: "Account created!", 
+        message: "Check your email to verify your account." 
+      });
+      
+      setRegistered(true);
+      
+      // Redirect to verify email page after 2 seconds
+      setTimeout(() => navigate("/verify-email"), 2000);
+      
     } catch (err) {
       const msg =
         err?.response?.data?.detail ||
@@ -97,6 +108,41 @@ export default function Register() {
       setLoading(false);
     }
   };
+
+  // Show success screen after registration
+  if (registered) {
+    return (
+      <div className="auth-root">
+        <style>{authStyles}</style>
+        <div className="auth-card">
+          <div className="auth-logo-wrap">
+            <div className="auth-logo">
+              <Flame className="w-6 h-6" style={{ color: "#0e0700" }} />
+            </div>
+            <h1 className="auth-brand">KOTABITES</h1>
+          </div>
+          
+          <div style={{ textAlign: "center", padding: "20px 0" }}>
+            <CheckCircle2 className="w-16 h-16 mx-auto mb-4" style={{ color: "#4ade80" }} />
+            <h2 className="auth-title">Check Your Email!</h2>
+            <p className="auth-sub" style={{ marginTop: 12, marginBottom: 20 }}>
+              We've sent a verification link to <strong style={{ color: "#FFC72C" }}>{form.email}</strong>
+            </p>
+            <p className="auth-sub">
+              Please verify your email before signing in.
+            </p>
+            <Link 
+              to="/verify-email" 
+              className="auth-link" 
+              style={{ display: "block", marginTop: 20, fontSize: 14 }}
+            >
+              Go to verification page →
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="auth-root">

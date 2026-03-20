@@ -2,10 +2,9 @@ import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../components/Toast";
-import { Flame, Mail, Lock, LogIn, Loader, Eye, EyeOff } from "lucide-react";
-// Add these imports at the top:
+import { Flame, Mail, Lock, LogIn, Loader, Eye, EyeOff, AlertCircle } from "lucide-react";
 import GoogleButton from "../components/GoogleButton";
-// Also import useToast (already there) 
+
 export default function Login() {
   const navigate = useNavigate();
   const { login } = useAuth();
@@ -15,8 +14,8 @@ export default function Login() {
   const [errors, setErrors]   = useState({});
   const [loading, setLoading] = useState(false);
   const [showPw, setShowPw]   = useState(false);
+  const [needsVerification, setNeedsVerification] = useState(false);
 
-  // Where to go after login — checkout if redirected, else menu
   const redirect = new URLSearchParams(window.location.search).get("redirect") || "/menu";
 
   const validate = () => {
@@ -27,19 +26,19 @@ export default function Login() {
     return e;
   };
 
-// Inside the component, add after the existing handleSubmit:
-const handleGoogle = (data) => {
-  toast.show({ type: "success", title: "Welcome!", message: data.user?.full_name || data.user?.email });
-  navigate(redirect, { replace: true });
-};
-const handleGoogleError = (err) => {
-  toast.show({ type: "error", title: "Google sign-in failed", message: err?.message || "Try again" });
-};
+  const handleGoogle = (data) => {
+    toast.show({ type: "success", title: "Welcome!", message: data.user?.full_name || data.user?.email });
+    navigate(redirect, { replace: true });
+  };
 
-// In the JSX, BEFORE the closing </div> of auth-card, add after the form:
+  const handleGoogleError = (err) => {
+    toast.show({ type: "error", title: "Google sign-in failed", message: err?.message || "Try again" });
+  };
+
   const handleChange = (field) => (ev) => {
     setForm((p) => ({ ...p, [field]: ev.target.value }));
     if (errors[field]) setErrors((p) => ({ ...p, [field]: "" }));
+    setNeedsVerification(false);
   };
 
   const handleSubmit = async (ev) => {
@@ -48,6 +47,8 @@ const handleGoogleError = (err) => {
     if (Object.keys(errs).length) { setErrors(errs); return; }
 
     setLoading(true);
+    setNeedsVerification(false);
+    
     try {
       await login(form);
       toast.show({ type: "success", title: "Welcome back!", message: form.email });
@@ -58,7 +59,18 @@ const handleGoogleError = (err) => {
         err?.response?.data?.message ||
         err.message ||
         "Login failed";
-      toast.show({ type: "error", title: "Login failed", message: msg });
+      
+      // ✅ Check if error is related to email verification
+      if (msg.toLowerCase().includes("verify") || msg.toLowerCase().includes("verification")) {
+        setNeedsVerification(true);
+        toast.show({ 
+          type: "error", 
+          title: "Email not verified", 
+          message: "Please verify your email before logging in." 
+        });
+      } else {
+        toast.show({ type: "error", title: "Login failed", message: msg });
+      }
     } finally {
       setLoading(false);
     }
@@ -81,6 +93,22 @@ const handleGoogleError = (err) => {
           <h2 className="auth-title">Welcome back</h2>
           <p className="auth-sub">Sign in to place your order</p>
         </div>
+
+        {/* ✅ Email verification warning banner */}
+        {needsVerification && (
+          <div className="verification-banner">
+            <AlertCircle className="w-4 h-4" style={{ flexShrink: 0 }} />
+            <div style={{ flex: 1 }}>
+              <p className="verification-title">Email Not Verified</p>
+              <p className="verification-text">
+                Please check your inbox and click the verification link.
+              </p>
+            </div>
+            <Link to="/verify-email" className="verification-link">
+              Resend →
+            </Link>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="auth-form">
           {/* Email */}
@@ -133,22 +161,24 @@ const handleGoogleError = (err) => {
             )}
           </button>
         </form>
-{/* Divider */}
-<div className="auth-divider">
-  <div className="auth-divider-line" />
-  <span className="auth-divider-text">OR</span>
-  <div className="auth-divider-line" />
-</div>
 
-{/* Google */}
-<GoogleButton onSuccess={handleGoogle} onError={handleGoogleError} />
+        {/* Divider */}
+        <div className="auth-divider">
+          <div className="auth-divider-line" />
+          <span className="auth-divider-text">OR</span>
+          <div className="auth-divider-line" />
+        </div>
 
-{/* Forgot password */}
-<p style={{ textAlign: "center", marginTop: 14 }}>
-  <Link to="/forgot-password" className="auth-link" style={{ fontSize: 13 }}>
-    Forgot your password?
-  </Link>
-</p>
+        {/* Google */}
+        <GoogleButton onSuccess={handleGoogle} onError={handleGoogleError} />
+
+        {/* Forgot password */}
+        <p style={{ textAlign: "center", marginTop: 14 }}>
+          <Link to="/forgot-password" className="auth-link" style={{ fontSize: 13 }}>
+            Forgot your password?
+          </Link>
+        </p>
+
         <p className="auth-switch">
           Don&apos;t have an account?{" "}
           <Link
@@ -218,6 +248,56 @@ const authStyles = `
     font-size: 30px; letter-spacing: 2px; color: var(--text); line-height: 1;
   }
   .auth-sub { font-size: 13px; color: var(--muted); margin-top: 4px; }
+
+  /* ✅ Verification banner */
+  .verification-banner {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    background: rgba(218,41,28,0.08);
+    border: 1px solid rgba(218,41,28,0.25);
+    border-radius: 14px;
+    padding: 12px 14px;
+    margin-bottom: 20px;
+    animation: slideIn 0.3s ease;
+  }
+  
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  
+  .verification-banner > svg {
+    color: #f87171;
+    margin-top: 2px;
+  }
+  
+  .verification-title {
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--text);
+    margin: 0 0 3px 0;
+  }
+  
+  .verification-text {
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.4;
+    margin: 0;
+  }
+  
+  .verification-link {
+    color: var(--gold);
+    font-size: 12px;
+    font-weight: 700;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: opacity 0.2s;
+  }
+  
+  .verification-link:hover {
+    opacity: 0.8;
+  }
 
   .auth-form { display: flex; flex-direction: column; gap: 16px; }
 
