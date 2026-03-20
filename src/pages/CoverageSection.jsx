@@ -1,4 +1,9 @@
+
+
 // ── CONFIG — update to your store coords ──
+
+import { useEffect, useRef, useState } from "react";
+import { MapPin, CheckCircle, XCircle, Bike } from "lucide-react";
 const STORE = {
   lat: -26.2041,
   lng: 28.0473,
