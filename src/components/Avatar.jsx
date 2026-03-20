@@ -24,15 +24,22 @@ export default function Avatar({
     if (!email) return null;
 
     const hash = md5(email.trim().toLowerCase());
-    return `https://www.gravatar.com/avatar/${hash}?s=${size}&d=robohash`;
+    return `https://www.gravatar.com/avatar/${hash}?s=${size}&d=identicon`;
   }, [email, size]);
 
-  // Random local avatar
+  // Random local avatar (based on email or name for consistency)
   const randomAvatar = useMemo(() => {
     const count = 5;
-    const index = Math.floor(Math.random() * count) + 1;
+    const seed = email || name || "default";
+    let hash = 0;
+    for (let i = 0; i < seed.length; i++) {
+      const char = seed.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32bit integer
+    }
+    const index = (Math.abs(hash) % count) + 1;
     return `/ppimg/img${index}.png`;
-  }, []);
+  }, [email, name]);
 
   const base = {
     width: size,
