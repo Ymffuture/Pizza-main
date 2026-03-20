@@ -396,7 +396,7 @@ if (pendingId) botMsg.pendingCancelId = pendingId;
       />
 
       {unread >0 || loading  && (
-        <span className="kb-ai-unread">{unread}</span>
+        <span className="kb-ai-unread">Typing...</span>
       )}
     </button>
   </Tooltip>
