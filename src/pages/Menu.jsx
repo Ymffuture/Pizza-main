@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import {Tooltip} from "antd" ;
+import "antd/dist/antd.css";
 
 // Sorted categories alphabetically with "All" first
 const CATEGORIES = ["All", "Chips", "Drinks", "Extras", "Kota"].sort((a, b) => {
@@ -292,8 +293,8 @@ export default function Menu() {
             {count > 0 && <span className="cart-badge">{count}</span>}
           </button>
           <Tooltip title={user?.full_name} placement="topLeft">
-          <Avatar picture={user?.picture} name={user?.full_name || user?.email} size={40} />
-                
+          <Avatar picture={user.avatar} name={user?.full_name || user?.email} email={user?.email} size={24} />
+      
           </Tooltip>
           
         </header>
