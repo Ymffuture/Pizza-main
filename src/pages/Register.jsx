@@ -94,8 +94,8 @@ export default function Register() {
       
       setRegistered(true);
       
-      // Redirect to verify email page after 2 seconds
-      setTimeout(() => navigate("/verify-email"), 2000);
+      // Redirect to verify email page after 6 seconds
+      setTimeout(() => navigate("/verify-email"), 6000);
       
     } catch (err) {
       const msg =
