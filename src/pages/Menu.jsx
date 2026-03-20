@@ -254,7 +254,7 @@ export default function Menu() {
           <div className="sidebar-footer">
             {isAuth ? (
               <div className="sidebar-user flex gap-2 ">
-                <Avatar picture={user?.picture} name={user?.full_name || user?.email} size={30} />
+                <Avatar picture={user?.picture || user?.avatar} name={user?.full_name} email={user?.email} size={30} />
                 
                 <span className="sidebar-user-email">{user?.email}</span>
                 <button className="sidebar-logout-btn" onClick={handleLogout}>
