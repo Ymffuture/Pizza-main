@@ -167,22 +167,26 @@ export default function Register() {
             name="full_name" label="Full Name" placeholder="Kgomotso Nkosi"
             icon={User} autoComplete="name"
             value={form.full_name} onChange={handleChange("full_name")} error={errors.full_name}
+            disabled={loading}
           />
           <Field
             name="email" label="Email" placeholder="you@example.com"
             icon={Mail} autoComplete="email"
             value={form.email.trim().toLowerCase()} onChange={handleChange("email")} error={errors.email}
+            disabled={loading}
           />
           <Field
             name="phone" label="Phone Number" placeholder="082 123 4567"
             icon={Phone} autoComplete="tel"
             value={form.phone} onChange={handleChange("phone")} error={errors.phone}
+            disabled={loading}
           />
           <Field
             name="password" label="Password" placeholder="Min. 6 characters"
             icon={Lock} type="password" autoComplete="new-password"
             value={form.password} onChange={handleChange("password")} error={errors.password}
             showPw={showPw} onTogglePw={() => setShowPw((s) => !s)}
+            disabled={loading}
           />
           <Field
   name="confirm"
@@ -195,6 +199,7 @@ export default function Register() {
   onChange={handleChange("confirm")}
   error={errors.confirm}
   showPw={showConfirm}
+            disabled={loading}
   onTogglePw={() => setShowConfirm((s) => !s)}
   
   // Add these to disable paste / copy / cut
