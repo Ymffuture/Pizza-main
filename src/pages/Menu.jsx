@@ -173,13 +173,13 @@ export default function Menu() {
       <aside className={`sidebar ${sidebarOpen ? "sidebar-open" : ""}`}>
         <div className="sidebar-inner">
           {/* Logo Section */}
-          <div className="sidebar-logo">
+          <div className="sidebar-logo scale-95">
             <div className="brand-badge">
               <Flame className="w-6 h-6" style={{ color: "#0e0700" }} />
             </div>
             <div className="sidebar-logo-text">
               <h1 className="brand-name">KotaGO</h1>
-              <p className="brand-tagline">Fresh · Fast · Fire</p>
+              <p className="brand-tagline text-sm">Fresh · Fast · Fire</p>
             </div>
             <button 
               className="sidebar-close-btn"
@@ -289,11 +289,11 @@ export default function Menu() {
           </div>
 
           <button className="cart-pill" onClick={() => navigate("/cart")}>
-            <ShoppingBag className="w-5 h-5" />
+            <ShoppingBag className="w-6 h-6" />
             {count > 0 && <span className="cart-badge">{count}</span>}
           </button>
           <Tooltip title={user?.full_name} placement="topLeft">
-          <Avatar picture={user.avatar} name={user?.full_name || user?.email} email={user?.email} size={24} />
+          <Avatar picture={user.avatar} name={user?.full_name || user?.email} email={user?.email} size={40} />
       
           </Tooltip>
           
