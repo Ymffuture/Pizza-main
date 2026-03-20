@@ -9,9 +9,9 @@ const STORE = {
 };
 
 const DELIVERY_ZONES = [
-  { label: "Express Zone", radius: 3000, color: "#4ade80", time: "20–30 min", fee: "R15" },
-  { label: "Standard Zone", radius: 6000, color: "#FFC72C", time: "30–45 min", fee: "R25" },
-  { label: "Extended Zone", radius: 10000, color: "#f87171", time: "45–60 min", fee: "R40" },
+  { label: "Express Zone", radius: 1000, color: "#4ade80", time: "20–30 min", fee: "R15" },
+  { label: "Standard Zone", radius: 1200, color: "#FFC72C", time: "30–45 min", fee: "R25" },
+  { label: "Extended Zone", radius: 1300, color: "#f87171", time: "35–40 min", fee: "R40" },
 ];
 
 function haversine(lat1, lng1, lat2, lng2) {
@@ -598,7 +598,7 @@ export default function CoverageSection() {
 
             {/* Quick Chips */}
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
-              {["Soweto", "Sandton", "Midrand", "Roodepoort"].map((area) => (
+              {["Tjovitjo phase 1", "Tjovitjo phase 2", "Orange Farm ", "Drieziek "].map((area) => (
                 <button
                   key={area}
                   className="chip-btn"
@@ -814,7 +814,7 @@ export default function CoverageSection() {
                 Coverage Area
               </p>
               <p style={{ fontSize: 20, fontWeight: 800, color: "#FFC72C" }}>
-                10 km <span style={{ fontSize: 12, fontWeight: 600, color: "rgba(255, 248, 231, 0.4)" }}>radius</span>
+                3 km <span style={{ fontSize: 12, fontWeight: 600, color: "rgba(255, 248, 231, 0.4)" }}>radius</span>
               </p>
             </div>
             <div
