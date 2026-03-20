@@ -51,7 +51,7 @@ export default function Login() {
     
     try {
       await login(form);
-      toast.show({ type: "success", title: "Welcome back!", message: form.email });
+      toast.show({ type: "success", title: "Welcome back!", message: form.email.trim().toLowerCase() });
       navigate(redirect, { replace: true });
     } catch (err) {
       const msg =
