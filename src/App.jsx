@@ -30,6 +30,7 @@ const Info = lazy(() => import("./components/Info"));
 const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
 const ResetPassword  = lazy(() => import("./pages/ResetPassword"));
 const VerifyEmail    = lazy(() => import("./pages/VerifyEmail"));
+const DeliveryCoverage    = lazy(() => import("./pages/DeliveryCoverage"));
 
 
 export default function App() {
@@ -54,7 +55,9 @@ export default function App() {
                     <Route path="/login" element={<Login />} />
 
                     <Route path="/register" element={<Register />} />
-
+                    
+                    <Route path="/coverage" element={<DeliveryCoverage />} />
+                    
                     <Route path="/info" element={<Info />} />
                     <Route path="/forgot-password" element={<ForgotPassword />} />
                     <Route path="/reset-password"  element={<ResetPassword />}  />
