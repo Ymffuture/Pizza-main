@@ -123,6 +123,7 @@ export default function Login() {
                 value={form.email.trim().toLowerCase()}
                 onChange={handleChange("email")}
                 autoComplete="email"
+                disabled={loading}
               />
             </div>
             {errors.email && <p className="auth-error">{errors.email}</p>}
@@ -140,6 +141,7 @@ export default function Login() {
                 value={form.password}
                 onChange={handleChange("password")}
                 autoComplete="current-password"
+                disabled={loading}
               />
               <button
                 type="button"
@@ -170,7 +172,7 @@ export default function Login() {
         </div>
 
         {/* Google */}
-        <GoogleButton onSuccess={handleGoogle} onError={handleGoogleError} />
+        <GoogleButton onSuccess={handleGoogle} onError={handleGoogleError} disabled={loading} />
 
         {/* Forgot password */}
         <p style={{ textAlign: "center", marginTop: 14 }}>
