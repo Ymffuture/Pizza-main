@@ -44,6 +44,7 @@ export default function Footer() {
             <li><Link to="/cart"    className="kb-footer-link">Cart</Link></li>
             <li><Link to="/login"   className="kb-footer-link">Sign In</Link></li>
             <li><Link to="/register" className="kb-footer-link">Create Account</Link></li>
+            <li><Link to="/coverage" className="kb-footer-link">Coverage delivery</Link></li>
           </ul>
         </div>
 
