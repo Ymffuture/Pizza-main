@@ -171,7 +171,7 @@ export default function Register() {
           <Field
             name="email" label="Email" placeholder="you@example.com"
             icon={Mail} autoComplete="email"
-            value={form.email} onChange={handleChange("email")} error={errors.email}
+            value={form.email.trim().toLowerCase()} onChange={handleChange("email")} error={errors.email}
           />
           <Field
             name="phone" label="Phone Number" placeholder="082 123 4567"
@@ -185,11 +185,27 @@ export default function Register() {
             showPw={showPw} onTogglePw={() => setShowPw((s) => !s)}
           />
           <Field
-            name="confirm" label="Confirm Password" placeholder="Repeat password"
-            icon={Lock} type="password" autoComplete="new-password"
-            value={form.confirm} onChange={handleChange("confirm")} error={errors.confirm}
-            showPw={showConfirm} onTogglePw={() => setShowConfirm((s) => !s)}
-          />
+  name="confirm"
+  label="Confirm Password"
+  placeholder="Repeat password"
+  icon={Lock}
+  type="password"
+  autoComplete="new-password"          // ← Keep this (best for new-password UX)
+  value={form.confirm}
+  onChange={handleChange("confirm")}
+  error={errors.confirm}
+  showPw={showConfirm}
+  onTogglePw={() => setShowConfirm((s) => !s)}
+  
+  // Add these to disable paste / copy / cut
+  onPaste={(e) => e.preventDefault()}
+  onCopy={(e) => e.preventDefault()}
+  onCut={(e) => e.preventDefault()}
+  
+  // Optional: also block drag & drop (extra thorough)
+  onDrop={(e) => e.preventDefault()}
+  onDragStart={(e) => e.preventDefault()}
+/>
 
           <button type="submit" disabled={loading} className="auth-submit">
             {loading ? (
