@@ -73,8 +73,8 @@ export default function VerifyEmail() {
             {state === "success" && (
               <div className="ve-state">
                 <CheckCircle2 className="w-12 h-12" style={{ color: "#4ade80" }} />
-                <p className="ve-title">Email Verified! 🎉</p>
-                <p className="ve-sub">Redirecting to the menu…</p>
+                <p className="ve-title">Email Successfully Verified! 🎉</p>
+                <p className="ve-sub">Redirecting to the sign in…</p>
               </div>
             )}
             {state === "error" && (
