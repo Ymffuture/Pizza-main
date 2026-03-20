@@ -329,25 +329,34 @@ const handleSend = async () => {
     if (data.cancel_result) setCancelResult(data.cancel_result);
 
     // ── IMPROVED: Better keyword detection for confirmation prompts ──
-    const pendingId = !data.cancel_result
-      ? (() => {
-          const lowerReply = (data.reply || "").toLowerCase();
-          
-          // More flexible keyword matching
-          const wantConfirm =
-            lowerReply.includes("confirm") ||
-            lowerReply.includes("are you sure") ||
-            lowerReply.includes("proceed") ||
-            lowerReply.includes("confirm cancellation") ||
-            (lowerReply.includes("cancel") && lowerReply.includes("?")) ||
-            lowerReply.includes("sure you want to cancel");
-          
-          const orderId = detectedId || contextId;
-          return wantConfirm && orderId ? orderId : undefined;
-        })()
-      : undefined;
+    // ── DETECT cancel intent from the USER's message (more reliable) ──
+const userWantsCancel = (() => {
+  const lowerText = text.toLowerCase();
+  return (
+    lowerText.includes("cancel") ||
+    lowerText.includes("cancel my order") ||
+    lowerText.includes("cancel order")
+  );
+})();
 
-    if (pendingId) botMsg.pendingCancelId = pendingId;
+const pendingId = !data.cancel_result
+  ? (() => {
+      const lowerReply = (data.reply || "").toLowerCase();
+
+      const botConfirming =
+        lowerReply.includes("confirm") ||
+        lowerReply.includes("are you sure") ||
+        lowerReply.includes("proceed") ||
+        lowerReply.includes("sure you want") ||
+        lowerReply.includes("cancel") ||
+        lowerReply.includes("?");
+
+      const orderId = detectedId || contextId;
+      return (userWantsCancel || botConfirming) && orderId ? orderId : undefined;
+    })()
+  : undefined;
+
+if (pendingId) botMsg.pendingCancelId = pendingId;
 
     setMessages([...updated, botMsg]);
     if (!open) setUnread((u) => u + 1);
