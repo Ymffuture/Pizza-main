@@ -165,16 +165,24 @@ export default function Login() {
         </form>
 
         {/* Divider */}
-        <div className="auth-divider">
-          <div className="auth-divider-line" />
-          <span className="auth-divider-text">OR</span>
-          <div className="auth-divider-line" />
-        </div>
+<div className="auth-divider">
+  <div className="auth-divider-line" />
+  <span className="auth-divider-text">OR</span>
+  <div className="auth-divider-line" />
+</div>
 
-        {/* Google */}
-        {!loading? 
-        <GoogleButton onSuccess={handleGoogle} onError={handleGoogleError} disabled={loading} />
-        : <span className="text-gray-600 animate-pulse text-sm" >Log in with email </span>} 
+{/* Google or loading text */}
+{loading ? (
+  <div className="auth-loading-text">
+    <Loader className="w-4 h-4 auth-spin" />
+    <span>Signing in with email...</span>
+  </div>
+) : (
+  <GoogleButton 
+    onSuccess={handleGoogle} 
+    onError={handleGoogleError} 
+  />
+)} 
         {/* Forgot password */}
         <p style={{ textAlign: "center", marginTop: 14 }}>
           <Link to="/forgot-password" className="auth-link" style={{ fontSize: 13 }}>
