@@ -2,10 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import { MapPin, CheckCircle, XCircle, Bike, Navigation, Clock, ArrowRight, LocateFixed } from "lucide-react";
 
 const STORE = {
-  lat: -26.2041,
-  lng: 28.0473,
+  lat:-26.430171,
+  lng: 27.872867,
   name: "KotaBites HQ",
-  address: "123 Kota Street, Johannesburg",
+  address: "Tjovitjo phase 2, Johannesburg",
 };
 
 const MAX_RADIUS = 1300; // 1.3km strict limit
