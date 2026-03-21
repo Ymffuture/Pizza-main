@@ -252,8 +252,8 @@ export default function Menu() {
         {/* ── Main content ── */}
         <div className="mn-content">
 
-          {/* Top bar */}
-          <header className="mn-topbar sticky top-0 z-50">
+          {/* Top bar - NO LONGER STICKY, scrolls away */}
+          <header className="mn-topbar">
             <button className="mn-topbar-menu lg-hidden" onClick={() => setSidebarOpen(true)}>
               <PanelLeftOpen className="w-6 h-6" />
             </button>
@@ -272,8 +272,8 @@ export default function Menu() {
             </Tooltip>
           </header>
 
-          {/* Category pills */}
-          <div className="MN-cats-wrap sticky top-0 z-50 shadow-2xl">
+          {/* Category pills - STICKY AT TOP */}
+          <div className="mn-cats-wrap sticky top-0 z-50 shadow-2xl">
             <div className="mn-cats-scroll">
               {CATEGORIES.map((cat) => (
                 <button
@@ -359,7 +359,6 @@ const styles = `
   .mn-root {
     display: flex;
     min-height: 100vh;
-    /* CRITICAL: prevent horizontal overflow that causes the shake */
     overflow-x: hidden;
     width: 100%;
     background:
@@ -378,13 +377,10 @@ const styles = `
     width: 272px;
     background: rgba(14, 7, 0, 0.98);
     border-right: 1px solid var(--border);
-    /* Off-screen on mobile by default */
     transform: translateX(-100%);
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    /* Prevent sidebar from causing overflow */
     overflow: hidden;
   }
-  /* On desktop: always visible */
   @media (min-width: 1024px) {
     .mn-sidebar { transform: translateX(0); }
     .lg-hidden   { display: none !important; }
@@ -456,7 +452,6 @@ const styles = `
     color: var(--text); font-size: 13px; font-weight: 500;
     font-family: 'Plus Jakarta Sans', sans-serif;
     outline: none; transition: border-color 0.2s;
-    /* Prevent input from expanding beyond container */
     box-sizing: border-box;
   }
   .mn-search-input:focus { border-color: rgba(255,199,44,0.35); }
@@ -552,16 +547,13 @@ const styles = `
     position: fixed; inset: 0; z-index: 40;
     background: rgba(0,0,0,0.6);
     backdrop-filter: blur(4px);
-    /* Only appears on mobile — hidden via sidebar desktop rule */
   }
   @media (min-width: 1024px) { .mn-overlay { display: none; } }
 
   /* ─── Main content area ─── */
   .mn-content {
     flex: 1;
-    /* Push content right of sidebar on desktop */
     min-width: 0;
-    /* CRITICAL: prevent this column from causing overflow */
     overflow-x: hidden;
     display: flex;
     flex-direction: column;
@@ -571,15 +563,13 @@ const styles = `
     .mn-content { margin-left: 272px; }
   }
 
-  /* Top bar */
+  /* Top bar - NO LONGER STICKY (removed position: sticky, top: 0, z-index: 40) */
   .mn-topbar {
-    position: sticky; top: 0; z-index: 40;
     display: flex; align-items: center; gap: 12px;
     padding: 12px 20px;
     background: rgba(14,7,0,0.95);
     backdrop-filter: blur(20px) saturate(1.4);
     border-bottom: 1px solid var(--border);
-    /* Prevent topbar overflow */
     overflow: hidden;
   }
   .mn-topbar-menu {
@@ -619,12 +609,13 @@ const styles = `
   }
   @keyframes mnPop { from { transform: scale(0); } to { transform: scale(1); } }
 
-  /* Category pills */
+  /* Category pills - STICKY AT TOP (changed from top: 65px to top: 0, z-index: 50) */
   .mn-cats-wrap {
-    position: sticky; top: 65px; z-index: 30;
+    position: sticky;
+    top: 0;
+    z-index: 50;
     background: rgba(14,7,0,0.92);
     border-bottom: 1px solid var(--border);
-    /* CRITICAL: prevents the pill row from leaking */
     overflow: hidden;
   }
   .mn-cats-scroll {
@@ -687,7 +678,6 @@ const styles = `
   }
   .mn-grid {
     display: grid;
-    /* Matches index.css pattern — no overflow */
     grid-template-columns: repeat(auto-fill, minmax(min(100%, 285px), 1fr));
     gap: 20px;
     min-width: 0;
@@ -730,7 +720,6 @@ const styles = `
     font-size: 14px; font-weight: 900;
     box-shadow: 0 8px 32px rgba(218,41,28,0.5), 0 0 0 2px rgba(255,199,44,0.2);
     transition: all 0.2s;
-    /* Prevent FAB from spanning full width on very small screens */
     white-space: nowrap;
     animation: mnFabIn 0.4s cubic-bezier(0.34,1.56,0.64,1);
   }
@@ -808,3 +797,4 @@ const styles = `
     .mn-info-strip { padding: 7px 14px; }
   }
 `;
+
