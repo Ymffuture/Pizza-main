@@ -253,7 +253,7 @@ export default function Menu() {
         <div className="mn-content">
 
           {/* Top bar */}
-          <header className="mn-topbar">
+          <header className="mn-topbar sticky top-0 z-50">
             <button className="mn-topbar-menu lg-hidden" onClick={() => setSidebarOpen(true)}>
               <PanelLeftOpen className="w-6 h-6" />
             </button>
