@@ -9,16 +9,16 @@ import { Link } from "react-router-dom";
 
 // ── CONFIG — update these to your actual store location & radius ──
 const STORE = {
-  lat: -26.2041,   // Johannesburg example — replace with your coords
-  lng: 28.0473,
+  lat:-26.430171,
+  lng: 27.872867,
   name: "KotaBites HQ",
-  address: "123 Kota Street, Johannesburg",
+  address: "Tjovitjo phase 2, Johannesburg",
 };
 
 const DELIVERY_ZONES = [
-  { label: "Express Zone",  radius: 3000,  color: "#4ade80", opacity: 0.18, borderOpacity: 0.7, time: "20–30 min", fee: "R15" },
-  { label: "Standard Zone", radius: 6000,  color: "#FFC72C", opacity: 0.12, borderOpacity: 0.6, time: "30–45 min", fee: "R25" },
-  { label: "Extended Zone", radius: 10000, color: "#f87171", opacity: 0.08, borderOpacity: 0.4, time: "45–60 min", fee: "R40" },
+  { label: "Express Zone",  radius: 1000,  color: "#4ade80", opacity: 0.18, borderOpacity: 0.7, time: "20–30 min", fee: "R15" },
+  { label: "Standard Zone", radius: 1100,  color: "#FFC72C", opacity: 0.12, borderOpacity: 0.6, time: "30–45 min", fee: "R25" },
+  { label: "Extended Zone", radius: 1300, color: "#f87171", opacity: 0.08, borderOpacity: 0.4, time: "45–60 min", fee: "R40" },
 ];
 
 export default function DeliveryCoverage() {
@@ -274,9 +274,9 @@ export default function DeliveryCoverage() {
               <p className="cov-store-addr">{STORE.address}</p>
               <div className="cov-hours">
                 {[
-                  ["Mon – Fri", "09:00 – 21:00"],
-                  ["Saturday",  "10:00 – 22:00"],
-                  ["Sunday",    "11:00 – 20:00"],
+                  ["Mon – Fri", "09:00 – 17:00"],
+                  ["Saturday",  "09:00 – 14:00"],
+                  ["Sunday",    "Closed"],
                 ].map(([day, hrs]) => (
                   <div key={day} className="cov-hours-row">
                     <span>{day}</span><span>{hrs}</span>
