@@ -24,3 +24,60 @@
   font-weight: 500;
 }
 
+/* Grid - FIXED VERSION */
+.menu-grid-wrap { 
+  max-width: 1200px; 
+  margin: 0 auto; 
+  padding: 24px 16px;
+  /* Prevent horizontal overflow */
+  overflow-x: hidden;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.menu-grid { 
+  display: grid; 
+  /* Use min(100%, 285px) to prevent cards from exceeding container width on small screens */
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 285px), 1fr)); 
+  gap: 20px;
+  /* Ensure grid doesn't expand beyond container */
+  min-width: 0;
+}
+
+/* Ensure cards don't overflow their cells */
+.menu-card-wrap {
+  min-width: 0;
+  overflow: hidden;
+  animation: cardIn 0.55s cubic-bezier(0.34,1.2,0.64,1) both; 
+  animation-delay: calc(var(--i) * 55ms); 
+}
+
+/* Ensure images inside cards are constrained */
+.menu-card-wrap img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+@keyframes cardIn { 
+  from { opacity: 0; transform: translateY(22px) scale(0.96); } 
+  to { opacity: 1; transform: none; } 
+}
+
+/* Mobile fix */
+@media (max-width: 600px) {
+  .menu-grid  { 
+    grid-template-columns: 1fr; 
+    gap: 16px;
+  }
+  .menu-grid-wrap {
+    padding: 16px 12px;
+  }
+}
+
+/* Tablet adjustment */
+@media (min-width: 601px) and (max-width: 1023px) {
+  .menu-grid {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
+  }
+}
