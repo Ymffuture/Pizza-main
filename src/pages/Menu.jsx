@@ -10,19 +10,19 @@ import Avatar from "../components/Avatar";
 import {
   ShoppingBag, RefreshCw, UtensilsCrossed, Zap, PanelLeftClose,
   ChevronRight, Flame, Search, SlidersHorizontal, LogOut,
-  PanelLeftOpen, X, Info, Home, Phone, Wallet, Bike
+  PanelLeftOpen, X, Info, Home, Phone, Wallet, Bike, Banknote
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { Tooltip } from "antd";
 
-// Categories with Uber Eats style emojis
+// Uber Eats style categories with emojis
 const CATEGORIES = [
-  { label: "All",       emoji: "🍽️" },
-  { label: "Kota",      emoji: "🥪" },
-  { label: "Drinks",    emoji: "🥤" },
-  { label: "Sides",     emoji: "🍟" },
-  { label: "Combos",    emoji: "🔥" },
-  { label: "Desserts",  emoji: "🍰" },
+  { label: "All", emoji: "🍽️" },
+  { label: "Kota", emoji: "🥪" },
+  { label: "Drinks", emoji: "🥤" },
+  { label: "Sides", emoji: "🍟" },
+  { label: "Combos", emoji: "🔥" },
+  { label: "Desserts", emoji: "🍰" },
 ];
 
 export default function Menu() {
@@ -224,7 +224,7 @@ export default function Menu() {
               </nav>
             </div>
 
-            {/* Earn with KotaGO */}
+            {/* Earn with KotaGO - Delivery Sign Up */}
             <div className="sidebar-section">
               <h3 className="sidebar-section-title">Earn with us</h3>
               <Link to="/deliver" className="sidebar-deliver-card">
