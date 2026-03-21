@@ -13,3 +13,14 @@
 /* */
 @import "antd/dist/antd.css"; 
 
+.auth-loading-text {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
+}
+
