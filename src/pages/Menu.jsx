@@ -250,7 +250,7 @@ export default function Menu() {
         </aside>
 
         {/* ── Main content ── */}
-        <div className="MN-content sticky top-0 shadow-2xl">
+        <div className="MN-content sticky">
 
           {/* Top bar - NO LONGER STICKY, scrolls away */}
           <header className="mn-topbar">
