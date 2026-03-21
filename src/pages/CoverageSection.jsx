@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { MapPin, CheckCircle, XCircle, Bike, Navigation, Clock, Wallet, ArrowRight } from "lucide-react";
+import { MapPin, CheckCircle, XCircle, Bike, Navigation, Clock, ArrowRight, LocateFixed } from "lucide-react";
 
 const STORE = {
   lat: -26.2041,
@@ -8,11 +8,7 @@ const STORE = {
   address: "123 Kota Street, Johannesburg",
 };
 
-const DELIVERY_ZONES = [
-  { label: "Express Zone", radius: 1000, color: "#4ade80", time: "20–30 min", fee: "R15" },
-  { label: "Standard Zone", radius: 1200, color: "#FFC72C", time: "30–45 min", fee: "R25" },
-  { label: "Extended Zone", radius: 1300, color: "#f87171", time: "35–40 min", fee: "R40" },
-];
+const MAX_RADIUS = 1300; // 1.3km strict limit
 
 function haversine(lat1, lng1, lat2, lng2) {
   const R = 6371000;
@@ -33,6 +29,8 @@ export default function CoverageSection() {
   const [address, setAddress] = useState("");
   const [checking, setChecking] = useState(false);
   const [result, setResult] = useState(null);
+  const [userLocation, setUserLocation] = useState(null);
+  const [locating, setLocating] = useState(false);
 
   useEffect(() => {
     if (mapInstance.current) return;
@@ -40,7 +38,7 @@ export default function CoverageSection() {
     import("leaflet").then((L) => {
       const map = L.map(mapRef.current, {
         center: [STORE.lat, STORE.lng],
-        zoom: 12,
+        zoom: 14,
         zoomControl: false,
         attributionControl: false,
       });
@@ -57,20 +55,17 @@ export default function CoverageSection() {
 
       L.control.zoom({ position: "bottomright" }).addTo(map);
 
-      // Draw zones with subtle gradient effect
-      DELIVERY_ZONES.forEach((zone, index) => {
-        L.circle([STORE.lat, STORE.lng], {
-          radius: zone.radius,
-          color: zone.color,
-          fillColor: zone.color,
-          fillOpacity: 0.08 + index * 0.02,
-          weight: 2,
-          opacity: 0.7,
-          dashArray: zone.label === "Extended Zone" ? "8 6" : null,
-        }).addTo(map);
-      });
+      // Single delivery zone - 1.3km
+      L.circle([STORE.lat, STORE.lng], {
+        radius: MAX_RADIUS,
+        color: "#4ade80",
+        fillColor: "#4ade80",
+        fillOpacity: 0.08,
+        weight: 2,
+        opacity: 0.8,
+      }).addTo(map);
 
-      // Premium store marker with pulse
+      // Store marker
       const storeIcon = L.divIcon({
         className: "",
         html: `<div class="store-marker">
@@ -105,6 +100,57 @@ export default function CoverageSection() {
     };
   }, []);
 
+  const checkLocation = (lat, lng, source = "manual") => {
+    const dist = haversine(STORE.lat, STORE.lng, lat, lng);
+    const covered = dist <= MAX_RADIUS;
+    
+    setResult({
+      covered,
+      distance: Math.round(dist / 100) / 10,
+      source,
+    });
+
+    import("leaflet").then((L) => {
+      if (!mapInstance.current) return;
+      const userIcon = L.divIcon({
+        className: "",
+        html: `<div class="user-marker ${covered ? 'user-marker--in' : 'user-marker--out'}"></div>`,
+        iconSize: [16, 16],
+        iconAnchor: [8, 8],
+      });
+      if (markerRef.current) {
+        markerRef.current.setLatLng([lat, lng]);
+      } else {
+        markerRef.current = L.marker([lat, lng], { icon: userIcon }).addTo(mapInstance.current);
+      }
+      mapInstance.current.flyTo([lat, lng], 15, { duration: 1.2, easeLinearity: 0.25 });
+    });
+  };
+
+  const handleGetLocation = () => {
+    if (!navigator.geolocation) {
+      setResult({ error: "Geolocation is not supported by your browser." });
+      return;
+    }
+    
+    setLocating(true);
+    setResult(null);
+    
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        setUserLocation({ lat: latitude, lng: longitude });
+        checkLocation(latitude, longitude, "gps");
+        setLocating(false);
+      },
+      (error) => {
+        setLocating(false);
+        setResult({ error: "Unable to retrieve your location. Please check your permissions." });
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+  };
+
   const handleCheck = async () => {
     if (!address.trim()) return;
     setChecking(true);
@@ -123,28 +169,7 @@ export default function CoverageSection() {
       }
 
       const { lat, lon } = data[0];
-      const userLat = parseFloat(lat);
-      const userLng = parseFloat(lon);
-      const dist = haversine(STORE.lat, STORE.lng, userLat, userLng);
-      const zone = DELIVERY_ZONES.find((z) => dist <= z.radius);
-
-      setResult({ covered: !!zone, zone: zone || null, distance: Math.round(dist / 100) / 10 });
-
-      import("leaflet").then((L) => {
-        if (!mapInstance.current) return;
-        const userIcon = L.divIcon({
-          className: "",
-          html: `<div class="user-marker"></div>`,
-          iconSize: [16, 16],
-          iconAnchor: [8, 8],
-        });
-        if (markerRef.current) {
-          markerRef.current.setLatLng([userLat, userLng]);
-        } else {
-          markerRef.current = L.marker([userLat, userLng], { icon: userIcon }).addTo(mapInstance.current);
-        }
-        mapInstance.current.flyTo([userLat, userLng], 14, { duration: 1.5, easeLinearity: 0.25 });
-      });
+      checkLocation(parseFloat(lat), parseFloat(lon), "search");
     } catch {
       setResult({ error: "Could not check coverage. Please try again." });
     } finally {
@@ -171,9 +196,9 @@ export default function CoverageSection() {
           top: 0;
           left: 50%;
           transform: translateX(-50%);
-          width: 800px;
-          height: 400px;
-          background: radial-gradient(ellipse at center, rgba(255, 199, 44, 0.03) 0%, transparent 70%);
+          width: 600px;
+          height: 300px;
+          background: radial-gradient(ellipse at center, rgba(74, 222, 128, 0.03) 0%, transparent 70%);
           pointer-events: none;
         }
         
@@ -218,15 +243,31 @@ export default function CoverageSection() {
           width: 16px;
           height: 16px;
           border-radius: 50%;
-          background: #DA291C;
           border: 3px solid white;
-          box-shadow: 0 4px 12px rgba(218, 41, 28, 0.5);
-          animation: userMarkerPulse 2s ease infinite;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+          transition: all 0.3s ease;
         }
         
-        @keyframes userMarkerPulse {
-          0%, 100% { box-shadow: 0 0 0 0 rgba(218, 41, 28, 0.4), 0 4px 12px rgba(218, 41, 28, 0.5); }
-          50% { box-shadow: 0 0 0 8px rgba(218, 41, 28, 0), 0 4px 12px rgba(218, 41, 28, 0.5); }
+        .user-marker--in {
+          background: #4ade80;
+          box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.4), 0 4px 12px rgba(74, 222, 128, 0.5);
+          animation: pulseIn 2s ease infinite;
+        }
+        
+        .user-marker--out {
+          background: #f87171;
+          box-shadow: 0 0 0 0 rgba(248, 113, 113, 0.4), 0 4px 12px rgba(248, 113, 113, 0.5);
+          animation: pulseOut 2s ease infinite;
+        }
+        
+        @keyframes pulseIn {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.4), 0 4px 12px rgba(74, 222, 128, 0.5); }
+          50% { box-shadow: 0 0 0 8px rgba(74, 222, 128, 0), 0 4px 12px rgba(74, 222, 128, 0.5); }
+        }
+        
+        @keyframes pulseOut {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(248, 113, 113, 0.4), 0 4px 12px rgba(248, 113, 113, 0.5); }
+          50% { box-shadow: 0 0 0 8px rgba(248, 113, 113, 0), 0 4px 12px rgba(248, 113, 113, 0.5); }
         }
         
         .cov-spin {
@@ -241,6 +282,19 @@ export default function CoverageSection() {
         
         @keyframes covSpin { 
           to { transform: rotate(360deg); } 
+        }
+        
+        .locate-btn {
+          background: rgba(255, 255, 255, 0.05);
+          border: 1.5px solid rgba(74, 222, 128, 0.3);
+          color: #4ade80;
+          transition: all 0.3s ease;
+        }
+        
+        .locate-btn:hover:not(:disabled) {
+          background: rgba(74, 222, 128, 0.1);
+          border-color: rgba(74, 222, 128, 0.5);
+          transform: translateY(-1px);
         }
         
         .check-btn {
@@ -270,10 +324,6 @@ export default function CoverageSection() {
           box-shadow: 0 8px 24px rgba(218, 41, 28, 0.4);
         }
         
-        .check-btn:active:not(:disabled) {
-          transform: translateY(0);
-        }
-        
         .zone-card {
           background: rgba(255, 248, 231, 0.02);
           border: 1px solid rgba(255, 199, 44, 0.1);
@@ -284,25 +334,13 @@ export default function CoverageSection() {
         .zone-card:hover {
           background: rgba(255, 248, 231, 0.04);
           border-color: rgba(255, 199, 44, 0.2);
-          transform: translateY(-2px);
         }
         
         .chip-btn {
           background: rgba(255, 199, 44, 0.05);
           border: 1px solid rgba(255, 199, 44, 0.15);
           color: rgba(255, 248, 231, 0.6);
-          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-          position: relative;
-          overflow: hidden;
-        }
-        
-        .chip-btn::before {
-          content: '';
-          position: absolute;
-          inset: 0;
-          background: linear-gradient(135deg, rgba(255, 199, 44, 0.1), transparent);
-          opacity: 0;
-          transition: opacity 0.3s;
+          transition: all 0.2s ease;
         }
         
         .chip-btn:hover {
@@ -312,31 +350,21 @@ export default function CoverageSection() {
           transform: translateY(-1px);
         }
         
-        .chip-btn:hover::before {
-          opacity: 1;
-        }
-        
         .result-success {
-          background: linear-gradient(135deg, rgba(74, 222, 128, 0.08) 0%, rgba(74, 222, 128, 0.02) 100%);
-          border: 1px solid rgba(74, 222, 128, 0.25);
-          animation: resultSlideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+          background: linear-gradient(135deg, rgba(74, 222, 128, 0.1) 0%, rgba(74, 222, 128, 0.02) 100%);
+          border: 1px solid rgba(74, 222, 128, 0.3);
+          animation: resultSlideIn 0.4s ease;
         }
         
         .result-error {
-          background: linear-gradient(135deg, rgba(248, 113, 113, 0.08) 0%, rgba(248, 113, 113, 0.02) 100%);
-          border: 1px solid rgba(248, 113, 113, 0.25);
-          animation: resultSlideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+          background: linear-gradient(135deg, rgba(248, 113, 113, 0.1) 0%, rgba(248, 113, 113, 0.02) 100%);
+          border: 1px solid rgba(248, 113, 113, 0.3);
+          animation: resultSlideIn 0.4s ease;
         }
         
         @keyframes resultSlideIn {
-          from {
-            opacity: 0;
-            transform: translateY(-10px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
+          from { opacity: 0; transform: translateY(-10px); }
+          to { opacity: 1; transform: translateY(0); }
         }
         
         .input-field {
@@ -349,21 +377,6 @@ export default function CoverageSection() {
           background: rgba(255, 248, 231, 0.06);
           border-color: rgba(255, 199, 44, 0.3);
           box-shadow: 0 0 0 3px rgba(255, 199, 44, 0.1);
-        }
-        
-        .zone-indicator {
-          position: relative;
-        }
-        
-        .zone-indicator::after {
-          content: '';
-          position: absolute;
-          inset: -2px;
-          border-radius: 50%;
-          background: inherit;
-          filter: blur(8px);
-          opacity: 0.6;
-          z-index: -1;
         }
         
         .map-container {
@@ -381,41 +394,20 @@ export default function CoverageSection() {
           z-index: 10;
         }
         
+        .radius-badge {
+          background: linear-gradient(135deg, rgba(74, 222, 128, 0.15), rgba(74, 222, 128, 0.05));
+          border: 1px solid rgba(74, 222, 128, 0.2);
+        }
+        
         .leaflet-control-zoom a {
           background: rgba(26, 14, 0, 0.9) !important;
           border-color: rgba(255, 199, 44, 0.15) !important;
           color: #fff8e7 !important;
-          transition: all 0.2s ease;
         }
         
         .leaflet-control-zoom a:hover {
           background: rgba(255, 199, 44, 0.15) !important;
           color: #FFC72C !important;
-        }
-        
-        .leaflet-control-attribution {
-          background: rgba(14, 7, 0, 0.8) !important;
-          color: rgba(255, 248, 231, 0.3) !important;
-          font-size: 9px !important;
-          backdrop-filter: blur(4px);
-        }
-        
-        .leaflet-control-attribution a {
-          color: rgba(255, 199, 44, 0.5) !important;
-          transition: color 0.2s;
-        }
-        
-        .leaflet-control-attribution a:hover {
-          color: #FFC72C !important;
-        }
-        
-        .badge-pulse {
-          animation: badgePulse 2s ease infinite;
-        }
-        
-        @keyframes badgePulse {
-          0%, 100% { box-shadow: 0 0 0 0 rgba(255, 199, 44, 0.2); }
-          50% { box-shadow: 0 0 0 8px rgba(255, 199, 44, 0); }
         }
       `}</style>
 
@@ -426,26 +418,24 @@ export default function CoverageSection() {
             display: "inline-flex",
             alignItems: "center",
             gap: 10,
-            background: "rgba(255, 199, 44, 0.06)",
-            border: "1px solid rgba(255, 199, 44, 0.15)",
+            background: "rgba(74, 222, 128, 0.08)",
+            border: "1px solid rgba(74, 222, 128, 0.15)",
             borderRadius: 50,
             padding: "8px 18px",
             marginBottom: 20,
-            backdropFilter: "blur(10px)",
           }}
-          className="badge-pulse"
         >
-          <Bike style={{ width: 14, height: 14, color: "#FFC72C" }} />
+          <Bike style={{ width: 14, height: 14, color: "#4ade80" }} />
           <span
             style={{
               fontSize: 11,
               fontWeight: 800,
-              color: "#FFC72C",
+              color: "#4ade80",
               letterSpacing: "0.15em",
               textTransform: "uppercase",
             }}
           >
-            Delivery Coverage
+            Local Delivery Only
           </span>
         </div>
         
@@ -457,10 +447,9 @@ export default function CoverageSection() {
             color: "#fff8e7",
             lineHeight: 1,
             marginBottom: 16,
-            textShadow: "0 2px 20px rgba(255, 199, 44, 0.1)",
           }}
         >
-          Do We Deliver To You?
+          Are You Nearby?
         </h2>
         
         <p
@@ -473,7 +462,7 @@ export default function CoverageSection() {
             lineHeight: 1.6,
           }}
         >
-          Enter your address below to check if you're in our delivery zone and see estimated delivery times.
+          We only deliver within 1.3km of our kitchen to ensure your food arrives hot and fresh.
         </p>
       </div>
 
@@ -500,6 +489,38 @@ export default function CoverageSection() {
             gap: 20,
           }}
         >
+          {/* Quick Location Button */}
+          <button
+            onClick={handleGetLocation}
+            disabled={locating}
+            className="locate-btn"
+            style={{
+              borderRadius: 16,
+              padding: "16px 20px",
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              cursor: "pointer",
+              fontFamily: "'Plus Jakarta Sans', sans-serif",
+              fontWeight: 700,
+              fontSize: 14,
+            }}
+          >
+            {locating ? (
+              <span className="cov-spin" />
+            ) : (
+              <LocateFixed style={{ width: 18, height: 18 }} />
+            )}
+            <span>{locating ? "Finding you..." : "Use my current location"}</span>
+          </button>
+
+          {/* Or divider */}
+          <div style={{ display: "flex", alignItems: "center", gap: 12, opacity: 0.3 }}>
+            <div style={{ flex: 1, height: 1, background: "rgba(255,199,44,0.2)" }} />
+            <span style={{ fontSize: 11, color: "#FFC72C", fontWeight: 600 }}>OR</span>
+            <div style={{ flex: 1, height: 1, background: "rgba(255,199,44,0.2)" }} />
+          </div>
+
           {/* Address Check Card */}
           <div
             className="zone-card"
@@ -538,7 +559,7 @@ export default function CoverageSection() {
                   color: "rgba(255, 248, 231, 0.5)",
                 }}
               >
-                Check your address
+                Enter address manually
               </span>
             </div>
 
@@ -581,7 +602,6 @@ export default function CoverageSection() {
                   alignItems: "center",
                   justifyContent: "center",
                   gap: 6,
-                  minWidth: 80,
                   opacity: checking || !address.trim() ? 0.5 : 1,
                 }}
               >
@@ -597,8 +617,8 @@ export default function CoverageSection() {
             </div>
 
             {/* Quick Chips */}
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
-              {["Tjovitjo phase 1", "Tjovitjo phase 2", "Orange Farm ", "Drieziek "].map((area) => (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {["Soweto", "Sandton", "Midrand", "Roodepoort"].map((area) => (
                 <button
                   key={area}
                   className="chip-btn"
@@ -630,49 +650,28 @@ export default function CoverageSection() {
                   gap: 12,
                   padding: "16px",
                   borderRadius: 14,
+                  marginTop: 16,
                 }}
               >
                 {result.covered ? (
-                  <CheckCircle
-                    style={{
-                      width: 20,
-                      height: 20,
-                      flexShrink: 0,
-                      marginTop: 2,
-                      color: "#4ade80",
-                    }}
-                  />
+                  <CheckCircle style={{ width: 20, height: 20, flexShrink: 0, marginTop: 2, color: "#4ade80" }} />
                 ) : (
-                  <XCircle
-                    style={{
-                      width: 20,
-                      height: 20,
-                      flexShrink: 0,
-                      marginTop: 2,
-                      color: "#f87171",
-                    }}
-                  />
+                  <XCircle style={{ width: 20, height: 20, flexShrink: 0, marginTop: 2, color: "#f87171" }} />
                 )}
                 <div style={{ flex: 1 }}>
-                  <p
-                    style={{
-                      fontSize: 14,
-                      fontWeight: 700,
-                      color: "#fff8e7",
-                      marginBottom: 4,
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 6,
-                    }}
-                  >
-                    {result.covered ? "We deliver here!" : "Outside delivery area"}
-                    {result.covered && <span style={{ fontSize: 16 }}>🎉</span>}
+                  <p style={{ fontSize: 14, fontWeight: 700, color: "#fff8e7", marginBottom: 4 }}>
+                    {result.covered ? "Yes, we deliver to you! 🎉" : "Sorry, you're too far"}
                   </p>
                   <p style={{ fontSize: 12, color: "rgba(255, 248, 231, 0.5)", lineHeight: 1.5 }}>
                     {result.covered
-                      ? `${result.zone.label} · ${result.zone.time} · ${result.zone.fee}`
-                      : `${result.distance} km away — outside our ${DELIVERY_ZONES[DELIVERY_ZONES.length - 1].radius / 1000} km range.`}
+                      ? `You're ${result.distance} km away — within our ${MAX_RADIUS/1000}km range.`
+                      : `You're ${result.distance} km away. We only deliver within ${MAX_RADIUS/1000}km.`}
                   </p>
+                  {result.source === "gps" && (
+                    <p style={{ fontSize: 11, color: "#4ade80", marginTop: 6, fontWeight: 600 }}>
+                      📍 Using your current location
+                    </p>
+                  )}
                 </div>
               </div>
             )}
@@ -686,123 +685,20 @@ export default function CoverageSection() {
                   gap: 12,
                   padding: "14px 16px",
                   borderRadius: 14,
+                  marginTop: 16,
                 }}
               >
-                <XCircle
-                  style={{ width: 18, height: 18, color: "#f87171", flexShrink: 0 }}
-                />
-                <p style={{ fontSize: 12, color: "rgba(255, 248, 231, 0.6)" }}>
-                  {result.error}
-                </p>
+                <XCircle style={{ width: 18, height: 18, color: "#f87171", flexShrink: 0 }} />
+                <p style={{ fontSize: 12, color: "rgba(255, 248, 231, 0.6)" }}>{result.error}</p>
               </div>
             )}
           </div>
 
-          {/* Zones Legend */}
+          {/* Simple Info Card */}
           <div
-            className="zone-card"
+            className="zone-card radius-badge"
             style={{
-              borderRadius: 24,
-              padding: "24px",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                marginBottom: 20,
-              }}
-            >
-              <div
-                style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: 10,
-                  background: "rgba(255, 199, 44, 0.1)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <Clock style={{ width: 16, height: 16, color: "#FFC72C" }} />
-              </div>
-              <span
-                style={{
-                  fontSize: 11,
-                  fontWeight: 800,
-                  letterSpacing: "0.1em",
-                  textTransform: "uppercase",
-                  color: "rgba(255, 248, 231, 0.5)",
-                }}
-              >
-                Delivery zones
-              </span>
-            </div>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              {DELIVERY_ZONES.map((z, idx) => (
-                <div
-                  key={z.label}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 14,
-                    padding: "12px",
-                    borderRadius: 12,
-                    background: "rgba(255, 248, 231, 0.02)",
-                    border: "1px solid rgba(255, 248, 231, 0.03)",
-                  }}
-                >
-                  <span
-                    className="zone-indicator"
-                    style={{
-                      width: 12,
-                      height: 12,
-                      borderRadius: "50%",
-                      flexShrink: 0,
-                      background: z.color,
-                      boxShadow: `0 0 12px ${z.color}40`,
-                    }}
-                  />
-                  <div style={{ flex: 1 }}>
-                    <p
-                      style={{
-                        fontSize: 13,
-                        fontWeight: 700,
-                        color: "#fff8e7",
-                        lineHeight: 1.3,
-                        marginBottom: 2,
-                      }}
-                    >
-                      {z.label}
-                    </p>
-                    <p
-                      style={{
-                        fontSize: 11,
-                        color: "rgba(255, 248, 231, 0.4)",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 8,
-                      }}
-                    >
-                      <span>{z.radius / 1000} km radius</span>
-                      <span style={{ color: "rgba(255, 248, 231, 0.2)" }}>·</span>
-                      <span>{z.time}</span>
-                      <span style={{ color: "rgba(255, 248, 231, 0.2)" }}>·</span>
-                      <span style={{ color: z.color, fontWeight: 600 }}>{z.fee}</span>
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Stats Mini Card */}
-          <div
-            className="zone-card"
-            style={{
-              borderRadius: 24,
+              borderRadius: 20,
               padding: "20px 24px",
               display: "flex",
               alignItems: "center",
@@ -811,25 +707,39 @@ export default function CoverageSection() {
           >
             <div>
               <p style={{ fontSize: 11, color: "rgba(255, 248, 231, 0.4)", marginBottom: 4 }}>
-                Coverage Area
+                Delivery Radius
               </p>
-              <p style={{ fontSize: 20, fontWeight: 800, color: "#FFC72C" }}>
-                3 km <span style={{ fontSize: 12, fontWeight: 600, color: "rgba(255, 248, 231, 0.4)" }}>radius</span>
+              <p style={{ fontSize: 24, fontWeight: 800, color: "#4ade80" }}>
+                1.3 <span style={{ fontSize: 14, fontWeight: 600, color: "rgba(255, 248, 231, 0.5)" }}>km</span>
               </p>
             </div>
             <div
               style={{
-                width: 40,
-                height: 40,
-                borderRadius: 12,
-                background: "rgba(255, 199, 44, 0.1)",
+                width: 48,
+                height: 48,
+                borderRadius: 14,
+                background: "rgba(74, 222, 128, 0.1)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
               }}
             >
-              <MapPin style={{ width: 20, height: 20, color: "#FFC72C" }} />
+              <Clock style={{ width: 24, height: 24, color: "#4ade80" }} />
             </div>
+          </div>
+
+          {/* Why local */}
+          <div
+            style={{
+              borderRadius: 16,
+              padding: "20px",
+              background: "rgba(255, 199, 44, 0.03)",
+              border: "1px solid rgba(255, 199, 44, 0.08)",
+            }}
+          >
+            <p style={{ fontSize: 12, color: "rgba(255, 248, 231, 0.6)", lineHeight: 1.6 }}>
+              <strong style={{ color: "#FFC72C" }}>Why so close?</strong> We keep our delivery radius small to guarantee your kota arrives hot, fresh, and within 20-30 minutes.
+            </p>
           </div>
         </div>
 
@@ -841,7 +751,7 @@ export default function CoverageSection() {
             minWidth: 320,
             borderRadius: 24,
             overflow: "hidden",
-            border: "1px solid rgba(255, 199, 44, 0.1)",
+            border: "1px solid rgba(74, 222, 128, 0.15)",
             minHeight: 500,
             position: "relative",
             background: "rgba(0,0,0,0.2)",
@@ -849,7 +759,7 @@ export default function CoverageSection() {
         >
           <div ref={mapRef} style={{ width: "100%", height: "100%", minHeight: 500 }} />
           
-          {/* Map Overlay Badge */}
+          {/* Map Overlay */}
           <div
             style={{
               position: "absolute",
@@ -861,13 +771,12 @@ export default function CoverageSection() {
               gap: 8,
               background: "rgba(14, 7, 0, 0.9)",
               backdropFilter: "blur(12px)",
-              border: "1px solid rgba(255, 199, 44, 0.15)",
+              border: "1px solid rgba(74, 222, 128, 0.2)",
               borderRadius: 12,
               padding: "10px 16px",
               fontSize: 12,
               fontWeight: 700,
-              color: "#FFC72C",
-              boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
+              color: "#4ade80",
             }}
           >
             <div
@@ -877,13 +786,12 @@ export default function CoverageSection() {
                 borderRadius: "50%",
                 background: "#4ade80",
                 boxShadow: "0 0 8px #4ade80",
-                animation: "pulse 2s infinite",
               }}
             />
             <span>{STORE.name}</span>
           </div>
 
-          {/* Distance Indicator (shows when result has distance) */}
+          {/* Distance Badge */}
           {result?.distance && (
             <div
               style={{
@@ -893,16 +801,15 @@ export default function CoverageSection() {
                 zIndex: 800,
                 background: "rgba(14, 7, 0, 0.9)",
                 backdropFilter: "blur(12px)",
-                border: "1px solid rgba(255, 199, 44, 0.15)",
+                border: `1px solid ${result.covered ? "rgba(74, 222, 128, 0.3)" : "rgba(248, 113, 113, 0.3)"}`,
                 borderRadius: 12,
                 padding: "10px 16px",
                 fontSize: 12,
                 fontWeight: 700,
-                color: "#fff8e7",
+                color: result.covered ? "#4ade80" : "#f87171",
               }}
             >
-              <span style={{ color: "rgba(255, 248, 231, 0.5)" }}>Distance: </span>
-              <span style={{ color: "#FFC72C" }}>{result.distance} km</span>
+              {result.distance} km away
             </div>
           )}
         </div>
