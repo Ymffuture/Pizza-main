@@ -175,23 +175,6 @@ export default function Menu() {
               </button>
             </div>
 
-            {/* Search */}
-            <div className="mn-search-wrap">
-              <Search className="mn-search-icon" />
-              <input
-                type="text"
-                placeholder="Search menu..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="mn-search-input"
-              />
-              {search && (
-                <button className="mn-search-clear" onClick={() => setSearch("")}>
-                  <X className="w-3 h-3" />
-                </button>
-              )}
-            </div>
-
             {/* Navigation */}
             <div className="mn-nav-section">
               <h3 className="mn-nav-title">Navigation</h3>
@@ -249,7 +232,7 @@ export default function Menu() {
         {/* ── Main content ── */}
         <div className="mn-content">
 
-          {/* Top bar - NO LONGER STICKY, scrolls away */}
+          {/* Top bar - scrolls away */}
           <header className="mn-topbar">
             <button className="mn-topbar-menu lg-hidden" onClick={() => setSidebarOpen(true)}>
               <PanelLeftOpen className="w-6 h-6" />
@@ -269,8 +252,27 @@ export default function Menu() {
             </Tooltip>
           </header>
 
-          {/* Category pills - STICKY AT TOP */}
-          <div className="mn-cats-wrap shadow-2xl">
+          {/* Search bar - STICKY */}
+          <div className="mn-search-bar-wrap">
+            <div className="mn-search-bar-inner">
+              <Search className="mn-search-bar-icon" />
+              <input
+                type="text"
+                placeholder="Search menu..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="mn-search-bar-input"
+              />
+              {search && (
+                <button className="mn-search-bar-clear" onClick={() => setSearch("")}>
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Category pills - STICKY */}
+          <div className="mn-cats-wrap">
             <div className="mn-cats-scroll">
               {CATEGORIES.map((cat) => (
                 <button
@@ -431,37 +433,6 @@ const styles = `
   }
   .mn-sidebar-close:hover { color: var(--text); }
 
-  /* Search */
-  .mn-search-wrap {
-    position: relative; display: flex; align-items: center;
-    flex-shrink: 0;
-  }
-  .mn-search-icon {
-    position: absolute; left: 12px;
-    width: 15px; height: 15px; color: var(--muted);
-    pointer-events: none;
-  }
-  .mn-search-input {
-    width: 100%; padding: 10px 36px 10px 36px;
-    background: rgba(255,248,231,0.05);
-    border: 1.5px solid var(--border);
-    border-radius: 12px;
-    color: var(--text); font-size: 13px; font-weight: 500;
-    font-family: 'Plus Jakarta Sans', sans-serif;
-    outline: none; transition: border-color 0.2s;
-    box-sizing: border-box;
-  }
-  .mn-search-input:focus { border-color: rgba(255,199,44,0.35); }
-  .mn-search-input::placeholder { color: var(--muted); }
-  .mn-search-clear {
-    position: absolute; right: 10px;
-    width: 20px; height: 20px; border-radius: 50%;
-    background: rgba(255,199,44,0.1);
-    border: none; cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    color: var(--gold);
-  }
-
   /* Nav sections */
   .mn-nav-section { display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; }
   .mn-nav-title {
@@ -560,7 +531,7 @@ const styles = `
     .mn-content { margin-left: 272px; }
   }
 
-  /* Top bar - NO LONGER STICKY (removed position: sticky, top: 0, z-index: 40) */
+  /* Top bar - scrolls away */
   .mn-topbar {
     display: flex; align-items: center; gap: 12px;
     padding: 12px 20px;
@@ -606,11 +577,77 @@ const styles = `
   }
   @keyframes mnPop { from { transform: scale(0); } to { transform: scale(1); } }
 
-  /* Category pills - STICKY AT TOP (changed from top: 65px to top: 0, z-index: 50) */
-  .mn-cats-wrap {
-    position: relative;
+  /* Search bar - STICKY */
+  .mn-search-bar-wrap {
+    position: sticky;
     top: 0;
     z-index: 50;
+    background: rgba(14,7,0,0.95);
+    backdrop-filter: blur(20px) saturate(1.4);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 20px;
+  }
+  .mn-search-bar-inner {
+    position: relative;
+    display: flex;
+    align-items: center;
+    max-width: 600px;
+    margin: 0 auto;
+    width: 100%;
+  }
+  .mn-search-bar-icon {
+    position: absolute;
+    left: 16px;
+    width: 18px;
+    height: 18px;
+    color: var(--muted);
+    pointer-events: none;
+  }
+  .mn-search-bar-input {
+    width: 100%;
+    padding: 12px 44px 12px 44px;
+    background: rgba(255,248,231,0.05);
+    border: 1.5px solid var(--border);
+    border-radius: 14px;
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 500;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    outline: none;
+    transition: border-color 0.2s, background 0.2s;
+    box-sizing: border-box;
+  }
+  .mn-search-bar-input:focus {
+    border-color: rgba(255,199,44,0.35);
+    background: rgba(255,248,231,0.08);
+  }
+  .mn-search-bar-input::placeholder {
+    color: var(--muted);
+  }
+  .mn-search-bar-clear {
+    position: absolute;
+    right: 12px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: rgba(255,199,44,0.1);
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--gold);
+    transition: all 0.2s;
+  }
+  .mn-search-bar-clear:hover {
+    background: rgba(255,199,44,0.2);
+  }
+
+  /* Category pills - STICKY (below search) */
+  .mn-cats-wrap {
+    position: sticky;
+    top: 61px;
+    z-index: 49;
     background: rgba(14,7,0,0.92);
     border-bottom: 1px solid var(--border);
     overflow: hidden;
@@ -791,7 +828,9 @@ const styles = `
     .mn-grid-wrap { padding: 16px 12px; }
     .mn-grid { grid-template-columns: 1fr; gap: 16px; }
     .mn-topbar { padding: 10px 14px; }
+    .mn-search-bar-wrap { padding: 10px 14px; }
+    .mn-cats-wrap { top: 57px; }
+    .mn-cats-scroll { padding: 10px 14px; }
     .mn-info-strip { padding: 7px 14px; }
   }
 `;
-
