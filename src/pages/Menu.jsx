@@ -18,10 +18,7 @@ import { Tooltip } from "antd";
 const CATEGORIES = [
   { label: "All",      emoji: "🍽️" },
   { label: "Kota",     emoji: "🥪" },
-  { label: "Drinks",   emoji: "🥤" },
-  { label: "Sides",    emoji: "🍟" },
-  { label: "Combos",   emoji: "🔥" },
-  { label: "Desserts", emoji: "🍰" },
+  
 ];
 
 export default function Menu() {
@@ -114,7 +111,7 @@ export default function Menu() {
             <Zap className="mn-wake-icon" />
             <div>
               <p className="mn-wake-title">Server warming up…</p>
-              <p className="mn-wake-sub">Ready in 30–60 s</p>
+              <p className="mn-wake-sub">Loading menu ready in 30–60 s</p>
             </div>
           </div>
         )}
