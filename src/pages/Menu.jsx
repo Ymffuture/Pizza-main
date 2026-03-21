@@ -270,7 +270,7 @@ export default function Menu() {
           </header>
 
           {/* Category pills - STICKY AT TOP */}
-          <div className="mn-cats-wrap sticky top-0 z-50 shadow-2xl">
+          <div className="mn-cats-wrap shadow-2xl">
             <div className="mn-cats-scroll">
               {CATEGORIES.map((cat) => (
                 <button
