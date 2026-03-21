@@ -608,7 +608,7 @@ const styles = `
 
   /* Category pills - STICKY AT TOP (changed from top: 65px to top: 0, z-index: 50) */
   .mn-cats-wrap {
-    position: absolute;
+    position: relative;
     top: 0;
     z-index: 50;
     background: rgba(14,7,0,0.92);
