@@ -6,10 +6,12 @@ import usePolling from "../hooks/usePolling";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../components/Toast";
 import { formatCurrency } from "../utils/formatCurrency";
+import { getAssignmentByOrder } from "../api/delivery.api";
 import {
   ArrowLeft, Flame, LogOut, RefreshCw,
   Clock, CheckCircle2, ChefHat, Package, Truck,
-  XCircle, MapPin, Receipt, Copy, Check, Phone
+  XCircle, MapPin, Receipt, Copy, Check, Phone,
+  User, Bike, Navigation, CheckCheck,
 } from "lucide-react";
 import Footer from "../components/Footer";
 
@@ -31,6 +33,70 @@ const STEPS = [
   { key: "delivered", label: "Delivered" },
 ];
 
+// Delivery sub-statuses shown inside driver card
+const DRIVER_STATUS_CFG = {
+  accepted:   { label: "Driver assigned",  color: "#FFC72C", Icon: Bike        },
+  picked_up:  { label: "Picked up",        color: "#60a5fa", Icon: Package     },
+  in_transit: { label: "On the way",       color: "#fb923c", Icon: Navigation  },
+  delivered:  { label: "Delivered",        color: "#4ade80", Icon: CheckCheck  },
+};
+
+/* ── Driver info card ── */
+function DriverCard({ info }) {
+  if (!info?.has_driver) return null;
+  const dCfg = DRIVER_STATUS_CFG[info.status] || DRIVER_STATUS_CFG.accepted;
+  const DIcon = dCfg.Icon;
+
+  return (
+    <section className="os-card os-driver-card">
+      <h2 className="os-section-label">
+        <Bike className="w-4 h-4" /> Your Driver
+      </h2>
+
+      {/* Status pill */}
+      <div className="os-driver-status-row">
+        <span
+          className="os-driver-status-pill"
+          style={{ background: `${dCfg.color}18`, border: `1px solid ${dCfg.color}40`, color: dCfg.color }}
+        >
+          <DIcon style={{ width: 13, height: 13, flexShrink: 0 }} />
+          {dCfg.label}
+        </span>
+      </div>
+
+      {/* Driver details */}
+      <div className="os-driver-info">
+        <div className="os-driver-avatar">
+          <User className="w-5 h-5" style={{ color: "#FFC72C" }} />
+        </div>
+        <div className="os-driver-text">
+          <p className="os-driver-name">{info.driver_name}</p>
+          {info.driver_phone && (
+            <a href={`tel:${info.driver_phone}`} className="os-driver-phone">
+              <Phone style={{ width: 12, height: 12 }} />
+              {info.driver_phone}
+            </a>
+          )}
+        </div>
+        {info.delivery_fee != null && (
+          <div className="os-driver-fee">
+            <span className="os-meta-label">Delivery fee</span>
+            <span className="os-driver-fee-amount">R{info.delivery_fee.toFixed(2)}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Timing */}
+      {info.actual_time != null && (
+        <p className="os-driver-time">
+          <Clock style={{ width: 12, height: 12 }} />
+          Delivered in {info.actual_time} min
+        </p>
+      )}
+    </section>
+  );
+}
+
 export default function OrderStatus() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -38,10 +104,11 @@ export default function OrderStatus() {
   const { logout, user } = useAuth();
   const toast = useToast();
 
-  const [order, setOrder]         = useState(null);
-  const [loadError, setLoadError] = useState(null);
-  const [lastUpdated, setLast]    = useState(null);
-  const [copiedId, setCopiedId]   = useState(false);
+  const [order, setOrder]           = useState(null);
+  const [loadError, setLoadError]   = useState(null);
+  const [lastUpdated, setLast]      = useState(null);
+  const [copiedId, setCopiedId]     = useState(false);
+  const [driverInfo, setDriverInfo] = useState(null);
 
   const load = async () => {
     try {
@@ -49,6 +116,16 @@ export default function OrderStatus() {
       setOrder(data);
       setLast(new Date());
       setLoadError(null);
+
+      // Fetch driver info for orders that have / had a driver
+      if (["preparing", "ready", "delivered"].includes(data?.status)) {
+        try {
+          const res = await getAssignmentByOrder(id);
+          setDriverInfo(res.data);
+        } catch {
+          // non-fatal — driver info just won't show
+        }
+      }
     } catch (err) {
       setLoadError(
         err?.response?.data?.detail ||
@@ -77,7 +154,6 @@ export default function OrderStatus() {
       if (navigator.clipboard && window.isSecureContext) {
         await navigator.clipboard.writeText(orderIdStr);
       } else {
-        // Fallback for non-HTTPS contexts
         const textarea = document.createElement("textarea");
         textarea.value = orderIdStr;
         textarea.style.position = "fixed";
@@ -90,12 +166,12 @@ export default function OrderStatus() {
       setCopiedId(true);
       toast.show({ type: "success", title: "Copied!", message: "Order ID copied to clipboard" });
       setTimeout(() => setCopiedId(false), 2000);
-    } catch (err) {
+    } catch {
       toast.show({ type: "error", title: "Failed to copy", message: "Please try again" });
     }
   };
 
-  /* ── Error (no order yet) ── */
+  /* ── Error ── */
   if (loadError && !order) {
     return (
       <div className="os-root">
@@ -149,11 +225,7 @@ export default function OrderStatus() {
                 <span className="os-brand-name">TRACK ORDER</span>
                 <div className="os-brand-id-row">
                   <p className="os-brand-id">#{orderIdShort}</p>
-                  <button 
-                    className="os-copy-btn" 
-                    onClick={copyOrderId}
-                    title="Copy Order ID"
-                  >
+                  <button className="os-copy-btn" onClick={copyOrderId} title="Copy Order ID">
                     {copiedId ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
                   </button>
                 </div>
@@ -189,7 +261,6 @@ export default function OrderStatus() {
           <section className="os-card">
             <h2 className="os-section-label"><Receipt className="w-4 h-4" /> Order Progress</h2>
             <div className="os-stepper">
-              {/* Track line */}
               <div className="os-track-bg" />
               <div
                 className="os-track-fill"
@@ -199,7 +270,7 @@ export default function OrderStatus() {
                 }}
               />
               {STEPS.map((step, i) => {
-                const done = i + 1 <= currentStep;
+                const done   = i + 1 <= currentStep;
                 const active = i + 1 === currentStep;
                 return (
                   <div key={step.key} className="os-step">
@@ -218,22 +289,23 @@ export default function OrderStatus() {
             </div>
           </section>
         )}
-        
-{order.status === "preparing" && (
-  <div className="os-cta-warn">
-  <div className="os-cta-card os-cta-warn">
+
+        {/* ── Driver Card ── */}
+        <DriverCard info={driverInfo} />
+
+        {/* ── Preparing warning ── */}
+        {order.status === "preparing" && (
+          <div className="os-cta-card os-cta-warn">
             <XCircle className="w-5 h-5" />
             <div>
               <p className="os-cta-title">Important Note:</p>
-              <p className="os-cta-sub">From this step this order can not be cancelled or refundable wait until delivered.</p>
+              <p className="os-cta-sub">From this step this order cannot be cancelled or refunded — wait until delivered.</p>
             </div>
             <button className="os-cta-btn" onClick={() => navigate("/info")}>Learn more</button>
           </div>
-  </div>
-          
         )}
-        
-        {/* ── Cancellation Info Banner ── */}
+
+        {/* ── Cancellation Info (pending only) ── */}
         {order.status === "pending" && (
           <section className="os-cancel-info">
             <div className="os-cancel-icon">
@@ -242,8 +314,7 @@ export default function OrderStatus() {
             <div className="os-cancel-content">
               <p className="os-cancel-title">Cancellation Support</p>
               <p className="os-cancel-text">
-                Cancellations can only be processed through Katabot AI-Powered. 
-                For any issues or refunds, please contact:
+                Cancellations can only be processed through KotaBot AI. For issues or refunds, call:
               </p>
               <a href="tel:0653935339" className="os-cancel-phone">
                 065 393 5339
@@ -314,7 +385,7 @@ export default function OrderStatus() {
           )}
         </section>
 
-        {/* ── Cancelled / Delivered CTA ── */}
+        {/* ── Cancelled CTA ── */}
         {order.status === "cancelled" && (
           <div className="os-cta-card os-cta-red">
             <XCircle className="w-5 h-5" />
@@ -325,8 +396,8 @@ export default function OrderStatus() {
             <button className="os-cta-btn" onClick={() => navigate("/menu")}>Order Again</button>
           </div>
         )}
-        
 
+        {/* ── Delivered CTA ── */}
         {order.status === "delivered" && (
           <div className="os-cta-card os-cta-green">
             <Truck className="w-5 h-5" />
@@ -406,6 +477,54 @@ const styles = `
   .os-step-label { font-size:10px; font-weight:700; color:var(--muted); text-align:center; width:52px; line-height:1.3; }
   .os-step-label-done { color:var(--text); }
 
+  /* ── Driver Card ── */
+  .os-driver-card {
+    border-color: rgba(255,199,44,0.2);
+    background: linear-gradient(135deg, rgba(255,199,44,0.06) 0%, var(--card) 60%);
+    animation: osDriverIn 0.4s cubic-bezier(0.34,1.2,0.64,1);
+  }
+  @keyframes osDriverIn { from{opacity:0;transform:translateY(-8px)} to{opacity:1;transform:none} }
+
+  .os-driver-status-row { display:flex; align-items:center; gap:8px; }
+  .os-driver-status-pill {
+    display:inline-flex; align-items:center; gap:6px;
+    padding:5px 12px; border-radius:50px;
+    font-size:11px; font-weight:800; letter-spacing:0.04em;
+  }
+
+  .os-driver-info {
+    display:flex; align-items:center; gap:14px;
+    background:rgba(255,248,231,0.03); border:1px solid var(--border);
+    border-radius:14px; padding:14px 16px;
+  }
+  .os-driver-avatar {
+    width:44px; height:44px; border-radius:12px; flex-shrink:0;
+    background:rgba(255,199,44,0.1); border:1px solid rgba(255,199,44,0.2);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .os-driver-text { flex:1; min-width:0; }
+  .os-driver-name {
+    font-size:14px; font-weight:800; color:var(--text);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .os-driver-phone {
+    display:inline-flex; align-items:center; gap:5px;
+    font-size:12px; font-weight:700; color:var(--gold);
+    text-decoration:none; margin-top:4px;
+    transition:opacity 0.2s;
+  }
+  .os-driver-phone:hover { opacity:0.8; }
+  .os-driver-fee { display:flex; flex-direction:column; align-items:flex-end; gap:2px; flex-shrink:0; }
+  .os-driver-fee-amount { font-family:'Bebas Neue',sans-serif; font-size:18px; color:#4ade80; }
+
+  .os-driver-time {
+    display:inline-flex; align-items:center; gap:5px;
+    font-size:11px; font-weight:600; color:var(--muted);
+    padding:6px 12px; border-radius:50px;
+    background:rgba(255,248,231,0.04); border:1px solid var(--border);
+    width:fit-content;
+  }
+
   /* Cancellation Info Banner */
   .os-cancel-info { display:flex; align-items:flex-start; gap:12px; background:rgba(218,41,28,0.08); border:1px solid rgba(218,41,28,0.25); border-radius:16px; padding:16px 18px; }
   .os-cancel-icon { width:36px; height:36px; background:rgba(218,41,28,0.15); border-radius:10px; display:flex; align-items:center; justify-content:center; color:var(--red); flex-shrink:0; }
@@ -438,8 +557,8 @@ const styles = `
 
   /* CTA cards */
   .os-cta-card { display:flex; align-items:center; gap:14px; border-radius:16px; padding:16px 18px; border:1px solid; }
-  .os-cta-red { background:rgba(218,41,28,0.08); border-color:rgba(218,41,28,0.25); color:var(--red); }
-  .os-cta-warn { background:rgba(218,41,28,0.08); border-color:rgba(218,41,28,0.25); color:orange; }
+  .os-cta-red  { background:rgba(218,41,28,0.08); border-color:rgba(218,41,28,0.25); color:var(--red); }
+  .os-cta-warn { background:rgba(251,146,60,0.08); border-color:rgba(251,146,60,0.25); color:#fb923c; }
   .os-cta-green { background:rgba(74,222,128,0.08); border-color:rgba(74,222,128,0.25); color:#4ade80; }
   .os-cta-title { font-size:14px; font-weight:800; color:var(--text); }
   .os-cta-sub { font-size:11px; color:var(--muted); margin-top:2px; }
