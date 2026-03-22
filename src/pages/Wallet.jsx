@@ -3,13 +3,17 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import {
+  getWalletBalance,
+  getWalletTransactions,
+  getDriverProfile,
+  withdrawFunds,
+} from "../api/delivery.api";
+import {
   Flame, Wallet as WalletIcon, ArrowLeft, TrendingUp,
   DollarSign, Download, Clock, CheckCircle2, AlertCircle,
   ArrowUpRight, ArrowDownRight, Gift, Zap, ShoppingBag,
   Loader, X, Info, ChevronRight
 } from "lucide-react";
-
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 export default function WalletPage() {
   const navigate = useNavigate();
@@ -39,43 +43,23 @@ export default function WalletPage() {
       setLoading(true);
       setError(null);
       
-      // Fetch wallet balance
-      const balanceRes = await fetch(`${API_URL}/delivery/wallet/balance`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      // Fetch all data in parallel
+      const [balanceRes, txRes, profileRes] = await Promise.all([
+        getWalletBalance(),
+        getWalletTransactions(50),
+        getDriverProfile(),
+      ]);
       
-      if (!balanceRes.ok) {
-        if (balanceRes.status === 404) {
-          throw new Error("Driver profile not found. Please complete driver signup first.");
-        }
-        throw new Error("Failed to load wallet data");
-      }
-      
-      const balanceData = await balanceRes.json();
-      setBalance(balanceData);
-      
-      // Fetch transactions
-      const txRes = await fetch(`${API_URL}/delivery/wallet/transactions?limit=50`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      
-      if (txRes.ok) {
-        const txData = await txRes.json();
-        setTransactions(txData);
-      }
-      
-      // Fetch driver profile
-      const profileRes = await fetch(`${API_URL}/delivery/profile`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      
-      if (profileRes.ok) {
-        const profileData = await profileRes.json();
-        setProfile(profileData);
-      }
+      setBalance(balanceRes.data);
+      setTransactions(txRes.data);
+      setProfile(profileRes.data);
       
     } catch (err) {
-      setError(err.message);
+      if (err?.response?.status === 404) {
+        setError("Driver profile not found. Please complete driver signup first.");
+      } else {
+        setError(err?.response?.data?.detail || err.message || "Failed to load wallet data");
+      }
     } finally {
       setLoading(false);
     }
@@ -99,25 +83,12 @@ export default function WalletPage() {
     setWithdrawError(null);
     
     try {
-      const response = await fetch(`${API_URL}/delivery/wallet/withdraw`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          amount: amount,
-          bank_name: profile?.bank_name,
-          account_number: profile?.account_number,
-          account_holder: profile?.account_holder,
-        }),
+      await withdrawFunds({
+        amount,
+        bank_name: profile?.bank_name,
+        account_number: profile?.account_number,
+        account_holder: profile?.account_holder,
       });
-      
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.detail || "Withdrawal failed");
-      }
       
       setWithdrawSuccess(true);
       setTimeout(() => {
@@ -128,7 +99,7 @@ export default function WalletPage() {
       }, 2000);
       
     } catch (err) {
-      setWithdrawError(err.message);
+      setWithdrawError(err?.response?.data?.detail || err.message || "Withdrawal failed");
     } finally {
       setWithdrawing(false);
     }
@@ -163,7 +134,7 @@ export default function WalletPage() {
           <h2 className="wl-auth-title">Driver Wallet</h2>
           <p className="wl-auth-sub">Sign in to view your earnings, track transactions, and withdraw funds.</p>
           <Link to="/login?redirect=/wallet" className="wl-auth-btn">Sign In to Continue</Link>
-          <Link to="/deliver" className="wl-auth-link">Not a driver yet? Apply now →</Link>
+          <Link to="/deliver-signup" className="wl-auth-link">Not a driver yet? Apply now →</Link>
         </div>
       </div>
     );
@@ -190,7 +161,7 @@ export default function WalletPage() {
           <h3>Unable to Load Wallet</h3>
           <p>{error}</p>
           {error.includes("Driver profile not found") && (
-            <Link to="/deliver" className="wl-auth-btn">Complete Driver Signup</Link>
+            <Link to="/deliver-signup" className="wl-auth-btn">Complete Driver Signup</Link>
           )}
           <button onClick={fetchWalletData} className="wl-retry-btn">Retry</button>
         </div>

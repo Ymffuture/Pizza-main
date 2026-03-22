@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { driverSignup } from "../api/delivery.api";
 import {
   Flame, Bike, ChevronRight, ChevronDown,
   Star, Shield, Clock, Zap, MapPin,
@@ -9,8 +10,6 @@ import {
   ArrowRight, Loader, DollarSign,
   TrendingUp, Award, Upload, X, AlertCircle
 } from "lucide-react";
-
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 const BENEFITS = [
   {
@@ -155,7 +154,7 @@ export default function DeliverSignup() {
     e.preventDefault();
     
     if (!isAuth) {
-      navigate('/login?redirect=/deliverq');
+      navigate('/login?redirect=/deliver-signup');
       return;
     }
     
@@ -181,23 +180,11 @@ export default function DeliverSignup() {
         if (file) formData.append(key, file);
       });
       
-      const response = await fetch(`${API_URL}/delivery/signup`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-        body: formData,
-      });
-      
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.detail || 'Application failed. Please try again.');
-      }
-      
+      await driverSignup(formData);
       setDone(true);
+      
     } catch (error) {
-      setApiError(error.message);
+      setApiError(error?.response?.data?.detail || error.message || 'Application failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -251,7 +238,7 @@ export default function DeliverSignup() {
 
             <div className="ds-hero-stats">
               <div className="ds-stat">
-                <span className="ds-stat-num">R100+</span>
+                <span className="ds-stat-num">R800+</span>
                 <span className="ds-stat-label">Daily potential</span>
               </div>
               <div className="ds-stat-divider" />
@@ -280,7 +267,7 @@ export default function DeliverSignup() {
                 ))}
               </div>
               <p className="ds-drivers-text">
-                <strong>11+ active drivers</strong> already earning
+                <strong>200+ active drivers</strong> already earning
               </p>
             </div>
           </div>
