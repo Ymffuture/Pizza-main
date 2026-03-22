@@ -34,7 +34,6 @@ export const withdrawFunds = (data) =>
 
 // ────────────────────────────────────────────────────────────
 // AVAILABILITY & ORDERS
-// FIX: toggleAvailability now sends required { is_available } body
 // ────────────────────────────────────────────────────────────
 export const toggleAvailability = (isAvailable) =>
   axiosClient.post("/delivery/toggle-availability", { is_available: isAvailable });
@@ -45,7 +44,6 @@ export const getAvailableOrders = () =>
 export const acceptOrder = (orderId) =>
   axiosClient.post("/delivery/accept-order", { order_id: orderId });
 
-// FIX: was sending delivery_id — backend schema expects assignment_id
 export const updateDeliveryStatus = (assignmentId, status, notes = null) =>
   axiosClient.patch("/delivery/update-delivery-status", {
     assignment_id: assignmentId,
@@ -55,6 +53,14 @@ export const updateDeliveryStatus = (assignmentId, status, notes = null) =>
 
 export const getActiveDelivery = () =>
   axiosClient.get("/delivery/active-delivery");
+
+// ────────────────────────────────────────────────────────────
+// CUSTOMER: delivery info for a specific order
+// Calls GET /delivery/assignment/order/{orderId}
+// Returns { has_driver, driver_name, driver_phone, status, ... }
+// ────────────────────────────────────────────────────────────
+export const getAssignmentByOrder = (orderId) =>
+  axiosClient.get(`/delivery/assignment/order/${orderId}`);
 
 // ────────────────────────────────────────────────────────────
 // ADMIN (for future use)
