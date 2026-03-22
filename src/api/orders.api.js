@@ -1,7 +1,15 @@
-import axiosClient from "./axiosClient";
+import { api } from "./auth.api";
+import { parseApiError } from "../utils/apiError";
 
-export const createOrder = (payload) =>
-  axiosClient.post("/orders", payload);
+// GET /orders/all — admin: all orders in the system
+export const getOrders = () => api.get("/orders/all");
 
-export const getOrderById = (id) =>
-  axiosClient.get(`/orders/${id}`);
+// PATCH /orders/:id/status — admin: update order status
+// body: { status: "pending" | "paid" | "preparing" | "ready" | "delivered" | "cancelled" }
+export const updateOrderStatus = (id, status) =>
+  api.patch(`/orders/${id}/status`, { status });
+
+// GET /orders/:id — single order detail
+export const getOrderById = (id) => api.get(`/orders/${id}`);
+
+export { parseApiError };
