@@ -34,6 +34,7 @@ export const withdrawFunds = (data) =>
 
 // ────────────────────────────────────────────────────────────
 // AVAILABILITY & ORDERS
+// FIX: toggleAvailability now sends required { is_available } body
 // ────────────────────────────────────────────────────────────
 export const toggleAvailability = (isAvailable) =>
   axiosClient.post("/delivery/toggle-availability", { is_available: isAvailable });
@@ -44,6 +45,7 @@ export const getAvailableOrders = () =>
 export const acceptOrder = (orderId) =>
   axiosClient.post("/delivery/accept-order", { order_id: orderId });
 
+// FIX: was sending delivery_id — backend schema expects assignment_id
 export const updateDeliveryStatus = (assignmentId, status, notes = null) =>
   axiosClient.patch("/delivery/update-delivery-status", {
     assignment_id: assignmentId,
@@ -55,35 +57,26 @@ export const getActiveDelivery = () =>
   axiosClient.get("/delivery/active-delivery");
 
 // ────────────────────────────────────────────────────────────
-// CUSTOMER: delivery info for a specific order
-// Calls GET /delivery/assignment/order/{orderId}
-// Returns { has_driver, driver_name, driver_phone, status, ... }
-// ────────────────────────────────────────────────────────────
-export const getAssignmentByOrder = (orderId) =>
-  axiosClient.get(`/delivery/assignment/order/${orderId}`);
-
-// ────────────────────────────────────────────────────────────
 // ADMIN (for future use)
 // ────────────────────────────────────────────────────────────
 export const getPendingDrivers = () =>
   axiosClient.get("/delivery/admin/pending");
 
-export const approveDriver = (driverId, approved, reason = null) =>
-  axiosClient.post("/delivery/admin/approve", {
-    driver_id: driverId,
-    approved,
-    reason,
-  });
+export const approveDriver = (driverId, approved, reason = null) => {
+  const body = { driver_id: driverId, approved };
+  if (reason && reason.trim()) body.reason = reason.trim();
+  return axiosClient.post("/delivery/admin/approve", body);
+};
 
 export const getAllDrivers = (status = null) =>
   axiosClient.get("/delivery/admin/all-drivers", {
     params: status ? { status } : {},
   });
 
-export const adjustWallet = (driverId, amount, transactionType, description) =>
+export const adjustWallet = (driverId, amount, type, description) =>
   axiosClient.post("/delivery/admin/wallet/adjust", {
     driver_id: driverId,
     amount,
-    transaction_type: transactionType,
+    type,
     description,
   });
