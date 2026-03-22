@@ -134,7 +134,7 @@ export default function WalletPage() {
           <h2 className="wl-auth-title">Driver Wallet</h2>
           <p className="wl-auth-sub">Sign in to view your earnings, track transactions, and withdraw funds.</p>
           <Link to="/login?redirect=/wallet" className="wl-auth-btn">Sign In to Continue</Link>
-          <Link to="/deliver-signup" className="wl-auth-link">Not a driver yet? Apply now →</Link>
+          <Link to="/deliver" className="wl-auth-link">Not a driver yet? Apply now →</Link>
         </div>
       </div>
     );
@@ -161,7 +161,7 @@ export default function WalletPage() {
           <h3>Unable to Load Wallet</h3>
           <p>{error}</p>
           {error.includes("Driver profile not found") && (
-            <Link to="/deliver-signup" className="wl-auth-btn">Complete Driver Signup</Link>
+            <Link to="/deliver" className="wl-auth-btn">Complete Driver Signup</Link>
           )}
           <button onClick={fetchWalletData} className="wl-retry-btn">Retry</button>
         </div>
