@@ -1,13 +1,16 @@
 // src/pages/DeliverSignup.jsx
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import {
   Flame, Bike, ChevronRight, ChevronDown,
   Star, Shield, Clock, Zap, MapPin,
   Phone, Mail, User, Car, CheckCircle2,
   ArrowRight, Loader, DollarSign,
-  TrendingUp, Award, Users
+  TrendingUp, Award, Upload, X, AlertCircle
 } from "lucide-react";
+
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 const BENEFITS = [
   {
@@ -49,7 +52,7 @@ const FAQS = [
   },
   {
     q: "How do I get paid?",
-    a: "Earnings are calculated per delivery + tips. You can cash out daily via EFT or Instant Pay.",
+    a: "Earnings are calculated per delivery (R15 base). You can withdraw to your bank account anytime with a minimum of R50.",
   },
   {
     q: "What areas do you operate in?",
@@ -63,23 +66,61 @@ const FAQS = [
 
 export default function DeliverSignup() {
   const navigate = useNavigate();
+  const { isAuth, user, token } = useAuth();
+  
   const [form, setForm] = useState({
-    full_name: "", phone: "", email: "", vehicle: "", area: "",
+    full_name: user?.full_name || "",
+    phone: user?.phone || "",
+    id_number: "",
+    vehicle_type: "",
+    vehicle_registration: "",
+    drivers_license: "",
+    street_address: "",
+    suburb: "",
+    postal_code: "",
+    bank_name: "",
+    account_number: "",
+    account_holder: "",
   });
-  const [errors, setErrors]   = useState({});
+  
+  const [files, setFiles] = useState({
+    id_document: null,
+    license_document: null,
+    vehicle_document: null,
+    profile_photo: null,
+  });
+  
+  const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
-  const [done, setDone]       = useState(false);
+  const [done, setDone] = useState(false);
+  const [apiError, setApiError] = useState(null);
   const [openFaq, setOpenFaq] = useState(null);
 
   const validate = () => {
     const e = {};
     if (!form.full_name.trim()) e.full_name = "Full name is required";
-    if (!form.phone.trim())     e.phone     = "Phone number is required";
+    if (!form.phone.trim()) e.phone = "Phone number is required";
     else if (!/^0\d{9}$/.test(form.phone.replace(/\s/g, "")))
       e.phone = "Must be 10 digits starting with 0";
-    if (!form.email.trim())     e.email     = "Email is required";
-    else if (!/\S+@\S+\.\S+/.test(form.email)) e.email = "Invalid email";
-    if (!form.vehicle)          e.vehicle   = "Select your vehicle type";
+    if (!form.id_number.trim()) e.id_number = "ID number is required";
+    else if (!/^\d{13}$/.test(form.id_number))
+      e.id_number = "Must be 13 digits";
+    if (!form.vehicle_type) e.vehicle_type = "Select your vehicle type";
+    if (!form.street_address.trim()) e.street_address = "Address is required";
+    if (!form.suburb.trim()) e.suburb = "Suburb is required";
+    if (!form.postal_code.trim()) e.postal_code = "Postal code is required";
+    
+    // Banking details
+    if (!form.bank_name.trim()) e.bank_name = "Bank name is required";
+    if (!form.account_number.trim()) e.account_number = "Account number is required";
+    if (!form.account_holder.trim()) e.account_holder = "Account holder is required";
+    
+    // File validation
+    if (!files.id_document) e.id_document = "ID document required";
+    if (!files.license_document) e.license_document = "License document required";
+    if (!files.vehicle_document) e.vehicle_document = "Vehicle document required";
+    if (!files.profile_photo) e.profile_photo = "Profile photo required";
+    
     return e;
   };
 
@@ -88,15 +129,78 @@ export default function DeliverSignup() {
     if (errors[field]) setErrors((p) => ({ ...p, [field]: "" }));
   };
 
+  const handleFileChange = (field) => (ev) => {
+    const file = ev.target.files?.[0];
+    if (file) {
+      // Validate file size (5MB max)
+      if (file.size > 5 * 1024 * 1024) {
+        setErrors((p) => ({ ...p, [field]: "File too large (max 5MB)" }));
+        return;
+      }
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        setErrors((p) => ({ ...p, [field]: "Must be an image file" }));
+        return;
+      }
+      setFiles((p) => ({ ...p, [field]: file }));
+      if (errors[field]) setErrors((p) => ({ ...p, [field]: "" }));
+    }
+  };
+
+  const removeFile = (field) => {
+    setFiles((p) => ({ ...p, [field]: null }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (!isAuth) {
+      navigate('/login?redirect=/deliver-signup');
+      return;
+    }
+    
     const errs = validate();
-    if (Object.keys(errs).length) { setErrors(errs); return; }
+    if (Object.keys(errs).length) {
+      setErrors(errs);
+      return;
+    }
+    
     setLoading(true);
-    // Simulate API call
-    await new Promise((r) => setTimeout(r, 1800));
-    setLoading(false);
-    setDone(true);
+    setApiError(null);
+    
+    try {
+      const formData = new FormData();
+      
+      // Add text fields
+      Object.entries(form).forEach(([key, value]) => {
+        formData.append(key, value);
+      });
+      
+      // Add files
+      Object.entries(files).forEach(([key, file]) => {
+        if (file) formData.append(key, file);
+      });
+      
+      const response = await fetch(`${API_URL}/delivery/signup`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData,
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.detail || 'Application failed. Please try again.');
+      }
+      
+      setDone(true);
+    } catch (error) {
+      setApiError(error.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -112,7 +216,11 @@ export default function DeliverSignup() {
           </Link>
           <div className="ds-header-right">
             <Link to="/menu" className="ds-header-link">Browse Menu</Link>
-            <Link to="/login" className="ds-header-btn">Sign In</Link>
+            {isAuth ? (
+              <Link to="/driver-dashboard" className="ds-header-btn">Dashboard</Link>
+            ) : (
+              <Link to="/login" className="ds-header-btn">Sign In</Link>
+            )}
           </div>
         </div>
       </header>
@@ -163,7 +271,6 @@ export default function DeliverSignup() {
               <ArrowRight className="w-5 h-5" />
             </a>
 
-            {/* Avatars strip */}
             <div className="ds-drivers-row">
               <div className="ds-driver-avatars">
                 {["🧑🏾‍🦱","👩🏽","🧑🏿","👨🏾‍🦲","👩🏼"].map((em, i) => (
@@ -188,18 +295,35 @@ export default function DeliverSignup() {
                 <h3 className="ds-done-title">Application Received!</h3>
                 <p className="ds-done-sub">
                   We'll review your details and reach out within <strong>24 hours</strong> to get you started.
+                  Check your email for next steps.
                 </p>
-                <Link to="/menu" className="ds-done-btn">Back to Menu</Link>
+                <Link to="/driver-dashboard" className="ds-done-btn">View Dashboard</Link>
               </div>
             ) : (
               <>
                 <div className="ds-form-header">
                   <h2 className="ds-form-title">Become a Driver</h2>
-                  <p className="ds-form-sub">Takes less than 2 minutes</p>
+                  <p className="ds-form-sub">Takes less than 5 minutes</p>
                 </div>
 
+                {apiError && (
+                  <div className="ds-error-banner">
+                    <AlertCircle className="w-4 h-4" />
+                    <span>{apiError}</span>
+                  </div>
+                )}
+
+                {!isAuth && (
+                  <div className="ds-info-banner">
+                    <Shield className="w-4 h-4" />
+                    <span>Please <Link to="/login?redirect=/deliver-signup" className="ds-form-link">sign in</Link> to apply</span>
+                  </div>
+                )}
+
                 <form onSubmit={handleSubmit} className="ds-form">
-                  {/* Full Name */}
+                  {/* Personal Info */}
+                  <div className="ds-section-title">Personal Information</div>
+                  
                   <div className="ds-field">
                     <label className="ds-label">Full Name</label>
                     <div className={`ds-input-wrap${errors.full_name ? " ds-input-err" : ""}`}>
@@ -212,7 +336,6 @@ export default function DeliverSignup() {
                     {errors.full_name && <p className="ds-err">{errors.full_name}</p>}
                   </div>
 
-                  {/* Phone */}
                   <div className="ds-field">
                     <label className="ds-label">Phone Number</label>
                     <div className={`ds-input-wrap${errors.phone ? " ds-input-err" : ""}`}>
@@ -225,51 +348,187 @@ export default function DeliverSignup() {
                     {errors.phone && <p className="ds-err">{errors.phone}</p>}
                   </div>
 
-                  {/* Email */}
                   <div className="ds-field">
-                    <label className="ds-label">Email Address</label>
-                    <div className={`ds-input-wrap${errors.email ? " ds-input-err" : ""}`}>
-                      <Mail className="ds-icon" />
+                    <label className="ds-label">ID Number</label>
+                    <div className={`ds-input-wrap${errors.id_number ? " ds-input-err" : ""}`}>
+                      <User className="ds-icon" />
                       <input
-                        className="ds-input" placeholder="you@example.com"
-                        value={form.email} onChange={handleChange("email")}
+                        className="ds-input" placeholder="9501015800080"
+                        value={form.id_number} onChange={handleChange("id_number")}
+                        maxLength={13}
                       />
                     </div>
-                    {errors.email && <p className="ds-err">{errors.email}</p>}
+                    {errors.id_number && <p className="ds-err">{errors.id_number}</p>}
                   </div>
 
-                  {/* Vehicle */}
+                  {/* Vehicle Info */}
+                  <div className="ds-section-title">Vehicle Information</div>
+
                   <div className="ds-field">
                     <label className="ds-label">Vehicle Type</label>
-                    <div className={`ds-input-wrap${errors.vehicle ? " ds-input-err" : ""}`}>
+                    <div className={`ds-input-wrap${errors.vehicle_type ? " ds-input-err" : ""}`}>
                       <Car className="ds-icon" />
                       <select
                         className="ds-input ds-select"
-                        value={form.vehicle} onChange={handleChange("vehicle")}
+                        value={form.vehicle_type} onChange={handleChange("vehicle_type")}
                       >
                         <option value="">Select your vehicle</option>
                         <option value="bicycle">🚲 Bicycle</option>
-                        <option value="motorbike">🏍️ Motorbike</option>
+                        <option value="motorcycle">🏍️ Motorcycle</option>
                         <option value="car">🚗 Car</option>
-                        <option value="bakkie">🛻 Bakkie</option>
+                        <option value="scooter">🛴 Scooter</option>
                       </select>
                     </div>
-                    {errors.vehicle && <p className="ds-err">{errors.vehicle}</p>}
+                    {errors.vehicle_type && <p className="ds-err">{errors.vehicle_type}</p>}
                   </div>
 
-                  {/* Area */}
                   <div className="ds-field">
-                    <label className="ds-label">Your Area <span style={{ color: "var(--muted)", fontWeight: 400 }}>(optional)</span></label>
+                    <label className="ds-label">Vehicle Registration <span style={{ color: "var(--muted)", fontWeight: 400 }}>(optional)</span></label>
                     <div className="ds-input-wrap">
-                      <MapPin className="ds-icon" />
+                      <Car className="ds-icon" />
                       <input
-                        className="ds-input" placeholder="e.g. Soweto, Johannesburg"
-                        value={form.area} onChange={handleChange("area")}
+                        className="ds-input" placeholder="ABC123GP"
+                        value={form.vehicle_registration} onChange={handleChange("vehicle_registration")}
                       />
                     </div>
                   </div>
 
-                  <button type="submit" disabled={loading} className="ds-submit-btn">
+                  <div className="ds-field">
+                    <label className="ds-label">Driver's License <span style={{ color: "var(--muted)", fontWeight: 400 }}>(optional)</span></label>
+                    <div className="ds-input-wrap">
+                      <User className="ds-icon" />
+                      <input
+                        className="ds-input" placeholder="DL123456"
+                        value={form.drivers_license} onChange={handleChange("drivers_license")}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Address */}
+                  <div className="ds-section-title">Address</div>
+
+                  <div className="ds-field">
+                    <label className="ds-label">Street Address</label>
+                    <div className={`ds-input-wrap${errors.street_address ? " ds-input-err" : ""}`}>
+                      <MapPin className="ds-icon" />
+                      <input
+                        className="ds-input" placeholder="123 Main St"
+                        value={form.street_address} onChange={handleChange("street_address")}
+                      />
+                    </div>
+                    {errors.street_address && <p className="ds-err">{errors.street_address}</p>}
+                  </div>
+
+                  <div className="ds-field">
+                    <label className="ds-label">Suburb</label>
+                    <div className={`ds-input-wrap${errors.suburb ? " ds-input-err" : ""}`}>
+                      <MapPin className="ds-icon" />
+                      <input
+                        className="ds-input" placeholder="Soweto"
+                        value={form.suburb} onChange={handleChange("suburb")}
+                      />
+                    </div>
+                    {errors.suburb && <p className="ds-err">{errors.suburb}</p>}
+                  </div>
+
+                  <div className="ds-field">
+                    <label className="ds-label">Postal Code</label>
+                    <div className={`ds-input-wrap${errors.postal_code ? " ds-input-err" : ""}`}>
+                      <MapPin className="ds-icon" />
+                      <input
+                        className="ds-input" placeholder="1809"
+                        value={form.postal_code} onChange={handleChange("postal_code")}
+                      />
+                    </div>
+                    {errors.postal_code && <p className="ds-err">{errors.postal_code}</p>}
+                  </div>
+
+                  {/* Banking */}
+                  <div className="ds-section-title">Banking Details</div>
+
+                  <div className="ds-field">
+                    <label className="ds-label">Bank Name</label>
+                    <div className={`ds-input-wrap${errors.bank_name ? " ds-input-err" : ""}`}>
+                      <DollarSign className="ds-icon" />
+                      <select
+                        className="ds-input ds-select"
+                        value={form.bank_name} onChange={handleChange("bank_name")}
+                      >
+                        <option value="">Select bank</option>
+                        <option value="FNB">FNB</option>
+                        <option value="Standard Bank">Standard Bank</option>
+                        <option value="Capitec">Capitec</option>
+                        <option value="Nedbank">Nedbank</option>
+                        <option value="ABSA">ABSA</option>
+                      </select>
+                    </div>
+                    {errors.bank_name && <p className="ds-err">{errors.bank_name}</p>}
+                  </div>
+
+                  <div className="ds-field">
+                    <label className="ds-label">Account Number</label>
+                    <div className={`ds-input-wrap${errors.account_number ? " ds-input-err" : ""}`}>
+                      <DollarSign className="ds-icon" />
+                      <input
+                        className="ds-input" placeholder="1234567890"
+                        value={form.account_number} onChange={handleChange("account_number")}
+                      />
+                    </div>
+                    {errors.account_number && <p className="ds-err">{errors.account_number}</p>}
+                  </div>
+
+                  <div className="ds-field">
+                    <label className="ds-label">Account Holder Name</label>
+                    <div className={`ds-input-wrap${errors.account_holder ? " ds-input-err" : ""}`}>
+                      <User className="ds-icon" />
+                      <input
+                        className="ds-input" placeholder="Thabo Nkosi"
+                        value={form.account_holder} onChange={handleChange("account_holder")}
+                      />
+                    </div>
+                    {errors.account_holder && <p className="ds-err">{errors.account_holder}</p>}
+                  </div>
+
+                  {/* Documents */}
+                  <div className="ds-section-title">Required Documents</div>
+
+                  {[
+                    { key: 'id_document', label: 'ID Document' },
+                    { key: 'license_document', label: 'Driver\'s License' },
+                    { key: 'vehicle_document', label: 'Vehicle Document' },
+                    { key: 'profile_photo', label: 'Profile Photo' },
+                  ].map(({ key, label }) => (
+                    <div key={key} className="ds-field">
+                      <label className="ds-label">{label}</label>
+                      <div className={`ds-file-upload${errors[key] ? " ds-input-err" : ""}`}>
+                        {files[key] ? (
+                          <div className="ds-file-preview">
+                            <span className="ds-file-name">{files[key].name}</span>
+                            <button type="button" onClick={() => removeFile(key)} className="ds-file-remove">
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          <>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={handleFileChange(key)}
+                              className="ds-file-input"
+                              id={key}
+                            />
+                            <label htmlFor={key} className="ds-file-label">
+                              <Upload className="w-4 h-4" />
+                              <span>Choose file</span>
+                            </label>
+                          </>
+                        )}
+                      </div>
+                      {errors[key] && <p className="ds-err">{errors[key]}</p>}
+                    </div>
+                  ))}
+
+                  <button type="submit" disabled={loading || !isAuth} className="ds-submit-btn">
                     {loading
                       ? <><Loader className="w-5 h-5 ds-spin" /> Submitting…</>
                       : <><Bike className="w-5 h-5" /> Apply to Drive</>}
@@ -313,62 +572,10 @@ export default function DeliverSignup() {
             {STEPS.map((s, i) => (
               <div key={i} className="ds-step-card">
                 <div className="ds-step-num">{s.num}</div>
-                <div className="ds-step-connector" />
                 <h3 className="ds-step-title">{s.title}</h3>
                 <p className="ds-step-sub">{s.sub}</p>
               </div>
             ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Earnings Calculator ── */}
-      <section className="ds-calc-section">
-        <div className="ds-section-inner">
-          <div className="ds-calc-card">
-            <div className="ds-calc-left">
-              <div className="ds-calc-badge">
-                <TrendingUp className="w-4 h-4" />
-                <span>Earnings Estimate</span>
-              </div>
-              <h2 className="ds-calc-title">What Can You Earn?</h2>
-              <p className="ds-calc-sub">
-                Average KotaBites driver earns <strong style={{ color: "#4ade80" }}>R350–R800/day</strong> doing 8–15 deliveries.
-                Peak hours (lunch & dinner) pay up to <strong style={{ color: "#FFC72C" }}>2× more</strong>.
-              </p>
-              <div className="ds-calc-rows">
-                <div className="ds-calc-row">
-                  <span className="ds-calc-row-label">🌅 Morning shift (4 hrs)</span>
-                  <span className="ds-calc-row-val">~R180</span>
-                </div>
-                <div className="ds-calc-row">
-                  <span className="ds-calc-row-label">☀️ Full day (8 hrs)</span>
-                  <span className="ds-calc-row-val">~R420</span>
-                </div>
-                <div className="ds-calc-row ds-calc-row-peak">
-                  <span className="ds-calc-row-label">🔥 Peak day (10 hrs)</span>
-                  <span className="ds-calc-row-val" style={{ color: "#FFC72C" }}>~R800+</span>
-                </div>
-              </div>
-            </div>
-            <div className="ds-calc-right">
-              <div className="ds-earnings-visual">
-                {[40, 65, 50, 80, 55, 90, 70].map((h, i) => (
-                  <div key={i} className="ds-bar-wrap">
-                    <div
-                      className="ds-bar"
-                      style={{
-                        height: `${h}%`,
-                        background: i === 5 ? "#FFC72C" : "rgba(255,199,44,0.3)",
-                        animationDelay: `${i * 100}ms`,
-                      }}
-                    />
-                    <span className="ds-bar-label">{["M","T","W","T","F","S","S"][i]}</span>
-                  </div>
-                ))}
-              </div>
-              <p className="ds-chart-label">Weekly earnings (sample driver)</p>
-            </div>
           </div>
         </div>
       </section>
@@ -437,7 +644,6 @@ const styles = `
     --muted:  rgba(255,248,231,0.42);
   }
 
-  /* ── Root ── */
   .ds-root {
     min-height: 100vh;
     background: var(--dark);
@@ -446,7 +652,6 @@ const styles = `
     overflow-x: hidden;
   }
 
-  /* ── Header ── */
   .ds-header {
     position: sticky; top: 0; z-index: 100;
     background: rgba(14,7,0,0.96);
@@ -484,7 +689,6 @@ const styles = `
   }
   .ds-header-btn:hover { background: rgba(255,199,44,0.18); }
 
-  /* ── Hero ── */
   .ds-hero {
     position: relative; overflow: hidden;
     padding: 80px 24px 100px;
@@ -505,7 +709,7 @@ const styles = `
   .ds-hero-inner {
     position: relative; z-index: 1;
     max-width: 1200px; margin: 0 auto;
-    display: grid; grid-template-columns: 1fr 440px;
+    display: grid; grid-template-columns: 1fr 480px;
     gap: 60px; align-items: center;
   }
   .ds-hero-badge {
@@ -577,7 +781,6 @@ const styles = `
     to   { opacity: 1; transform: none; }
   }
 
-  /* ── Form Card ── */
   .ds-form-card {
     background: var(--card);
     border: 1px solid var(--border);
@@ -585,6 +788,8 @@ const styles = `
     padding: 32px 28px;
     box-shadow: 0 24px 64px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,199,44,0.06);
     animation: dsFadeUp 0.6s ease 0.2s both;
+    max-height: 80vh;
+    overflow-y: auto;
   }
   .ds-form-header { margin-bottom: 24px; }
   .ds-form-title {
@@ -597,6 +802,16 @@ const styles = `
   .ds-label {
     font-size: 10px; font-weight: 800; letter-spacing: 0.1em;
     text-transform: uppercase; color: var(--muted);
+  }
+  .ds-section-title {
+    font-size: 11px; font-weight: 900; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--gold);
+    margin: 16px 0 8px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+  }
+  .ds-section-title:first-of-type {
+    margin-top: 0; padding-top: 0; border-top: none;
   }
   .ds-input-wrap {
     display: flex; align-items: center; gap: 10px;
@@ -616,6 +831,56 @@ const styles = `
   .ds-select { cursor: pointer; appearance: none; }
   .ds-select option { background: #1a0e00; color: var(--text); }
   .ds-err { font-size: 11px; font-weight: 700; color: #f87171; }
+  
+  .ds-error-banner {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 14px; border-radius: 12px;
+    background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.3);
+    color: #f87171; font-size: 12px; font-weight: 700;
+    margin-bottom: 16px;
+  }
+  
+  .ds-info-banner {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 14px; border-radius: 12px;
+    background: rgba(96,165,250,0.1); border: 1px solid rgba(96,165,250,0.3);
+    color: #60a5fa; font-size: 12px; font-weight: 700;
+    margin-bottom: 16px;
+  }
+  
+  .ds-file-upload {
+    background: rgba(255,248,231,0.04);
+    border: 1.5px dashed var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    transition: all 0.2s;
+  }
+  .ds-file-upload:hover { border-color: rgba(255,199,44,0.3); }
+  .ds-file-input {
+    display: none;
+  }
+  .ds-file-label {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    color: var(--muted); font-size: 13px; font-weight: 700;
+    cursor: pointer; transition: color 0.2s;
+  }
+  .ds-file-label:hover { color: var(--text); }
+  .ds-file-preview {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px;
+  }
+  .ds-file-name {
+    font-size: 13px; color: var(--text); font-weight: 600;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .ds-file-remove {
+    background: rgba(248,113,113,0.15); border: 1px solid rgba(248,113,113,0.3);
+    border-radius: 6px; padding: 4px;
+    color: #f87171; cursor: pointer; transition: all 0.2s;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .ds-file-remove:hover { background: rgba(248,113,113,0.25); }
+  
   .ds-submit-btn {
     display: flex; align-items: center; justify-content: center; gap: 10px;
     background: var(--red); color: white; border: none; cursor: pointer;
@@ -630,7 +895,6 @@ const styles = `
   .ds-form-note { text-align: center; font-size: 11px; color: var(--muted); }
   .ds-form-link { color: var(--gold); font-weight: 700; text-decoration: none; }
 
-  /* Done state */
   .ds-done {
     display: flex; flex-direction: column; align-items: center;
     gap: 16px; text-align: center; padding: 16px 0;
@@ -641,7 +905,7 @@ const styles = `
     display: flex; align-items: center; justify-content: center;
   }
   .ds-done-title { font-family: 'Bebas Neue', sans-serif; font-size: 26px; letter-spacing: 2px; }
-  .ds-done-sub { font-size: 13px; color: var(--muted); line-height: 1.6; max-width: 260px; }
+  .ds-done-sub { font-size: 13px; color: var(--muted); line-height: 1.6; max-width: 300px; }
   .ds-done-btn {
     background: var(--red); color: white; border: none; cursor: pointer;
     font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 800; font-size: 14px;
@@ -650,7 +914,6 @@ const styles = `
   }
   .ds-done-btn:hover { background: var(--red2); }
 
-  /* ── Shared section styles ── */
   .ds-section-inner { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
   .ds-section-title {
     font-family: 'Bebas Neue', sans-serif;
@@ -663,7 +926,6 @@ const styles = `
     margin-bottom: 48px; line-height: 1.6;
   }
 
-  /* ── Benefits ── */
   .ds-benefits-section { padding: 80px 0; background: rgba(255,248,231,0.015); }
   .ds-benefits-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
   .ds-benefit-card {
@@ -685,7 +947,6 @@ const styles = `
   .ds-benefit-title { font-size: 16px; font-weight: 800; color: var(--text); }
   .ds-benefit-sub { font-size: 13px; color: var(--muted); line-height: 1.5; }
 
-  /* ── Steps ── */
   .ds-steps-section { padding: 80px 0; }
   .ds-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
   .ds-step-card {
@@ -701,60 +962,6 @@ const styles = `
   .ds-step-title { font-size: 18px; font-weight: 800; color: var(--text); }
   .ds-step-sub { font-size: 13px; color: var(--muted); line-height: 1.6; }
 
-  /* ── Earnings calc ── */
-  .ds-calc-section { padding: 80px 0; background: rgba(255,248,231,0.015); }
-  .ds-calc-card {
-    display: grid; grid-template-columns: 1fr 1fr;
-    gap: 48px; align-items: center;
-    background: var(--card); border: 1px solid var(--border);
-    border-radius: 28px; padding: 48px;
-    position: relative; overflow: hidden;
-  }
-  .ds-calc-card::before {
-    content: ''; position: absolute;
-    top: 0; left: 0; right: 0; height: 2px;
-    background: linear-gradient(90deg, transparent, var(--gold), transparent);
-  }
-  .ds-calc-badge {
-    display: inline-flex; align-items: center; gap: 7px;
-    padding: 6px 14px; border-radius: 50px;
-    background: rgba(74,222,128,0.08); border: 1px solid rgba(74,222,128,0.2);
-    font-size: 10px; font-weight: 800; letter-spacing: 0.1em;
-    text-transform: uppercase; color: #4ade80; margin-bottom: 16px;
-  }
-  .ds-calc-title {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 36px; letter-spacing: 2px; color: var(--text);
-    margin-bottom: 14px;
-  }
-  .ds-calc-sub { font-size: 14px; color: var(--muted); line-height: 1.7; margin-bottom: 24px; }
-  .ds-calc-rows { display: flex; flex-direction: column; gap: 8px; }
-  .ds-calc-row {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 10px 14px; border-radius: 10px;
-    background: rgba(255,248,231,0.03); border: 1px solid var(--border);
-    font-size: 13px;
-  }
-  .ds-calc-row-label { color: var(--muted); font-weight: 600; }
-  .ds-calc-row-val   { font-weight: 900; color: var(--text); }
-  .ds-calc-row-peak  { background: rgba(255,199,44,0.06); border-color: rgba(255,199,44,0.2); }
-
-  .ds-calc-right { display: flex; flex-direction: column; align-items: center; gap: 16px; }
-  .ds-earnings-visual {
-    display: flex; align-items: flex-end; gap: 8px;
-    height: 200px; width: 100%; padding: 0 8px;
-  }
-  .ds-bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; height: 100%; }
-  .ds-bar {
-    width: 100%; border-radius: 6px 6px 0 0;
-    animation: dsBarGrow 0.8s ease both;
-    transition: all 0.3s;
-  }
-  @keyframes dsBarGrow { from { transform: scaleY(0); transform-origin: bottom; } to { transform: scaleY(1); } }
-  .ds-bar-label { font-size: 10px; font-weight: 700; color: var(--muted); }
-  .ds-chart-label { font-size: 11px; font-weight: 600; color: var(--muted); }
-
-  /* ── FAQ ── */
   .ds-faq-section { padding: 80px 0; }
   .ds-faq-list { display: flex; flex-direction: column; gap: 10px; max-width: 720px; margin: 0 auto; }
   .ds-faq-item {
@@ -780,7 +987,6 @@ const styles = `
     animation: dsFadeUp 0.25s ease;
   }
 
-  /* ── Bottom CTA ── */
   .ds-bottom-cta { padding: 100px 0; }
   .ds-bottom-cta-inner {
     position: relative;
@@ -805,7 +1011,6 @@ const styles = `
   }
   .ds-bottom-sub { font-size: 15px; color: var(--muted); position: relative; z-index: 1; }
 
-  /* ── Footer strip ── */
   .ds-footer-strip {
     padding: 20px 24px;
     border-top: 1px solid var(--border);
@@ -818,12 +1023,10 @@ const styles = `
   .ds-footer-link { color: var(--muted); text-decoration: none; font-weight: 600; transition: color 0.2s; }
   .ds-footer-link:hover { color: var(--gold); }
 
-  /* ── Responsive ── */
   @media (max-width: 1024px) {
     .ds-hero-inner { grid-template-columns: 1fr; gap: 40px; }
     .ds-benefits-grid { grid-template-columns: repeat(2, 1fr); }
     .ds-steps { grid-template-columns: 1fr; }
-    .ds-calc-card { grid-template-columns: 1fr; padding: 32px 24px; }
   }
   @media (max-width: 640px) {
     .ds-hero { padding: 48px 16px 64px; }
