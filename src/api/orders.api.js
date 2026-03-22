@@ -1,15 +1,21 @@
-// import { api } from "./auth.api";
-import parseApiError  from "../utils/apiError";
+import axiosClient from "./axiosClient";
 
-// GET /orders/all — admin: all orders in the system
-export const getOrders = () => api.get("/orders/all");
+// ── Customer endpoints ────────────────────────────────────────────────────
 
-// PATCH /orders/:id/status — admin: update order status
-// body: { status: "pending" | "paid" | "preparing" | "ready" | "delivered" | "cancelled" }
+// POST /orders — create a new order
+export const createOrder = (payload) =>
+  axiosClient.post("/orders", payload);
+
+// GET /orders/:id — get a single order (customer)
+export const getOrderById = (id) =>
+  axiosClient.get(`/orders/${id}`);
+
+// ── Admin endpoints ───────────────────────────────────────────────────────
+
+// GET /orders/all — all orders in the system
+export const getOrders = () =>
+  axiosClient.get("/orders/all");
+
+// PATCH /orders/:id/status — update order status
 export const updateOrderStatus = (id, status) =>
-  api.patch(`/orders/${id}/status`, { status });
-
-// GET /orders/:id — single order detail
-export const getOrderById = (id) => api.get(`/orders/${id}`);
-
-export { parseApiError };
+  axiosClient.patch(`/orders/${id}/status`, { status });
