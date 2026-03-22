@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const axiosClient = axios.create({
-  baseURL: "https://kotabites.onrender.com",
+  baseURL: import.meta.env.VITE_API_URL,
   headers: { "Content-Type": "application/json" },
   timeout: 60000,
   // ✅ FIX: Must be false — auth is via Authorization: Bearer header,
