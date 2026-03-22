@@ -1,4 +1,3 @@
-
 // src/pages/DeliverDashboard.jsx
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
@@ -81,12 +80,22 @@ export default function DeliverDashboard() {
     }
     try {
       const ordersRes = await getAvailableOrders();
-      setAvailableOrders(Array.isArray(ordersRes.data) ? ordersRes.data : []);
+      const orders = Array.isArray(ordersRes.data) ? ordersRes.data : [];
+      setAvailableOrders(orders);
+      console.log("Orders fetched:", orders.length, orders); // DEBUG
     } catch (err) {
       const status = err?.response?.status;
       const detail = err?.response?.data?.detail || err?.message || "";
-      // 403 = driver not online — this is expected, just clear the list
+      console.log("Orders fetch error:", status, detail); // DEBUG
+      
+      // 403 = driver not online or not approved - this is expected, just clear the list
+      // 401 = unauthorized - token issue
+      // 500 = server error
       if (status === 403) {
+        setAvailableOrders([]);
+        // Don't show toast for 403 - it's expected when offline
+      } else if (status === 401) {
+        showToast("Session expired. Please log in again.", "error");
         setAvailableOrders([]);
       } else {
         // Surface unexpected errors so the driver knows what's wrong
@@ -115,7 +124,13 @@ export default function DeliverDashboard() {
 
         setActiveDelivery(activeRes.data?.active ? activeRes.data : null);
         setWalletBalance(balanceRes.data);
-        await fetchOrders(p);
+        
+        // Only fetch orders if online and no active delivery
+        if (p.is_available && !activeRes.data?.active) {
+          await fetchOrders(p);
+        } else {
+          setAvailableOrders([]);
+        }
       }
     } catch (err) {
       if (err?.response?.status === 404) {
@@ -144,10 +159,10 @@ export default function DeliverDashboard() {
 
   // ── Auto-refresh every 15s when online ──
   useEffect(() => {
-    if (!profile?.is_available) return;
+    if (!profile?.is_available || activeDelivery) return;
     const id = setInterval(() => fetchAll(true), 15000);
     return () => clearInterval(id);
-  }, [profile?.is_available, fetchAll]);
+  }, [profile?.is_available, activeDelivery, fetchAll]);
 
   const handleToggle = async () => {
     if (!profile) return;
