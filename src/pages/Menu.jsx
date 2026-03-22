@@ -581,7 +581,7 @@ const styles = `
   .mn-search-bar-wrap {
     position: sticky;
     top: 0;
-    z-index: 50;
+    z-index: 0;
     background: rgba(14,7,0,0.95);
     backdrop-filter: blur(20px) saturate(1.4);
     border-bottom: 1px solid var(--border);
