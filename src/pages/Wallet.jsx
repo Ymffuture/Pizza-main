@@ -59,7 +59,7 @@ export default function WalletPage() {
         if (prev <= 1) { clearRetry(); fetchData(true); return null; }
         return prev - 1;
       });
-    }, 90000);
+    }, 500);
   };
 
   const fetchData = async (silent = false) => {
