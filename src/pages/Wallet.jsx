@@ -67,18 +67,24 @@ export default function WalletPage() {
     setErrorInfo(null);
     clearRetry();
     try {
-      const [balRes, txRes, profRes] = await Promise.all([
+      const [profRes, balRes, txRes] = await Promise.allSettled([
+        getDriverProfile(),
         getWalletBalance(),
         getWalletTransactions(50),
-        getDriverProfile(),
       ]);
-      setBalance(balRes.data);
-      setTransactions(Array.isArray(txRes.data) ? txRes.data : []);
-      setProfile(profRes.data);
+      if (profRes.status === "rejected") {
+        const info = classifyError(profRes.reason);
+        setErrorInfo(info);
+        if (info.type === "network") startRetry(40);
+        return;
+      }
+      setProfile(profRes.value.data);
+      if (balRes.status === "fulfilled") setBalance(balRes.value.data);
+      if (txRes.status === "fulfilled") setTransactions(Array.isArray(txRes.value.data) ? txRes.value.data : []);
     } catch (err) {
       const info = classifyError(err);
       setErrorInfo(info);
-      if (info.type === "network") startRetry(5);
+      if (info.type === "network") startRetry(40);
     } finally {
       setLoading(false);
     }
