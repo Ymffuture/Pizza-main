@@ -1,5 +1,5 @@
 import { api } from "./auth.api";
-import { parseApiError } from "../utils/apiError";
+import parseApiError  from "../utils/apiError";
 
 // GET /orders/all — admin: all orders in the system
 export const getOrders = () => api.get("/orders/all");
