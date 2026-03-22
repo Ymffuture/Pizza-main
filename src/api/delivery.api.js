@@ -34,9 +34,10 @@ export const withdrawFunds = (data) =>
 
 // ────────────────────────────────────────────────────────────
 // AVAILABILITY & ORDERS
+// FIX: toggleAvailability now sends required { is_available } body
 // ────────────────────────────────────────────────────────────
-export const toggleAvailability = () =>
-  axiosClient.post("/delivery/toggle-availability");
+export const toggleAvailability = (isAvailable) =>
+  axiosClient.post("/delivery/toggle-availability", { is_available: isAvailable });
 
 export const getAvailableOrders = () =>
   axiosClient.get("/delivery/available-orders");
@@ -44,10 +45,12 @@ export const getAvailableOrders = () =>
 export const acceptOrder = (orderId) =>
   axiosClient.post("/delivery/accept-order", { order_id: orderId });
 
-export const updateDeliveryStatus = (deliveryId, status) =>
+// FIX: was sending delivery_id — backend schema expects assignment_id
+export const updateDeliveryStatus = (assignmentId, status, notes = null) =>
   axiosClient.patch("/delivery/update-delivery-status", {
-    delivery_id: deliveryId,
+    assignment_id: assignmentId,
     status,
+    ...(notes && { notes }),
   });
 
 export const getActiveDelivery = () =>
