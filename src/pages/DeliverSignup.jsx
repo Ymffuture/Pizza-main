@@ -15,7 +15,7 @@ const BENEFITS = [
   {
     icon: DollarSign,
     title: "Earn Big",
-    sub: "Up to R800/day during peak hours",
+    sub: "Up to R200/day during peak hours",
     color: "#4ade80",
   },
   {
@@ -154,7 +154,7 @@ export default function DeliverSignup() {
     e.preventDefault();
     
     if (!isAuth) {
-      navigate('/login?redirect=/deliver-signup');
+      navigate('/login?redirect=/deliver');
       return;
     }
     
@@ -303,7 +303,7 @@ export default function DeliverSignup() {
                 {!isAuth && (
                   <div className="ds-info-banner">
                     <Shield className="w-4 h-4" />
-                    <span>Please <Link to="/login?redirect=/deliver-signup" className="ds-form-link">sign in</Link> to apply</span>
+                    <span>Please <Link to="/login?redirect=/deliver" className="ds-form-link">sign in</Link> to apply</span>
                   </div>
                 )}
 
