@@ -155,7 +155,7 @@ export default function DeliverSignup() {
     e.preventDefault();
     
     if (!isAuth) {
-      navigate('/login?redirect=/deliver-signup');
+      navigate('/login?redirect=/deliverq');
       return;
     }
     
@@ -251,7 +251,7 @@ export default function DeliverSignup() {
 
             <div className="ds-hero-stats">
               <div className="ds-stat">
-                <span className="ds-stat-num">R800+</span>
+                <span className="ds-stat-num">R100+</span>
                 <span className="ds-stat-label">Daily potential</span>
               </div>
               <div className="ds-stat-divider" />
@@ -280,7 +280,7 @@ export default function DeliverSignup() {
                 ))}
               </div>
               <p className="ds-drivers-text">
-                <strong>200+ active drivers</strong> already earning
+                <strong>11+ active drivers</strong> already earning
               </p>
             </div>
           </div>
