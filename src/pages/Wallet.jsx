@@ -59,7 +59,7 @@ export default function WalletPage() {
         if (prev <= 1) { clearRetry(); fetchData(true); return null; }
         return prev - 1;
       });
-    }, 500);
+    }, 1000);
   };
 
   const fetchData = async (silent = false) => {
@@ -78,7 +78,7 @@ export default function WalletPage() {
     } catch (err) {
       const info = classifyError(err);
       setErrorInfo(info);
-      if (info.type === "network") startRetry(40);
+      if (info.type === "network") startRetry(5);
     } finally {
       setLoading(false);
     }
