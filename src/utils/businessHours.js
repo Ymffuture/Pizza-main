@@ -9,7 +9,7 @@ const SCHEDULE = {
   3: { open: "09:00", close: "17:00" },   // Thursday
   4: { open: "09:00", close: "17:00" },   // Friday
   5: { open: "09:00", close: "14:00" },   // Saturday
-  6: {open:"09:00", close:"14:00"} ,                                  // Sunday — closed
+  6: {open:"09:00", close:"20:00"} ,                                  // Sunday — closed
 };
 
 const DAY_NAMES = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
