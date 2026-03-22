@@ -62,6 +62,12 @@ export default function DeliverDashboard() {
   const [acceptingId, setAcceptingId]   = useState(null);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [activeTab, setActiveTab]       = useState(searchParams.get("tab") || "overview");
+  const [toast, setToast]               = useState(null);
+
+  const showToast = (msg, type = "success") => {
+    setToast({ msg, type, id: Date.now() });
+    setTimeout(() => setToast(null), 4500);
+  };
 
   const fetchAll = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -121,11 +127,14 @@ export default function DeliverDashboard() {
       if (res.data.is_available) {
         const ordersRes = await getAvailableOrders().catch(() => ({ data: [] }));
         setAvailableOrders(Array.isArray(ordersRes.data) ? ordersRes.data : []);
+        showToast("You're online — checking for orders!", "success");
       } else {
         setAvailableOrders([]);
+        showToast("You're now offline.", "info");
       }
     } catch (err) {
-      console.error("Toggle failed:", err?.response?.data?.detail || err.message);
+      const msg = err?.response?.data?.detail || err?.message || "Could not update availability";
+      showToast(msg, "error");
     } finally {
       setToggling(false);
     }
@@ -135,9 +144,21 @@ export default function DeliverDashboard() {
     setAcceptingId(orderId);
     try {
       await acceptOrder(orderId);
+      showToast("Order accepted! Head to the restaurant.", "success");
       await fetchAll(true);
     } catch (err) {
-      console.error("Accept failed:", err?.response?.data?.detail || err.message);
+      const status = err?.response?.status;
+      const detail = err?.response?.data?.detail;
+      if (status === 409) {
+        showToast("Another driver already accepted this order.", "error");
+      } else if (status === 400) {
+        showToast(detail || "Cannot accept this order right now.", "error");
+      } else if (status === 403) {
+        showToast("Go online first to accept orders.", "error");
+      } else {
+        showToast(detail || err?.message || "Failed to accept order — try again.", "error");
+      }
+      await fetchAll(true);
     } finally {
       setAcceptingId(null);
     }
@@ -147,9 +168,12 @@ export default function DeliverDashboard() {
     setUpdatingStatus(true);
     try {
       await updateDeliveryStatus(assignmentId, status);
+      const labels = { picked_up: "Picked up!", in_transit: "On the way!", delivered: "Delivered! Earnings credited." };
+      showToast(labels[status] || `Status updated to ${status}`, "success");
       await fetchAll(true);
     } catch (err) {
-      console.error("Status update failed:", err?.response?.data?.detail || err.message);
+      const msg = err?.response?.data?.detail || err?.message || "Status update failed";
+      showToast(msg, "error");
     } finally {
       setUpdatingStatus(false);
     }
@@ -210,6 +234,21 @@ export default function DeliverDashboard() {
   return (
     <div className="dd-root">
       <style>{styles}</style>
+
+      {/* ── Toast ── */}
+      {toast && (
+        <div
+          key={toast.id}
+          className={`dd-toast dd-toast-${toast.type}`}
+        >
+          {toast.type === "error"
+            ? <AlertCircle className="w-4 h-4" style={{ flexShrink: 0 }} />
+            : toast.type === "info"
+            ? <Zap className="w-4 h-4" style={{ flexShrink: 0 }} />
+            : <CheckCircle2 className="w-4 h-4" style={{ flexShrink: 0 }} />}
+          <span>{toast.msg}</span>
+        </div>
+      )}
 
       {/* ── Header ── */}
       <header className="dd-header">
@@ -573,12 +612,15 @@ export default function DeliverDashboard() {
             ) : availableOrders.length === 0 ? (
               <div className="dd-empty-state">
                 <ShoppingBag className="w-10 h-10" style={{ color: "var(--muted)" }} />
-                <p>No orders available</p>
-                <span>Check back soon — orders appear here when ready</span>
+                <p>No orders available right now</p>
+                <span>Orders appear here once the admin marks them <strong style={{color:"#a78bfa"}}>Ready</strong>. Check back in a moment.</span>
                 <button className="dd-go-online-btn" onClick={() => fetchAll(true)} disabled={refreshing}>
                   <RefreshCw className={`w-4 h-4${refreshing ? " dd-spin" : ""}`} />
                   Refresh
                 </button>
+                <div style={{marginTop:8,padding:"10px 16px",borderRadius:12,background:"rgba(255,199,44,0.07)",border:"1px solid rgba(255,199,44,0.2)",fontSize:11,color:"rgba(255,248,231,0.5)",textAlign:"center",maxWidth:280}}>
+                  Auto-refreshes every 15 seconds while you're online
+                </div>
               </div>
             ) : (
               <div className="dd-orders-list">
@@ -1052,9 +1094,24 @@ const styles = `
   @keyframes ddSpin { to { transform: rotate(360deg); } }
   .dd-spin { animation: ddSpin 0.8s linear infinite; }
 
+  /* Toast */
+  .dd-toast {
+    position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
+    z-index: 9999; display: flex; align-items: center; gap: 10px;
+    padding: 12px 20px; border-radius: 14px; border: 1px solid;
+    font-size: 13px; font-weight: 700; white-space: nowrap;
+    animation: ddToastIn 0.3s cubic-bezier(0.34,1.56,0.64,1);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  }
+  @keyframes ddToastIn { from{opacity:0;transform:translateX(-50%) translateY(16px) scale(0.9)} to{opacity:1;transform:translateX(-50%) translateY(0) scale(1)} }
+  .dd-toast-success { background: rgba(74,222,128,0.12); border-color: rgba(74,222,128,0.35); color: #4ade80; }
+  .dd-toast-error   { background: rgba(248,113,113,0.12); border-color: rgba(248,113,113,0.35); color: #f87171; }
+  .dd-toast-info    { background: rgba(255,199,44,0.1);  border-color: rgba(255,199,44,0.3);  color: #FFC72C; }
+
   @media (max-width: 480px) {
     .dd-stats-grid { grid-template-columns: repeat(2, 1fr); }
     .dd-quick-grid { grid-template-columns: repeat(2, 1fr); }
     .dd-body { padding: 16px 12px; }
+    .dd-toast { bottom: 16px; max-width: calc(100vw - 32px); white-space: normal; }
   }
 `;
