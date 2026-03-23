@@ -186,6 +186,7 @@ export default function Menu() {
                   <span>Bag</span>
                   {count > 0 && <span className="mn-nav-badge">{count}</span>}
                 </Link>
+                <Link to="/rewards"       className="mn-nav-link"><WalletCards      className="w-4 h-4" /><span>Rewards</span> <span className="mn-nav-badge">New</span></Link>
                 <Link to="/wallet" className="mn-nav-link"><Wallet    className="w-4 h-4" /><span>Wallet</span></Link>
               </nav>
             </div>
