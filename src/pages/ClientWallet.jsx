@@ -261,7 +261,7 @@ export default function ClientWallet() {
                   <div key={o.id} className="cw-history-row">
                     <div className="cw-history-order"><span className="cw-history-id">#{String(o.id).slice(-8).toUpperCase()}</span><span className="cw-history-date">{new Date(o.created_at).toLocaleDateString("en-ZA", { day: "numeric", month: "short", year: "numeric" })}</span></div>
                     <span className="cw-history-amount">R{(o.total_amount || 0).toFixed(2)}</span>
-                    <div className="cw-history-pts"><Star className="w-3 h-3" style={{ color: "#FFC72C" }} /><span>+{(pts*0.1).toFixed(2)}</span></div>
+                    <div className="cw-history-pts"><Star className="w-3 h-3" style={{ color: "#FFC72C" }} /><span>+{Math.round(pts*0.1)}</span></div>
                   </div>
                 );
               })}
