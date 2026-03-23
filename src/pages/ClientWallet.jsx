@@ -174,7 +174,7 @@ export default function ClientWallet() {
                 <span className="cw-pts-num">{availablePoints.toLocaleString()}</span>
                 <span className="cw-pts-label">KotaPoints available</span>
               </div>
-              <div className="cw-pts-value-note"><Star className="w-3 h-3" style={{ color: "#FFC72C" }} /><span>{availablePoints} pts = R{availablePoints} off your next order</span></div>
+              <div className="cw-pts-value-note"><Star className="w-3 h-3" style={{ color: "#FFC72C" }} /><span>{availablePoints} pts = R{availablePoints*0.5} off your next order</span></div>
               <div className="cw-hero-stats">
                 <div className="cw-hero-stat"><span className="cw-hs-val">{earnedPoints.toLocaleString()}</span><span className="cw-hs-lbl">Earned</span></div>
                 <div className="cw-hs-div" />
