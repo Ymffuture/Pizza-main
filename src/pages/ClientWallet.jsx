@@ -213,7 +213,7 @@ export default function ClientWallet() {
             ) : (
               <div className="cw-earn-cta">
                 <TrendingUp className="w-4 h-4" style={{ color: "#FFC72C", flexShrink: 0 }} />
-                <div><p className="cw-earn-title">Keep ordering to unlock rewards</p><p className="cw-earn-sub">Need <strong style={{ color: "#FFC72C" }}>{50 - availablePoints} more pts</strong> for your first reward.</p></div>
+                <div><p className="cw-earn-title">Keep ordering to unlock rewards</p><p className="cw-earn-sub">Need <strong style={{ color: "#FFC72C" }}>{300 - availablePoints} more pts</strong> for your first reward.</p></div>
                 <Link to="/menu" className="cw-order-btn">Order Now</Link>
               </div>
             )}
@@ -235,7 +235,7 @@ export default function ClientWallet() {
                       </div>
                       <div>
                         <p className="cw-redeem-label">{opt.label}</p><p className="cw-redeem-desc">{opt.desc}</p>
-                        <p className="cw-redeem-cost"><Star className="w-3 h-3" style={{ color: canClaim ? "#FFC72C" : "var(--muted)" }} />{opt.points} KotaPoints</p>
+                        <p className="cw-redeem-cost"><Star className="w-3 h-3" style={{ color: canClaim ? "#FFC72C" : "var(--muted)" }} />{opt.points} kp</p>
                       </div>
                     </div>
                     <button className={`cw-claim-btn${canClaim ? " cw-claim-available" : " cw-claim-locked"}`} onClick={() => canClaim && handleClaim(opt)} disabled={!canClaim || isClaiming || claiming !== null}>
