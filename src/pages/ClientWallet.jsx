@@ -39,9 +39,9 @@ const TIERS = [
   { name: "Platinum", min: 3000, max: Infinity, color: "#60a5fa", bg: "rgba(96,165,250,0.12)",  border: "rgba(96,165,250,0.3)",  icon: "💎" },
 ];
 const REDEEM_OPTIONS = [
-  { points: 50,  discount: 50,  label: "R50 Off",  desc: "Deduct R50 from your next order"  },
-  { points: 100, discount: 100, label: "R100 Off", desc: "Perfect for a big kota haul"       },
-  { points: 200, discount: 200, label: "R200 Off", desc: "An almost-free meal on us!"        },
+  { points: 50,  discount: 20,  label: "R22 Off",  desc: "Deduct R22 from your next order"  },
+  { points: 100, discount: 50, label: "R50 Off", desc: "Perfect for a big kota haul"       },
+  { points: 250, discount: 100, label: "R120 Off", desc: "An almost-free meal on us!"        },
 ];
 const getTier     = pts => TIERS.find(t => pts >= t.min && pts <= t.max) || TIERS[0];
 const getNextTier = pts => TIERS.find(t => t.min > pts) || null;
@@ -72,7 +72,7 @@ export default function ClientWallet() {
 
   useEffect(() => { if (isAuth) load(); }, [isAuth]);
 
-  const earnedPoints    = Math.floor(orders.reduce((s, o) => s + (o.total_amount || 0), 0));
+  const earnedPoints    = Math.floor(orders.reduce((s, o) => s + (o.total_amount || 0), 0) * 0.5);
   const availablePoints = Math.max(0, earnedPoints - redeemed);
   const tier            = getTier(earnedPoints);
   const nextTier        = getNextTier(earnedPoints);
@@ -199,7 +199,7 @@ export default function ClientWallet() {
               <div className="cw-how-grid">
                 {[
                   { emoji: "🛒", title: "Order food",       sub: "Place any order on KotaBites" },
-                  { emoji: "💰", title: "R1 = 1 point",     sub: "Points added after delivery" },
+                  { emoji: "💰", title: "R1 = 0.5 point",     sub: "Points added after delivery" },
                   { emoji: "🎁", title: "Claim a code",     sub: "Go to Redeem tab" },
                   { emoji: "✅", title: "Paste at checkout", sub: "Save money on your next order" },
                 ].map(({ emoji, title, sub }) => (
