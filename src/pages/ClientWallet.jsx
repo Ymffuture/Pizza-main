@@ -39,7 +39,7 @@ const TIERS = [
   { name: "Platinum", min: 3000, max: Infinity, color: "#60a5fa", bg: "rgba(96,165,250,0.12)",  border: "rgba(96,165,250,0.3)",  icon: "💎" },
 ];
 const REDEEM_OPTIONS = [
-  { points: 300,  discount: 23.50,  label: "R23.50 Off",  desc: "Deduct R23.50 from your next order"  },
+  { points: 300,  discount: 25,  label: "R25 Off",  desc: "Deduct R25 from your next order"  },
   { points: 650, discount: 50, label: "R50 Off", desc: "Perfect for a big kota haul"       },
   { points: 1500, discount: 100, label: "R120 Off", desc: "An almost-free meal on us!"        },
 ];
@@ -72,7 +72,7 @@ export default function ClientWallet() {
 
   useEffect(() => { if (isAuth) load(); }, [isAuth]);
 
-  const earnedPoints    = Math.floor(orders.reduce((s, o) => s + (o.total_amount || 0), 0) * 0.5);
+  const earnedPoints    = Math.floor(orders.reduce((s, o) => s + (o.total_amount || 0), 0) * 0.1);
   const availablePoints = Math.max(0, earnedPoints - redeemed);
   const tier            = getTier(earnedPoints);
   const nextTier        = getNextTier(earnedPoints);
@@ -199,7 +199,7 @@ export default function ClientWallet() {
               <div className="cw-how-grid">
                 {[
                   { emoji: "🛒", title: "Order food",       sub: "Place any order on KotaBites" },
-                  { emoji: "💰", title: "R1 = 0.5 point",     sub: "Points added after delivery" },
+                  { emoji: "💰", title: "R1 = 0.1 point",     sub: "Points added after delivery" },
                   { emoji: "🎁", title: "Claim a code",     sub: "Go to Redeem tab" },
                   { emoji: "✅", title: "Paste at checkout", sub: "Save money on your next order" },
                 ].map(({ emoji, title, sub }) => (
