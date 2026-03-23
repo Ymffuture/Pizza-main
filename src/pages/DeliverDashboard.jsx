@@ -577,23 +577,54 @@ export default function DeliverDashboard() {
                 </div>
                 {availableOrders.map(order => (
                   <div key={order.order_id} className="dd-order-card">
+                    {/* Header: ID + time + earn badge */}
                     <div className="dd-order-header">
                       <div>
-                        <span className="dd-order-id">#{order.short_id}</span>
+                        <span className="dd-order-id">#{order.short_id || String(order.order_id).slice(-6).toUpperCase()}</span>
                         <span className="dd-order-time">
                           {new Date(order.created_at).toLocaleTimeString("en-ZA", { hour: "2-digit", minute: "2-digit" })}
                         </span>
                       </div>
-                      <span className="dd-order-fee">+R{order.delivery_fee?.toFixed(2)}</span>
+                      <span className="dd-order-fee">+R{(order.delivery_fee ?? 15).toFixed(2)}</span>
                     </div>
-                    <div className="dd-order-detail">
-                      <MapPin className="w-3.5 h-3.5" style={{ flexShrink: 0, color: "#FFC72C" }} />
-                      <span>{order.delivery_address}</span>
+
+                    {/* Full delivery address — no truncation */}
+                    <div className="dd-order-detail" style={{ alignItems: "flex-start" }}>
+                      <MapPin className="w-3.5 h-3.5" style={{ flexShrink: 0, color: "#FFC72C", marginTop: 2 }} />
+                      <span style={{ lineHeight: 1.5, whiteSpace: "normal", wordBreak: "break-word" }}>
+                        {order.delivery_address || "Address not provided"}
+                      </span>
                     </div>
+
+                    {/* Customer phone if backend returns it */}
+                    {order.phone && (
+                      <div className="dd-order-detail">
+                        <Phone className="w-3.5 h-3.5" style={{ flexShrink: 0, color: "#60a5fa" }} />
+                        <a href={`tel:${order.phone}`} style={{ color: "#60a5fa", fontWeight: 700 }}>{order.phone}</a>
+                      </div>
+                    )}
+
+                    {/* Items list */}
+                    {Array.isArray(order.items) && order.items.length > 0 && (
+                      <div className="dd-order-items">
+                        {order.items.map((item, i) => (
+                          <span key={i} className="dd-order-item-tag">
+                            {item.name} ×{item.quantity}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Footer: totals + accept */}
                     <div className="dd-order-footer">
                       <div className="dd-order-meta">
                         <span>Total: <strong>R{order.total_amount?.toFixed(2)}</strong></span>
                         {order.distance_km && <span>{order.distance_km.toFixed(1)} km</span>}
+                        {order.payment_method && (
+                          <span style={{ color: order.payment_method === "cash" ? "#FFC72C" : "#60a5fa", fontWeight: 700 }}>
+                            {order.payment_method === "cash" ? "💵 Cash" : "💳 Online"}
+                          </span>
+                        )}
                       </div>
                       <button
                         className="dd-accept-btn"
@@ -766,8 +797,10 @@ const styles = `
   .dd-order-fee{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:1px;color:#4ade80;}
   .dd-order-detail{display:flex;align-items:flex-start;gap:7px;font-size:12px;color:var(--muted);line-height:1.5;}
   .dd-order-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;}
-  .dd-order-meta{font-size:12px;color:var(--muted);display:flex;gap:12px;}
+  .dd-order-meta{font-size:12px;color:var(--muted);display:flex;flex-wrap:wrap;gap:10px;align-items:center;}
   .dd-order-meta strong{color:var(--text);}
+  .dd-order-items{display:flex;flex-wrap:wrap;gap:6px;}
+  .dd-order-item-tag{font-size:11px;font-weight:700;background:rgba(255,248,231,0.06);border:1px solid rgba(255,248,231,0.1);border-radius:20px;padding:3px 10px;color:var(--muted);}
   .dd-accept-btn{display:flex;align-items:center;gap:6px;background:var(--red);color:white;border:none;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;font-weight:800;font-size:13px;padding:9px 18px;border-radius:50px;transition:all 0.2s;box-shadow:0 4px 14px rgba(218,41,28,0.35);flex-shrink:0;}
   .dd-accept-btn:hover:not(:disabled){background:var(--red2);}
   .dd-accept-btn:disabled{opacity:0.55;cursor:not-allowed;}
