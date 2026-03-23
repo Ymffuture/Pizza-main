@@ -171,10 +171,10 @@ export default function ClientWallet() {
               <div className="cw-hero-glow" style={{ background: `radial-gradient(circle, ${tier.color}20 0%, transparent 70%)` }} />
               <div className="cw-hero-badge" style={{ background: tier.bg, border: `1px solid ${tier.border}` }}><span style={{ fontSize: 28 }}>{tier.icon}</span></div>
               <div className="cw-hero-pts">
-                <span className="cw-pts-num">{availablePoints.toFixed(2)}</span>
+                <span className="cw-pts-num">{availablePoints.toLocaleString()}</span>
                 <span className="cw-pts-label">KotaPoints available</span>
               </div>
-              <div className="cw-pts-value-note"><Star className="w-3 h-3" style={{ color: "#FFC72C" }} /><span>{availablePoints} pts = R{availablePoints*0.1} off your next order</span></div>
+              <div className="cw-pts-value-note"><Star className="w-3 h-3" style={{ color: "#FFC72C" }} /><span>{availablePoints} pts = R{(availablePoints*0.1).toFixed(2)} off your next order</span></div>
               <div className="cw-hero-stats">
                 <div className="cw-hero-stat"><span className="cw-hs-val">{earnedPoints.toLocaleString()}</span><span className="cw-hs-lbl">Earned</span></div>
                 <div className="cw-hs-div" />
