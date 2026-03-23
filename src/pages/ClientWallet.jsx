@@ -72,7 +72,7 @@ export default function ClientWallet() {
 
   useEffect(() => { if (isAuth) load(); }, [isAuth]);
 
-  const earnedPoints    = Math.floor(orders.reduce((s, o) => s + (o.total_amount || 0), 0) * 0.1);
+  const earnedPoints    = Math.round(orders.reduce((s, o) => s + (o.total_amount || 0), 0) * 0.1);
   const availablePoints = Math.max(0, earnedPoints - redeemed);
   const tier            = getTier(earnedPoints);
   const nextTier        = getNextTier(earnedPoints);
