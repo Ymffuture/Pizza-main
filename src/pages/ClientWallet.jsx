@@ -39,9 +39,9 @@ const TIERS = [
   { name: "Platinum", min: 3000, max: Infinity, color: "#60a5fa", bg: "rgba(96,165,250,0.12)",  border: "rgba(96,165,250,0.3)",  icon: "💎" },
 ];
 const REDEEM_OPTIONS = [
-  { points: 50,  discount: 23.50,  label: "R23.50 Off",  desc: "Deduct R23.50 from your next order"  },
-  { points: 100, discount: 50, label: "R50 Off", desc: "Perfect for a big kota haul"       },
-  { points: 250, discount: 100, label: "R120 Off", desc: "An almost-free meal on us!"        },
+  { points: 300,  discount: 23.50,  label: "R23.50 Off",  desc: "Deduct R23.50 from your next order"  },
+  { points: 650, discount: 50, label: "R50 Off", desc: "Perfect for a big kota haul"       },
+  { points: 1500, discount: 100, label: "R120 Off", desc: "An almost-free meal on us!"        },
 ];
 const getTier     = pts => TIERS.find(t => pts >= t.min && pts <= t.max) || TIERS[0];
 const getNextTier = pts => TIERS.find(t => t.min > pts) || null;
