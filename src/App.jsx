@@ -1,40 +1,35 @@
 // src/App.jsx
-
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { lazy, Suspense } from "react";
 
-import { OrderProvider } from "./context/OrderContext";
-import { CartProvider } from "./context/CartContext";
-import { AuthProvider } from "./context/AuthContext";
-
-import { ToastProvider } from "./components/Toast";
-import RequireAuth from "./components/RequireAuth";
-import ErrorBoundary from "./components/ErrorBoundary";
-import PageLoader from "./components/PageLoader";
-
-import AiChat from "./components/AiChat";
-
+import { OrderProvider }  from "./context/OrderContext";
+import { CartProvider }   from "./context/CartContext";
+import { AuthProvider }   from "./context/AuthContext";
+import { ToastProvider }  from "./components/Toast";
+import RequireAuth        from "./components/RequireAuth";
+import ErrorBoundary      from "./components/ErrorBoundary";
+import PageLoader         from "./components/PageLoader";
+import AiChat             from "./components/AiChat";
 
 // Lazy loaded pages
-const Home = lazy(() => import("./pages/Home"));
-const Menu = lazy(() => import("./pages/Menu"));
-const Cart = lazy(() => import("./pages/Cart"));
-const Checkout = lazy(() => import("./pages/Checkout"));
-const OrderStatus = lazy(() => import("./pages/OrderStatus"));
-const Success = lazy(() => import("./pages/Success"));
-const ErrorPage = lazy(() => import("./pages/ErrorPage"));
-const Login = lazy(() => import("./pages/Login"));
-const Register = lazy(() => import("./pages/Register"));
-const Info = lazy(() => import("./components/Info"));
-const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
-const ResetPassword  = lazy(() => import("./pages/ResetPassword"));
-const VerifyEmail    = lazy(() => import("./pages/VerifyEmail"));
+const Home             = lazy(() => import("./pages/Home"));
+const Menu             = lazy(() => import("./pages/Menu"));
+const Cart             = lazy(() => import("./pages/Cart"));
+const Checkout         = lazy(() => import("./pages/Checkout"));
+const OrderStatus      = lazy(() => import("./pages/OrderStatus"));
+const Success          = lazy(() => import("./pages/Success"));
+const ErrorPage        = lazy(() => import("./pages/ErrorPage"));
+const Login            = lazy(() => import("./pages/Login"));
+const Register         = lazy(() => import("./pages/Register"));
+const Info             = lazy(() => import("./components/Info"));
+const ForgotPassword   = lazy(() => import("./pages/ForgotPassword"));
+const ResetPassword    = lazy(() => import("./pages/ResetPassword"));
+const VerifyEmail      = lazy(() => import("./pages/VerifyEmail"));
 const DeliveryCoverage = lazy(() => import("./pages/DeliveryCoverage"));
-const DeliverSignup  = lazy(() => import("./pages/DeliverSignup"));
-const Wallet         = lazy(() => import("./pages/Wallet"));
-// NEW: Driver Dashboard
+const DeliverSignup    = lazy(() => import("./pages/DeliverSignup"));
+const Wallet           = lazy(() => import("./pages/Wallet"));
 const DeliverDashboard = lazy(() => import("./pages/DeliverDashboard"));
-
+const ClientWallet     = lazy(() => import("./pages/ClientWallet")); // NEW: customer rewards
 
 export default function App() {
   return (
@@ -44,26 +39,31 @@ export default function App() {
           <CartProvider>
             <ToastProvider>
               <BrowserRouter>
-
                 <Suspense fallback={<PageLoader />}>
                   <Routes>
-                    <Route path="/" element={<Home />} />
-                    <Route path="/menu" element={<Menu />} />
-                    <Route path="/cart" element={<Cart />} />
-                    <Route path="/login" element={<Login />} />
-                    <Route path="/register" element={<Register />} />
-                    <Route path="/coverage" element={<DeliveryCoverage />} />
-                    <Route path="/deliver" element={<DeliverSignup />} />
-                    <Route path="/info" element={<Info />} />
-                    <Route path="/forgot-password" element={<ForgotPassword />} />
-                    <Route path="/reset-password"  element={<ResetPassword />}  />
-                    <Route path="/verify-email"    element={<VerifyEmail />}     />
+                    <Route path="/"                 element={<Home />} />
+                    <Route path="/menu"             element={<Menu />} />
+                    <Route path="/cart"             element={<Cart />} />
+                    <Route path="/login"            element={<Login />} />
+                    <Route path="/register"         element={<Register />} />
+                    <Route path="/coverage"         element={<DeliveryCoverage />} />
+                    <Route path="/deliver"          element={<DeliverSignup />} />
+                    <Route path="/info"             element={<Info />} />
+                    <Route path="/forgot-password"  element={<ForgotPassword />} />
+                    <Route path="/reset-password"   element={<ResetPassword />} />
+                    <Route path="/verify-email"     element={<VerifyEmail />} />
 
+                    {/* Protected: driver wallet */}
                     <Route path="/wallet" element={
                       <RequireAuth><Wallet /></RequireAuth>
                     } />
 
-                    {/* NEW: Driver Dashboard — requires auth */}
+                    {/* Protected: customer rewards wallet */}
+                    <Route path="/rewards" element={
+                      <RequireAuth><ClientWallet /></RequireAuth>
+                    } />
+
+                    {/* Protected: driver dashboard */}
                     <Route path="/driver-dashboard" element={
                       <RequireAuth><DeliverDashboard /></RequireAuth>
                     } />
@@ -75,12 +75,12 @@ export default function App() {
                       <RequireAuth><OrderStatus /></RequireAuth>
                     } />
 
-                    <Route path="/success" element={<Success />} />
-                    <Route path="*" element={<ErrorPage />} />
+                    <Route path="/success"  element={<Success />} />
+                    <Route path="*"         element={<ErrorPage />} />
                   </Routes>
                 </Suspense>
 
-                {/* KotaBot AI Chat (always mounted) */}
+                {/* KotaBot AI Chat — always mounted */}
                 <AiChat />
 
               </BrowserRouter>
