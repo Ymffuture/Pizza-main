@@ -1,40 +1,30 @@
 // src/api/delivery.api.js
 import axiosClient from "./axiosClient";
 
-// ────────────────────────────────────────────────────────────
-// DRIVER SIGNUP
-// ────────────────────────────────────────────────────────────
+// ── Driver Signup ──────────────────────────────────────────────────────────
 export const driverSignup = (formData) =>
   axiosClient.post("/delivery/signup", formData, {
     headers: { "Content-Type": "multipart/form-data" },
   });
 
-// ────────────────────────────────────────────────────────────
-// DRIVER PROFILE
-// ────────────────────────────────────────────────────────────
+// ── Driver Profile ─────────────────────────────────────────────────────────
 export const getDriverProfile = () =>
   axiosClient.get("/delivery/profile");
 
 export const updateDriverProfile = (data) =>
   axiosClient.patch("/delivery/profile", data);
 
-// ────────────────────────────────────────────────────────────
-// WALLET
-// ────────────────────────────────────────────────────────────
+// ── Wallet ─────────────────────────────────────────────────────────────────
 export const getWalletBalance = () =>
   axiosClient.get("/delivery/wallet/balance");
 
 export const getWalletTransactions = (limit = 50) =>
-  axiosClient.get("/delivery/wallet/transactions", {
-    params: { limit },
-  });
+  axiosClient.get("/delivery/wallet/transactions", { params: { limit } });
 
 export const withdrawFunds = (data) =>
   axiosClient.post("/delivery/wallet/withdraw", data);
 
-// ────────────────────────────────────────────────────────────
-// AVAILABILITY & ORDERS
-// ────────────────────────────────────────────────────────────
+// ── Availability & Orders ──────────────────────────────────────────────────
 export const toggleAvailability = (isAvailable) =>
   axiosClient.post("/delivery/toggle-availability", { is_available: isAvailable });
 
@@ -54,13 +44,11 @@ export const updateDeliveryStatus = (assignmentId, status, notes = null) =>
 export const getActiveDelivery = () =>
   axiosClient.get("/delivery/active-delivery");
 
-// ← ADD THIS MISSING FUNCTION
+// FIX: was /delivery/assignment-by-order/${orderId} — backend route is /delivery/assignment/order/{order_id}
 export const getAssignmentByOrder = (orderId) =>
-  axiosClient.get(`/delivery/assignment-by-order/${orderId}`);
+  axiosClient.get(`/delivery/assignment/order/${orderId}`);
 
-// ────────────────────────────────────────────────────────────
-// ADMIN
-// ────────────────────────────────────────────────────────────
+// ── Admin ──────────────────────────────────────────────────────────────────
 export const getPendingDrivers = () =>
   axiosClient.get("/delivery/admin/pending");
 

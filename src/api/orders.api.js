@@ -6,16 +6,20 @@ import axiosClient from "./axiosClient";
 export const createOrder = (payload) =>
   axiosClient.post("/orders", payload);
 
+// GET /orders/me — customer's own orders
+export const getMyOrders = () =>
+  axiosClient.get("/orders/me");
+
 // GET /orders/:id — get a single order (customer)
 export const getOrderById = (id) =>
   axiosClient.get(`/orders/${id}`);
 
 // ── Admin endpoints ───────────────────────────────────────────────────────
 
-// GET /orders/all — all orders in the system
+// GET /orders/all — all orders in the system (admin only)
 export const getOrders = () =>
   axiosClient.get("/orders/all");
 
-// PATCH /orders/:id/status — update order status
+// PATCH /orders/:id/status — update order status (admin only)
 export const updateOrderStatus = (id, status) =>
   axiosClient.patch(`/orders/${id}/status`, { status });
