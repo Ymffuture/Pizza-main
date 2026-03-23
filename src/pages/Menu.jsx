@@ -10,7 +10,7 @@ import Avatar from "../components/Avatar";
 import {
   ShoppingBag, RefreshCw, UtensilsCrossed, Zap, PanelLeftClose,
   ChevronRight, Flame, Search, SlidersHorizontal, LogOut,
-  PanelLeftOpen, X, Info, Home, Phone, Wallet, Bike
+  PanelLeftOpen, X, Info, Home, Phone, Wallet,WalletCards, Bike
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { Tooltip } from "antd";
