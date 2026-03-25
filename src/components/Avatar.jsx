@@ -19,7 +19,7 @@ export default function Avatar({
         .join("")
         .slice(0, 2)
         .toUpperCase()
-    : <CircleUser className="h-5 w-5"/>;
+    : <CircleUser className="h-10 w-10 text-orange "/>;
 
   // Gravatar avatar
   const gravatar = useMemo(() => {
