@@ -2,13 +2,6 @@ import { useMemo, useState } from "react";
 import md5 from "blueimp-md5";
 import { CircleUser } from 'lucide-react';
 
-const App = () => {
-  return (
-    <CircleUser />
-  );
-};
-
-export default App;
 
 export default function Avatar({
   picture,
