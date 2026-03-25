@@ -1,5 +1,14 @@
 import { useMemo, useState } from "react";
 import md5 from "blueimp-md5";
+import { CircleUser } from 'lucide-react';
+
+const App = () => {
+  return (
+    <CircleUser />
+  );
+};
+
+export default App;
 
 export default function Avatar({
   picture,
@@ -17,7 +26,7 @@ export default function Avatar({
         .join("")
         .slice(0, 2)
         .toUpperCase()
-    : "U";
+    : <CircleUser className="h-5 w-5"/>;
 
   // Gravatar avatar
   const gravatar = useMemo(() => {
