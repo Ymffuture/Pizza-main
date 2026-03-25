@@ -5,7 +5,7 @@
 const SCHEDULE = {
   0: { open: "09:00", close: "17:00" },   // Monday
   1: { open: "09:00", close: "17:00" },   // Tuesday
-  2: { open: "09:00", close: "17:00" },   // Wednesday
+  2: { open: "03:00", close: "17:00" },   // Wednesday
   3: { open: "09:00", close: "17:00" },   // Thursday
   4: { open: "09:00", close: "17:00" },   // Friday
   5: { open: "09:00", close: "14:00" },   // Saturday
