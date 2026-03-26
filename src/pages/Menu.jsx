@@ -8,7 +8,7 @@ import { useToast } from "../components/Toast";
 import Footer from "../components/Footer";
 import Avatar from "../components/Avatar";
 import {
-  ShoppingBag, RefreshCw, UtensilsCrossed, Zap, PanelLeftClose,
+  ShoppingBag, RefreshCw, UtensilsCrossed, Zap, PanelLeftClose,MessagesSquare, 
   ChevronRight, Flame, Search, SlidersHorizontal, LogOut,
   PanelLeftOpen, X, Info, Home, Phone, Wallet,WalletCards, Bike
 } from "lucide-react";
@@ -174,7 +174,7 @@ export default function Menu() {
               </div>
               */} 
               <button className="mn-sidebar-close lg-hidden" onClick={() => setSidebarOpen(false)}>
-                <PanelLeftClose className="w-5 h-5" />
+                <PanelLeftClose className="w-7 h-7 text-white" />
               </button>
             </div>
 
@@ -209,8 +209,8 @@ export default function Menu() {
 
             {/* Contact */}
             <div className="mn-contact-pill">
-              <Phone className="w-4 h-4" />
-              <span>065 393 5339</span>
+              <MessagesSquare className="w-4 h-4" />
+              <span> 063 441 4863</span>
             </div>
 
             {/* User */}
@@ -571,7 +571,7 @@ const styles = `
   }
   .mn-topbar-cart:hover { background: var(--red2); transform: scale(1.05); }
   .mn-topbar-cart-badge {
-    position: absolute; top: -8px; right: -8px;
+    position: absolute; top: -3px; right: -3px;
     min-width: 18px; height: 18px; padding: 0 4px;
     background: var(--gold); color: #0e0700;
     font-size: 10px; font-weight: 900;
