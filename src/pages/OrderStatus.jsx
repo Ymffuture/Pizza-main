@@ -6,7 +6,7 @@ import { formatCurrency } from "../utils/formatCurrency";
 import { getOrderById } from "../api/orders.api";
 import { getAssignmentByOrder } from "../api/delivery.api";
 import {
-  ArrowLeft, Flame, LogOut, RefreshCw,
+  ArrowLeft, Flame, LogOut, RefreshCw,BotMessageSquare, 
   Clock, CheckCircle2, ChefHat, Package, Truck,
   XCircle, MapPin, Receipt, Copy, Check, Phone,
   User, Bike, Navigation, CheckCheck,
@@ -403,7 +403,7 @@ export default function OrderStatus() {
             <div className="os-cancel-content">
               <p className="os-cancel-title">Need to cancel?</p>
               <p className="os-cancel-text">
-                Cancellations via KotaBot AI. For urgent issues call:
+                Cancellations via <BotMessageSquare className="text-blue-600 animate-pulse"/> KotaBot AI. For urgent issues call:
               </p>
               <a href="tel:0653935339" className="os-cancel-phone">065 393 5339</a>
             </div>
