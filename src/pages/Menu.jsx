@@ -567,11 +567,11 @@ const styles = `
     background:transparent ; border: 1px; cursor: pointer;
     display: flex; align-items: center; justify-content: center;
     color: white; transition: all 0.2s;
-    box-shadow: 0 4px 14px rgba(218,41,28,0.4);
+    
   }
   .mn-topbar-cart:hover { background: var(--red2); transform: scale(1.05); }
   .mn-topbar-cart-badge {
-    position: absolute; top: -5px; right: -5px;
+    position: absolute; top: -8px; right: -8px;
     min-width: 18px; height: 18px; padding: 0 4px;
     background: var(--gold); color: #0e0700;
     font-size: 10px; font-weight: 900;
