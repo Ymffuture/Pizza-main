@@ -80,7 +80,7 @@ export default function Menu() {
     addItem(item);
     toast.show({
       type:    "cart",
-      title:   "Added to cart",
+      title:   "Added to Bag",
       message: item.name,
       sub:     `R${Number(item.price).toFixed(2)}`,
       image:   item.image_url,
@@ -163,13 +163,16 @@ export default function Menu() {
 
             {/* Logo row */}
             <div className="mn-sidebar-logo-row">
+              {/*
               <div className="mn-sidebar-logo">
                 <Flame className="w-6 h-6" style={{ color: "#0e0700" }} />
               </div>
+              
               <div className="mn-sidebar-brand-wrap">
                 <h1 className="mn-sidebar-brand">KotaGO</h1>
                 <p className="mn-sidebar-tagline">Fresh · Fast · Fire</p>
               </div>
+              */} 
               <button className="mn-sidebar-close lg-hidden" onClick={() => setSidebarOpen(false)}>
                 <PanelLeftClose className="w-5 h-5" />
               </button>
@@ -246,7 +249,7 @@ export default function Menu() {
               <ShoppingBag className="w-5 h-5" />
               {count > 0 && <span className="mn-topbar-cart-badge">{count}</span>}
             </button>
-            <Tooltip title={user?.full_name} placement="topLeft">
+            <Tooltip title={user?.full_name} placement="top">
               <span style={{ flexShrink: 0 }}>
                 <Avatar picture={user?.picture || user?.avatar} name={user?.full_name} email={user?.email} size={40} />
               </span>
@@ -561,7 +564,7 @@ const styles = `
   .mn-topbar-cart {
     position: relative; flex-shrink: 0;
     width: 40px; height: 40px; border-radius: 12px;
-    background: var(--red); border: none; cursor: pointer;
+    background:transparent ; border: 1px; cursor: pointer;
     display: flex; align-items: center; justify-content: center;
     color: white; transition: all 0.2s;
     box-shadow: 0 4px 14px rgba(218,41,28,0.4);
