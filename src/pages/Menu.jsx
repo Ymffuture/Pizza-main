@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { Tooltip } from "antd";
-
+import ActiveOrderTracker from "../components/ActiveOrderTracker";
 const CATEGORIES = [
   { label: "All",      emoji: "🍽️" },
   { label: "Kota",     emoji: "🥪" },
@@ -149,7 +149,7 @@ export default function Menu() {
   return (
     <>
       <style>{styles}</style>
-
+<ActiveOrderTracker />
       <div className="mn-root">
 
         {/* ── Sidebar overlay (mobile) ── */}
