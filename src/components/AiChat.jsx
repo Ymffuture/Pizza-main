@@ -1,7 +1,7 @@
 // src/components/AiChat.jsx
 import { useState, useRef, useEffect } from "react";
 import {
-  MessageCircle, X, Send, BotMessageSquare, User,Forward, CornerRightUp, BotMessageSquare, 
+  MessageCircle, X, Send, BotMessageSquare, User,Forward, CornerRightUp, 
   Loader, Minimize2, Maximize2, XCircle, CheckCircle, Clock,CircleFadingPlus, CircleUser, Bot, 
   Copy, Check, Link as LinkIcon
 } from "lucide-react";
