@@ -1,7 +1,7 @@
 // src/components/AiChat.jsx
 import { useState, useRef, useEffect } from "react";
 import {
-  MessageCircle, X, Send, BotMessageSquare, User,Forward, CornerRightUp, 
+  MessageCircle, X, Send, BotMessageSquare, User,Forward, CornerRightUp, BotMessageSquare, 
   Loader, Minimize2, Maximize2, XCircle, CheckCircle, Clock,CircleFadingPlus, CircleUser, Bot, 
   Copy, Check, Link as LinkIcon
 } from "lucide-react";
@@ -387,7 +387,7 @@ if (pendingId) botMsg.pendingCancelId = pendingId;
       onClick={handleOpen}
       aria-label="Open KotaBot"
     >
-      <CircleFadingPlus className="w-6 h-6" />
+      <BotMessageSquare className="w-6 h-6" />
 
       {/* Green dot = open, red dot = closed */}
       <span
@@ -396,7 +396,7 @@ if (pendingId) botMsg.pendingCancelId = pendingId;
       />
 
       {unread >0 || loading  && (
-        <span className="kb-ai-unread">Typing...</span>
+        <span className="kb-ai-unread animate-pulse">Typing...</span>
       )}
     </button>
   </Tooltip>
