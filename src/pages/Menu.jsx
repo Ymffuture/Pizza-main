@@ -239,7 +239,7 @@ export default function Menu() {
           {/* Top bar - scrolls away */}
           <header className="mn-topbar">
             <button className="mn-topbar-menu lg-hidden" onClick={() => setSidebarOpen(true)}>
-              <PanelLeftOpen className="w-6 h-6" />
+              <PanelLeftOpen className="w-6 h-6 text-white" />
             </button>
             <div className="mn-topbar-center">
               <span className="mn-topbar-title">{activeCategory}</span>
