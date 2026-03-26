@@ -6,7 +6,7 @@ export default function Avatar({
   picture,
   email,
   name,
-  size = 32,
+  size = 22,
   style = {},
 }) {
   const [error, setError] = useState(false);
