@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import md5 from "blueimp-md5";
 import { CircleUser } from 'lucide-react';
 
-
 export default function Avatar({
   picture,
   email,
@@ -12,6 +11,9 @@ export default function Avatar({
 }) {
   const [error, setError] = useState(false);
 
+  // Check if we have any user data at all
+  const hasUser = picture || email || name;
+
   const initials = name
     ? name
         .split(" ")
@@ -19,7 +21,7 @@ export default function Avatar({
         .join("")
         .slice(0, 2)
         .toUpperCase()
-    : <CircleUser className="h-10 w-10 text-orange "/>;
+    : null;
 
   // Gravatar avatar
   const gravatar = useMemo(() => {
@@ -54,6 +56,26 @@ export default function Avatar({
 
   const src = picture || gravatar || randomAvatar;
 
+  // ✅ Transparent fallback when no user data
+  if (!hasUser) {
+    return (
+      <div
+        style={{
+          ...base,
+          backgroundColor: "transparent",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <CircleUser 
+          className="text-gray-400" 
+          style={{ width: size * 0.9, height: size * 0.9 }}
+        />
+      </div>
+    );
+  }
+
   if (error) {
     return (
       <div
@@ -70,7 +92,7 @@ export default function Avatar({
           border: "2px solid rgba(218,41,28,0.4)",
         }}
       >
-        {initials}
+        {initials || <CircleUser size={size * 0.5} />}
       </div>
     );
   }
