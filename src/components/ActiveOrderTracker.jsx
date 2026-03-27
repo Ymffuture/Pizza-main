@@ -1,7 +1,7 @@
 // src/components/ActiveOrderTracker.jsx
 // Floating banner on the Menu page showing live driver delivery progress.
-// Polls every 8s. Only renders when the customer has an active order with
-// a driver assigned (accepted → picked_up → in_transit → delivered).
+// Polls every 8s. Now includes ZegoCloud voice + video call buttons.
+// Room ID = order ID — driver and customer join the same session automatically.
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
@@ -10,10 +10,11 @@ import { getMyOrders } from "../api/orders.api";
 import { getAssignmentByOrder } from "../api/delivery.api";
 import {
   Bike, Package, Navigation, CheckCheck,
-  ChevronRight, X, Phone,
+  ChevronRight, X, Phone, Video, PhoneCall,
 } from "lucide-react";
+import VideoCall from "./VideoCall";
 
-// ── delivery sub-steps (mirrors OrderStatus.jsx) ─────────────────────────
+// ── Delivery sub-steps ─────────────────────────────────────────────────────
 const STEPS = [
   { key: "accepted",   label: "Assigned",   Icon: Bike        },
   { key: "picked_up",  label: "Picked Up",  Icon: Package     },
@@ -32,11 +33,12 @@ const STEP_COLOR = {
 const TRACKABLE = new Set(["paid", "preparing", "ready", "delivered"]);
 
 export default function ActiveOrderTracker() {
-  const { isAuth } = useAuth();
-  const navigate   = useNavigate();
+  const { isAuth, user } = useAuth();
+  const navigate = useNavigate();
 
-  const [info,      setInfo]      = useState(null);   // { orderId, assignment }
+  const [info,      setInfo]      = useState(null); // { orderId, assignment }
   const [dismissed, setDismissed] = useState(false);
+  const [callMode,  setCallMode]  = useState(null); // null | "voice" | "video"
   const intervalRef = useRef(null);
 
   const poll = useCallback(async () => {
@@ -45,8 +47,6 @@ export default function ActiveOrderTracker() {
       const res    = await getMyOrders();
       const orders = Array.isArray(res.data) ? res.data : [];
 
-      // Find the most recent trackable order (non-cancelled, not delivered yet
-      // unless very recent — keep showing for 60s after delivery)
       const active = orders
         .filter(o => TRACKABLE.has(o.status))
         .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
@@ -56,21 +56,11 @@ export default function ActiveOrderTracker() {
       try {
         const aRes       = await getAssignmentByOrder(active.id);
         const assignment = aRes.data;
-
         if (!assignment?.has_driver) { setInfo(null); return; }
-
         setInfo({ orderId: active.id, assignment });
-
-        // Stop polling once delivered
-        if (assignment.status === "delivered") {
-          clearInterval(intervalRef.current);
-        }
-      } catch {
-        setInfo(null);
-      }
-    } catch {
-      /* silent */
-    }
+        if (assignment.status === "delivered") clearInterval(intervalRef.current);
+      } catch { setInfo(null); }
+    } catch { /* silent */ }
   }, [isAuth]);
 
   useEffect(() => {
@@ -80,10 +70,10 @@ export default function ActiveOrderTracker() {
     return () => clearInterval(intervalRef.current);
   }, [isAuth, poll]);
 
-  // Re-show if a new delivery comes in after dismiss
+  // Re-show after dismiss when a NEW order appears
   useEffect(() => {
     if (info) setDismissed(false);
-  }, [info?.orderId]); // only reset dismiss when a NEW order appears
+  }, [info?.orderId]);
 
   if (!info || dismissed) return null;
 
@@ -94,15 +84,30 @@ export default function ActiveOrderTracker() {
   const isDone    = assignment.status === "delivered";
   const isMoving  = assignment.status === "in_transit";
 
+  const hasPhone  = !!assignment.driver_phone;
+
   return (
     <>
       <style>{css}</style>
+
+      {/* ── ZegoCloud Call Modal ── */}
+      {callMode && (
+        <VideoCall
+          orderId={orderId}
+          driverName={assignment.driver_name}
+          driverPhone={assignment.driver_phone}
+          customerName={user?.full_name}
+          userId={user?.email}
+          mode={callMode}
+          onClose={() => setCallMode(null)}
+        />
+      )}
 
       <div className="aot-banner" style={{ "--accent": accentCol }}>
         {/* Glow strip at top */}
         <div className="aot-glow-strip" style={{ background: accentCol }} />
 
-        {/* Header row */}
+        {/* ── Header row ── */}
         <div className="aot-header">
           <div className="aot-header-left">
             <div className="aot-icon-wrap" style={{ background: `${accentCol}20`, border: `1px solid ${accentCol}40` }}>
@@ -110,7 +115,7 @@ export default function ActiveOrderTracker() {
             </div>
             <div>
               <p className="aot-title">
-                {isDone   ? "Order Delivered 🎉"
+                {isDone    ? "Order Delivered 🎉"
                 : isMoving ? "Driver on the way!"
                 : `Driver ${curStep.label}`}
               </p>
@@ -120,17 +125,45 @@ export default function ActiveOrderTracker() {
               </p>
             </div>
           </div>
+
+          {/* ── Action buttons ── */}
           <div className="aot-header-actions">
-            {assignment.driver_phone && !isDone && (
+
+            {/* Regular phone call */}
+            {hasPhone && !isDone && (
               <a
                 href={`tel:${assignment.driver_phone}`}
-                className="aot-call-btn"
-                title="Call driver"
+                className="aot-action-btn aot-btn-phone"
+                title={`Call ${assignment.driver_phone}`}
                 onClick={e => e.stopPropagation()}
               >
                 <Phone style={{ width: 13, height: 13 }} />
               </a>
             )}
+
+            {/* ZegoCloud voice call */}
+            {!isDone && (
+              <button
+                className="aot-action-btn aot-btn-voice"
+                title="Voice call with driver"
+                onClick={e => { e.stopPropagation(); setCallMode("voice"); }}
+              >
+                <PhoneCall style={{ width: 13, height: 13 }} />
+              </button>
+            )}
+
+            {/* ZegoCloud video call */}
+            {!isDone && (
+              <button
+                className="aot-action-btn aot-btn-video"
+                title="Video call with driver"
+                onClick={e => { e.stopPropagation(); setCallMode("video"); }}
+              >
+                <Video style={{ width: 13, height: 13 }} />
+              </button>
+            )}
+
+            {/* Dismiss */}
             <button
               className="aot-dismiss"
               onClick={e => { e.stopPropagation(); setDismissed(true); }}
@@ -141,7 +174,18 @@ export default function ActiveOrderTracker() {
           </div>
         </div>
 
-        {/* Progress steps */}
+        {/* ── Call ID strip (shows driver's Zego room info) ── */}
+        {!isDone && (
+          <div className="aot-call-id-strip">
+            <span className="aot-call-id-label">Call Room:</span>
+            <code className="aot-call-id-code">
+              kotabites-order-{String(orderId).slice(-8)}
+            </code>
+            <span className="aot-call-id-hint">· tap 📹 or 🎙️ to connect</span>
+          </div>
+        )}
+
+        {/* ── Progress steps row ── */}
         <div className="aot-steps" onClick={() => navigate(`/order/${orderId}`)}>
           {STEPS.map((step, i) => {
             const done   = i <= stepIdx;
@@ -150,7 +194,6 @@ export default function ActiveOrderTracker() {
             const col    = done ? STEP_COLOR[step.key] : "rgba(255,248,231,0.15)";
             return (
               <div key={step.key} className="aot-step">
-                {/* connector line */}
                 {i > 0 && (
                   <div
                     className="aot-connector"
@@ -177,7 +220,7 @@ export default function ActiveOrderTracker() {
             );
           })}
 
-          {/* tap hint */}
+          {/* Tap hint */}
           <div className="aot-tap-hint">
             <span>Tap to track</span>
             <ChevronRight style={{ width: 12, height: 12 }} />
@@ -207,13 +250,9 @@ const css = `
     to   { transform: translateY(0);     opacity: 1; }
   }
 
-  .aot-glow-strip {
-    height: 2px;
-    width: 100%;
-    opacity: 0.8;
-  }
+  .aot-glow-strip { height: 2px; width: 100%; opacity: 0.8; }
 
-  /* Header */
+  /* ── Header ── */
   .aot-header {
     display: flex;
     align-items: center;
@@ -252,25 +291,44 @@ const css = `
   .aot-header-actions {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 5px;
     flex-shrink: 0;
   }
-  .aot-call-btn {
+
+  /* ── Action buttons (phone / voice / video / dismiss) ── */
+  .aot-action-btn {
     width: 28px;
     height: 28px;
     border-radius: 8px;
-    background: rgba(74, 222, 128, 0.12);
-    border: 1px solid rgba(74, 222, 128, 0.3);
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #4ade80;
     text-decoration: none;
+    cursor: pointer;
+    border: 1px solid;
     transition: all 0.18s;
   }
-  .aot-call-btn:hover {
-    background: rgba(74, 222, 128, 0.22);
+  .aot-btn-phone {
+    background: rgba(74, 222, 128, 0.1);
+    border-color: rgba(74, 222, 128, 0.3);
+    color: #4ade80;
   }
+  .aot-btn-phone:hover { background: rgba(74, 222, 128, 0.22); }
+
+  .aot-btn-voice {
+    background: rgba(96, 165, 250, 0.1);
+    border-color: rgba(96, 165, 250, 0.3);
+    color: #60a5fa;
+  }
+  .aot-btn-voice:hover { background: rgba(96, 165, 250, 0.22); }
+
+  .aot-btn-video {
+    background: rgba(255, 199, 44, 0.1);
+    border-color: rgba(255, 199, 44, 0.3);
+    color: #FFC72C;
+  }
+  .aot-btn-video:hover { background: rgba(255, 199, 44, 0.2); }
+
   .aot-dismiss {
     width: 28px;
     height: 28px;
@@ -290,7 +348,42 @@ const css = `
     border-color: rgba(218, 41, 28, 0.3);
   }
 
-  /* Steps row */
+  /* ── Call ID strip ── */
+  .aot-call-id-strip {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 16px 2px;
+    font-size: 10px;
+    font-weight: 600;
+    color: rgba(255, 248, 231, 0.28);
+    letter-spacing: 0.02em;
+    border-bottom: 1px solid rgba(255, 248, 231, 0.04);
+  }
+  .aot-call-id-label {
+    color: rgba(255, 248, 231, 0.35);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-size: 9px;
+  }
+  .aot-call-id-code {
+    background: rgba(255, 199, 44, 0.08);
+    border: 1px solid rgba(255, 199, 44, 0.14);
+    border-radius: 5px;
+    padding: 1px 7px;
+    font-family: 'Courier New', monospace;
+    font-size: 10px;
+    color: rgba(255, 199, 44, 0.7);
+    letter-spacing: 0.03em;
+  }
+  .aot-call-id-hint {
+    color: rgba(255, 248, 231, 0.2);
+    font-size: 9px;
+    font-style: italic;
+  }
+
+  /* ── Progress steps ── */
   .aot-steps {
     display: flex;
     align-items: center;
@@ -299,9 +392,7 @@ const css = `
     cursor: pointer;
     position: relative;
   }
-  .aot-steps:hover .aot-tap-hint {
-    opacity: 1;
-  }
+  .aot-steps:hover .aot-tap-hint { opacity: 1; }
 
   .aot-step {
     display: flex;
@@ -313,7 +404,6 @@ const css = `
     z-index: 1;
   }
 
-  /* connector between dots */
   .aot-connector {
     position: absolute;
     top: 13px;
@@ -336,9 +426,7 @@ const css = `
     position: relative;
     z-index: 1;
   }
-  .aot-dot-pulse {
-    animation: aotPulse 1.6s ease infinite;
-  }
+  .aot-dot-pulse { animation: aotPulse 1.6s ease infinite; }
   @keyframes aotPulse {
     0%, 100% { transform: scale(1); }
     50%       { transform: scale(1.18); }
@@ -351,7 +439,6 @@ const css = `
     transition: color 0.3s;
   }
 
-  /* "Tap to track" hint */
   .aot-tap-hint {
     position: absolute;
     right: 16px;
@@ -369,8 +456,9 @@ const css = `
   }
 
   @media (max-width: 600px) {
-    .aot-step-label { display: none; }
-    .aot-steps { padding: 8px 16px 10px; }
-    .aot-dot { width: 24px; height: 24px; }
+    .aot-step-label   { display: none; }
+    .aot-steps        { padding: 8px 16px 10px; }
+    .aot-dot          { width: 24px; height: 24px; }
+    .aot-call-id-strip { display: none; }
   }
 `;
