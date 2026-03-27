@@ -18,6 +18,11 @@ import {
   ChevronRight, RefreshCw, Wallet, User, Award,
   Navigation, CheckCheck, Circle, Zap, LogOut,
 } from "lucide-react";
+import VideoCall, { getDriverCallToken } from "../components/VideoCall";
+
+// Inside the active delivery render:
+const { roomID } = getDriverCallToken(activeDelivery.order_id, driver.id, driver.full_name);
+
 
 // FIX: added "active" and "offline" — without them drivers in those statuses
 // saw "Under Review" and the entire dashboard was hidden behind the isApproved guard.
@@ -448,6 +453,20 @@ export default function DeliverDashboard() {
                           </div>
                         );
                       })}
+                      <button onClick={() => setDriverCallMode("video")}>
+  <Video /> Video Call Customer
+</button>
+
+{driverCallMode && (
+  <VideoCall
+    orderId={activeDelivery.order_id}
+    driverName={profile.full_name}
+    customerName={activeDelivery.customer_name}
+    userId={profile.id}          // pass driver's ID here
+    mode={driverCallMode}
+    onClose={() => setDriverCallMode(null)}
+  />
+)}
                     </div>
 
                     {/* Customer info */}
