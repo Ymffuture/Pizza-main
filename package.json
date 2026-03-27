@@ -19,6 +19,7 @@
     "@tanstack/react-query": "^5.51.0",
     "axios": "^1.6.7",
  "leaflet": "^1.9.4",
+    "@zegocloud/zego-uikit-prebuilt": "^2.17.3",
 "react-leaflet": "^5.0.0", 
     "blueimp-md5": "^2.19.0",
     "framer-motion": "^11.3.0",
