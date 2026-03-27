@@ -432,76 +432,84 @@ export default function DeliverDashboard() {
                 </div>
 
                 {/* Active Delivery */}
-                {activeDelivery && (
-                  <div className="dd-card dd-active-delivery">
-                    <div className="dd-section-lbl"><Zap className="w-4 h-4" style={{ color: "#FFC72C" }} /> Active Delivery</div>
 
-                    {/* Steps */}
-                    <div className="dd-delivery-steps">
-                      {DELIVERY_STATUS_STEPS.map((step, i) => {
-                        const done   = i <= currentStepIdx;
-                        const active = i === currentStepIdx;
-                        const SIcon  = step.Icon;
-                        return (
-                          <div key={step.key} className="dd-step">
-                            <div className={`dd-step-dot${done ? " dd-step-done" : ""}${active ? " dd-step-active" : ""}`}>
-                              <SIcon className="w-3.5 h-3.5" />
-                            </div>
-                            <span className={`dd-step-lbl${done ? " dd-step-lbl-done" : ""}`}>{step.label}</span>
-                          </div>
-                        );
-                      })}
-                      const roomID   = `kotabites-order_${activeDelivery.order_id}`;
-const { roomID } = getDriverCallToken(activeDelivery.order_id, driver.id, driver.full_name);
 
-                      <button onClick={() => setDriverCallMode("video")}>
-  <Video /> Video Call Customer
-</button>
+{activeDelivery && (
+  <div className="dd-card dd-active-delivery">
+    <div className="dd-section-lbl"><Zap className="w-4 h-4" style={{ color: "#FFC72C" }} /> Active Delivery</div>
 
-{driverCallMode && (
+    {/* Steps */}
+    <div className="dd-delivery-steps">
+      {DELIVERY_STATUS_STEPS.map((step, i) => {
+        const done   = i <= currentStepIdx;
+        const active = i === currentStepIdx;
+        const SIcon  = step.Icon;
+        return (
+          <div key={step.key} className="dd-step">
+            <div className={`dd-step-dot${done ? " dd-step-done" : ""}${active ? " dd-step-active" : ""}`}>
+              <SIcon className="w-3.5 h-3.5" />
+            </div>
+            <span className={`dd-step-lbl${done ? " dd-step-lbl-done" : ""}`}>{step.label}</span>
+          </div>
+        );
+      })}
+    </div>
+
+    {/* ✅ FIXED: Video Call Button - properly integrated */}
+    {activeDelivery.status !== "delivered" && (
+      <button 
+        className="dd-delivery-action-btn" 
+        style={{ marginTop: 8, background: "rgba(96,165,250,0.2)", border: "1px solid rgba(96,165,250,0.3)", color: "#60a5fa" }}
+        onClick={() => setDriverCallMode("video")}
+      >
+        <Phone className="w-4 h-4" /> Video Call Customer
+      </button>
+    )}
+
+    {/* Customer info */}
+    <div className="dd-delivery-info">
+      <div className="dd-delivery-row"><User  className="w-4 h-4 dd-info-icon" /><span>{activeDelivery.customer_name}</span></div>
+      <div className="dd-delivery-row"><MapPin className="w-4 h-4 dd-info-icon" /><span>{activeDelivery.delivery_address}</span></div>
+      {activeDelivery.customer_phone && (
+        <div className="dd-delivery-row">
+          <Phone className="w-4 h-4 dd-info-icon" />
+          <a href={`tel:${activeDelivery.customer_phone}`} className="dd-phone-link">{activeDelivery.customer_phone}</a>
+        </div>
+      )}
+      <div className="dd-delivery-row">
+        <DollarSign className="w-4 h-4 dd-info-icon" />
+        <span>Earn <strong style={{ color: "#4ade80" }}>R{activeDelivery.delivery_fee?.toFixed(2)}</strong></span>
+      </div>
+    </div>
+
+    {NEXT_STATUS[activeDelivery.status] && (
+      <button
+        className="dd-delivery-action-btn"
+        onClick={() => handleUpdateStatus(activeDelivery.assignment_id, NEXT_STATUS[activeDelivery.status])}
+        disabled={updatingStatus}
+      >
+        {updatingStatus
+          ? <><Loader2 className="w-4 h-4 dd-spin" /> Updating…</>
+          : <><Truck className="w-4 h-4" /> {NEXT_LABEL[activeDelivery.status]}</>}
+      </button>
+    )}
+    {activeDelivery.status === "delivered" && (
+      <div className="dd-delivered-banner"><CheckCheck className="w-4 h-4" /> Delivered! Earnings will be credited shortly.</div>
+    )}
+  </div>
+)}
+
+{/* ✅ FIXED: Video Call Modal - moved outside the active delivery card */}
+{driverCallMode && activeDelivery && (
   <VideoCall
     orderId={activeDelivery.order_id}
     driverName={profile.full_name}
     customerName={activeDelivery.customer_name}
-    userId={profile.id}          // pass driver's ID here
+    userId={profile.id}
     mode={driverCallMode}
     onClose={() => setDriverCallMode(null)}
   />
 )}
-                    </div>
-
-                    {/* Customer info */}
-                    <div className="dd-delivery-info">
-                      <div className="dd-delivery-row"><User  className="w-4 h-4 dd-info-icon" /><span>{activeDelivery.customer_name}</span></div>
-                      <div className="dd-delivery-row"><MapPin className="w-4 h-4 dd-info-icon" /><span>{activeDelivery.delivery_address}</span></div>
-                      {activeDelivery.customer_phone && (
-                        <div className="dd-delivery-row">
-                          <Phone className="w-4 h-4 dd-info-icon" />
-                          <a href={`tel:${activeDelivery.customer_phone}`} className="dd-phone-link">{activeDelivery.customer_phone}</a>
-                        </div>
-                      )}
-                      <div className="dd-delivery-row">
-                        <DollarSign className="w-4 h-4 dd-info-icon" />
-                        <span>Earn <strong style={{ color: "#4ade80" }}>R{activeDelivery.delivery_fee?.toFixed(2)}</strong></span>
-                      </div>
-                    </div>
-
-                    {NEXT_STATUS[activeDelivery.status] && (
-                      <button
-                        className="dd-delivery-action-btn"
-                        onClick={() => handleUpdateStatus(activeDelivery.assignment_id, NEXT_STATUS[activeDelivery.status])}
-                        disabled={updatingStatus}
-                      >
-                        {updatingStatus
-                          ? <><Loader2 className="w-4 h-4 dd-spin" /> Updating…</>
-                          : <><Truck className="w-4 h-4" /> {NEXT_LABEL[activeDelivery.status]}</>}
-                      </button>
-                    )}
-                    {activeDelivery.status === "delivered" && (
-                      <div className="dd-delivered-banner"><CheckCheck className="w-4 h-4" /> Delivered! Earnings will be credited shortly.</div>
-                    )}
-                  </div>
-                )}
 
                 {/* Quick Actions */}
                 <div className="dd-quick-grid">
