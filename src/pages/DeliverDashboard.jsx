@@ -20,8 +20,6 @@ import {
 } from "lucide-react";
 import VideoCall, { getDriverCallToken } from "../components/VideoCall";
 
-// Inside the active delivery render:
-const { roomID } = getDriverCallToken(activeDelivery.order_id, driver.id, driver.full_name);
 
 
 // FIX: added "active" and "offline" — without them drivers in those statuses
@@ -453,6 +451,9 @@ export default function DeliverDashboard() {
                           </div>
                         );
                       })}
+                      
+const { roomID } = getDriverCallToken(activeDelivery.order_id, driver.id, driver.full_name);
+
                       <button onClick={() => setDriverCallMode("video")}>
   <Video /> Video Call Customer
 </button>
