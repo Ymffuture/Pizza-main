@@ -12,7 +12,8 @@ import {
   User, Bike, Navigation, CheckCheck, Banknote,
 } from "lucide-react";
 import Footer from "../components/Footer";
-
+import { BsCashCoin } from "react-icons/bs";
+import { FaCcMastercard } from "react-icons/fa";
 /* ── Status config ── */
 const STATUS_CFG = {
   pending:   { label: "Order Placed",     Icon: Clock,        color: "#FFC72C" },
@@ -475,7 +476,7 @@ export default function OrderStatus() {
               <div className="os-meta-item">
                 <span className="os-meta-label">Payment</span>
                 <span className="os-meta-value">
-                  {isCash ? "💵 Cash on Delivery" : "💳 Paystack"}
+                  {isCash ? <span ><BsCashCoin /> Cash on Delivery </span>:<FaCcMastercard/>}
                 </span>
               </div>
             )}
