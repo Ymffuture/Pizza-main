@@ -63,7 +63,7 @@ const PageLoadingScreen = ({ message = "Connecting to Google..." }) => (
         <p className="text-white/50 text-sm">Please wait while we verify your account</p>
       </div>
       <div className="flex gap-1 mt-2">
-        <RiLoader5Line/> 
+        <RiLoader5Line className="animate-spin" /> 
       </div>
     </div>
   </div>
