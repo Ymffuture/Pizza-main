@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useGoogleLogin } from "@react-oauth/google";
 import { useAuth } from "../context/AuthContext";
-
+import { RiLoader5Line } from "react-icons/ri";
 // Loading Spinner Component
 const LoadingSpinner = ({ size = "md", color = "currentColor" }) => {
   const sizes = {
@@ -63,9 +63,7 @@ const PageLoadingScreen = ({ message = "Connecting to Google..." }) => (
         <p className="text-white/50 text-sm">Please wait while we verify your account</p>
       </div>
       <div className="flex gap-1 mt-2">
-        <span className="w-2 h-2 bg-[#FFC72C] rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-        <span className="w-2 h-2 bg-[#FFC72C] rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-        <span className="w-2 h-2 bg-[#FFC72C] rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+        <RiLoader5Line/> 
       </div>
     </div>
   </div>
