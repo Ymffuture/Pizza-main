@@ -31,6 +31,10 @@ const Wallet           = lazy(() => import("./pages/Wallet"));
 const DeliverDashboard = lazy(() => import("./pages/DeliverDashboard"));
 const ClientWallet     = lazy(() => import("./pages/ClientWallet")); // NEW: customer rewards
 
+import GitHubCallback  from "./pages/GitHubCallback";
+import SpotifyCallback from "./pages/SpotifyCallback";
+
+
 export default function App() {
   return (
     <ErrorBoundary>
@@ -52,7 +56,9 @@ export default function App() {
                     <Route path="/forgot-password"  element={<ForgotPassword />} />
                     <Route path="/reset-password"   element={<ResetPassword />} />
                     <Route path="/verify-email"     element={<VerifyEmail />} />
-
+                    <Route path="/auth/github/callback"  element={<GitHubCallback />} />
+                    <Route path="/auth/spotify/callback" element={<SpotifyCallback />} />
+   
                     {/* Protected: driver wallet */}
                     <Route path="/wallet" element={
                       <RequireAuth><Wallet /></RequireAuth>
