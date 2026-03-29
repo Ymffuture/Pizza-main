@@ -3,7 +3,9 @@ import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../components/Toast";
 import { Flame, Mail, Lock, LogIn, Loader, Eye, EyeOff, AlertCircle } from "lucide-react";
-import GoogleButton from "../components/GoogleButton";
+import GoogleButton  from "../components/GoogleButton";
+import GitHubButton  from "../components/GitHubButton";
+import SpotifyButton from "../components/SpotifyButton";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -26,13 +28,14 @@ export default function Login() {
     return e;
   };
 
-  const handleGoogle = (data) => {
+  // Shared success handler for all three OAuth providers
+  const handleOAuthSuccess = (data) => {
     toast.show({ type: "success", title: "Welcome!", message: data.user?.full_name || data.user?.email });
     navigate(redirect, { replace: true });
   };
 
-  const handleGoogleError = (err) => {
-    toast.show({ type: "error", title: "Google sign-in failed", message: err?.message || "Try again" });
+  const handleOAuthError = (err) => {
+    toast.show({ type: "error", title: "Sign-in failed", message: err?.message || "Try again" });
   };
 
   const handleChange = (field) => (ev) => {
@@ -48,7 +51,7 @@ export default function Login() {
 
     setLoading(true);
     setNeedsVerification(false);
-    
+
     try {
       await login(form);
       toast.show({ type: "success", title: "Welcome back!", message: form.email.trim().toLowerCase() });
@@ -59,15 +62,10 @@ export default function Login() {
         err?.response?.data?.message ||
         err.message ||
         "Login failed";
-      
-      // ✅ Check if error is related to email verification
+
       if (msg.toLowerCase().includes("verify") || msg.toLowerCase().includes("verification")) {
         setNeedsVerification(true);
-        toast.show({ 
-          type: "error", 
-          title: "Email not verified", 
-          message: "Please verify your email before logging in." 
-        });
+        toast.show({ type: "error", title: "Email not verified", message: "Please verify your email before logging in." });
       } else {
         toast.show({ type: "error", title: "Login failed", message: msg });
       }
@@ -94,7 +92,7 @@ export default function Login() {
           <p className="auth-sub">Sign in to place your order</p>
         </div>
 
-        {/* ✅ Email verification warning banner */}
+        {/* Email verification warning */}
         {needsVerification && (
           <div className="verification-banner">
             <AlertCircle className="w-4 h-4" style={{ flexShrink: 0 }} />
@@ -165,24 +163,37 @@ export default function Login() {
         </form>
 
         {/* Divider */}
-<div className="auth-divider">
-  <div className="auth-divider-line" />
-  <span className="auth-divider-text">OR</span>
-  <div className="auth-divider-line" />
-</div>
+        <div className="auth-divider">
+          <div className="auth-divider-line" />
+          <span className="auth-divider-text">OR</span>
+          <div className="auth-divider-line" />
+        </div>
 
-{/* Google or loading text */}
-{loading ? (
-  <div className="auth-loading-text">
-    <Loader className="w-4 h-4 auth-spin" />
-    <span>Signing in with email...</span>
-  </div>
-) : (
-  <GoogleButton 
-    onSuccess={handleGoogle} 
-    onError={handleGoogleError} 
-  />
-)} 
+        {/* Social login stack */}
+        <div className="social-stack">
+          {loading ? (
+            <div className="auth-loading-text">
+              <Loader className="w-4 h-4 auth-spin" />
+              <span>Signing in with email...</span>
+            </div>
+          ) : (
+            <>
+              <GoogleButton
+                onSuccess={handleOAuthSuccess}
+                onError={handleOAuthError}
+              />
+              <GitHubButton
+                onSuccess={handleOAuthSuccess}
+                onError={handleOAuthError}
+              />
+              <SpotifyButton
+                onSuccess={handleOAuthSuccess}
+                onError={handleOAuthError}
+              />
+            </>
+          )}
+        </div>
+
         {/* Forgot password */}
         <p style={{ textAlign: "center", marginTop: 14 }}>
           <Link to="/forgot-password" className="auth-link" style={{ fontSize: 13 }}>
@@ -260,58 +271,27 @@ const authStyles = `
   }
   .auth-sub { font-size: 13px; color: var(--muted); margin-top: 4px; }
 
-  /* ✅ Verification banner */
   .verification-banner {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
+    display: flex; align-items: flex-start; gap: 12px;
     background: rgba(218,41,28,0.08);
     border: 1px solid rgba(218,41,28,0.25);
-    border-radius: 14px;
-    padding: 12px 14px;
-    margin-bottom: 20px;
+    border-radius: 14px; padding: 12px 14px; margin-bottom: 20px;
     animation: slideIn 0.3s ease;
   }
-  
   @keyframes slideIn {
     from { opacity: 0; transform: translateY(-10px); }
-    to { opacity: 1; transform: translateY(0); }
+    to   { opacity: 1; transform: translateY(0); }
   }
-  
-  .verification-banner > svg {
-    color: #f87171;
-    margin-top: 2px;
+  .verification-banner > svg { color: #f87171; margin-top: 2px; }
+  .verification-title  { font-size: 12px; font-weight: 800; color: var(--text); margin: 0 0 3px; }
+  .verification-text   { font-size: 11px; color: var(--muted); line-height: 1.4; margin: 0; }
+  .verification-link   {
+    color: var(--gold); font-size: 12px; font-weight: 700;
+    text-decoration: none; white-space: nowrap; transition: opacity 0.2s;
   }
-  
-  .verification-title {
-    font-size: 12px;
-    font-weight: 800;
-    color: var(--text);
-    margin: 0 0 3px 0;
-  }
-  
-  .verification-text {
-    font-size: 11px;
-    color: var(--muted);
-    line-height: 1.4;
-    margin: 0;
-  }
-  
-  .verification-link {
-    color: var(--gold);
-    font-size: 12px;
-    font-weight: 700;
-    text-decoration: none;
-    white-space: nowrap;
-    transition: opacity 0.2s;
-  }
-  
-  .verification-link:hover {
-    opacity: 0.8;
-  }
+  .verification-link:hover { opacity: 0.8; }
 
   .auth-form { display: flex; flex-direction: column; gap: 16px; }
-
   .auth-field { display: flex; flex-direction: column; gap: 6px; }
   .auth-label {
     font-size: 11px; font-weight: 800; letter-spacing: 0.08em;
@@ -329,8 +309,7 @@ const authStyles = `
   .auth-input {
     flex: 1; background: none; border: none; outline: none;
     color: var(--text); font-size: 14px; font-weight: 500;
-    font-family: 'Plus Jakarta Sans', sans-serif;
-    padding: 13px 0;
+    font-family: 'Plus Jakarta Sans', sans-serif; padding: 13px 0;
   }
   .auth-input::placeholder { color: var(--muted); }
   .auth-pw-toggle {
@@ -344,10 +323,9 @@ const authStyles = `
     display: flex; align-items: center; justify-content: center; gap: 10px;
     background: var(--red); color: white; border: none; cursor: pointer;
     font-family: 'Plus Jakarta Sans', sans-serif;
-    font-weight: 900; font-size: 15px;
-    padding: 15px; border-radius: 14px; margin-top: 4px;
-    box-shadow: 0 6px 20px rgba(218,41,28,0.4);
-    transition: all 0.2s;
+    font-weight: 900; font-size: 15px; padding: 15px;
+    border-radius: 14px; margin-top: 4px;
+    box-shadow: 0 6px 20px rgba(218,41,28,0.4); transition: all 0.2s;
   }
   .auth-submit:hover:not(:disabled) { background: var(--red2); transform: scale(1.02); }
   .auth-submit:disabled { opacity: 0.55; cursor: not-allowed; }
@@ -355,22 +333,27 @@ const authStyles = `
   @keyframes spin { to { transform: rotate(360deg); } }
   .auth-spin { animation: spin 0.8s linear infinite; }
 
+  .auth-divider {
+    display: flex; align-items: center; gap: 12px; margin: 20px 0 16px;
+  }
+  .auth-divider-line  { flex: 1; height: 1px; background: var(--border); }
+  .auth-divider-text  { font-size: 11px; color: var(--muted); font-weight: 600; }
+
+  /* Three social buttons stacked with even spacing */
+  .social-stack { display: flex; flex-direction: column; gap: 10px; }
+
+  .auth-loading-text {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    font-size: 13px; color: var(--muted); padding: 10px 0;
+  }
+
   .auth-switch {
-    text-align: center; font-size: 13px;
-    color: var(--muted); margin-top: 20px;
+    text-align: center; font-size: 13px; color: var(--muted); margin-top: 20px;
   }
   .auth-link {
-    color: var(--gold); font-weight: 700; text-decoration: none;
-    transition: opacity 0.2s;
+    color: var(--gold); font-weight: 700; text-decoration: none; transition: opacity 0.2s;
   }
   .auth-link:hover { opacity: 0.8; }
-
-  .auth-divider {
-    display: flex; align-items: center; gap: 12px;
-    margin: 4px 0;
-  }
-  .auth-divider-line { flex: 1; height: 1px; background: var(--border); }
-  .auth-divider-text { font-size: 11px; color: var(--muted); font-weight: 600; }
 
   @media (max-width: 480px) {
     .auth-card { padding: 28px 20px; }
