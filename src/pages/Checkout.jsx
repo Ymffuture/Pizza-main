@@ -90,7 +90,9 @@ export default function Checkout() {
   // Any excess reward balance rolls into the delivery fee (customer still pays delivery)
   const discountOverage   = rawDiscount - effectiveDiscount;
   const deliveryFee       = baseDeliveryFee - discountOverage;
-
+  
+   if (deliveryFee<0) return 0
+  
   const orderTotal = Math.max(0, subtotal - effectiveDiscount + deliveryFee);
 
   // Payment method availability
