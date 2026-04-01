@@ -315,7 +315,7 @@ export default function Checkout() {
                   <Info className="w-3.5 h-3.5" />
                   Reward balance applied to delivery
                 </span>
-                <span>+ {formatCurrency(discountOverage)}</span>
+                <span>- {formatCurrency(discountOverage)}</span>
               </div>
             )}
 
@@ -326,7 +326,7 @@ export default function Checkout() {
     <span className="flex items-center gap-2">
       {/* Original fee with strikethrough */}
       <span className="line-through opacity-70">
-        {formatCurrency(deliveryFee)}
+        {formatCurrency(baseDeliveryFee)}
       </span>
       
       {/* Adjusted fee */}
