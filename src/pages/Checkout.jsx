@@ -91,7 +91,7 @@ export default function Checkout() {
   const discountOverage   = rawDiscount - effectiveDiscount;
   const deliveryFee       = baseDeliveryFee - discountOverage;
   
-   if (deliveryFee<0) return 0
+  
   
   const orderTotal = Math.max(0, subtotal - effectiveDiscount + deliveryFee);
 
