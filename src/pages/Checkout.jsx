@@ -14,14 +14,33 @@ import {
   ArrowLeft, CreditCard, Banknote, ShoppingBag,
   MapPin, Phone, ChevronRight, Loader2, CheckCircle2,
   LogOut, Flame, Zap, AlertCircle, Clock,
-  Tag, X, Star, Gift,
+  Tag, X, Star, Gift, Info,
 } from "lucide-react";
 
-const DELIVERY_FEE = 15;
+// ── Delivery fee tiers ────────────────────────────────────────────────────
+function calcDeliveryFee(subtotal) {
+  if (subtotal <= 50)  return 8;
+  if (subtotal <= 100) return 12;
+  return 15;
+}
+
+// ── Payment method limits ─────────────────────────────────────────────────
+const CASH_MAX = 150;   // Cash on delivery not available above R150
+const CARD_MAX = 250;   // Card not available above R250 (contact store directly)
 
 const PAYMENT_METHODS = [
-  { id: "cash",     label: "Cash on Delivery", sub: "Pay when your order arrives",           Icon: Banknote   },
-  { id: "paystack", label: "Pay Online",        sub: "Card, EFT & Instant EFT via Paystack", Icon: CreditCard },
+  {
+    id:    "cash",
+    label: "Cash on Delivery",
+    sub:   `Pay when your order arrives · max ${formatCurrency(CASH_MAX)}`,
+    Icon:  Banknote,
+  },
+  {
+    id:    "paystack",
+    label: "Pay Online",
+    sub:   `Card, EFT & Instant EFT via Paystack · max ${formatCurrency(CARD_MAX)}`,
+    Icon:  CreditCard,
+  },
 ];
 
 function parseError(err) {
@@ -57,14 +76,26 @@ export default function Checkout() {
   const [serverError,  setServerError]  = useState(null);
 
   // Promo code
-  const [promoInput,   setPromoInput]   = useState("");
-  const [promoApplied, setPromoApplied] = useState(null); // { code, discount, label }
-  const [promoError,   setPromoError]   = useState("");
-  const [promoChecking,setPromoChecking]= useState(false);
+  const [promoInput,    setPromoInput]    = useState("");
+  const [promoApplied,  setPromoApplied]  = useState(null); // { code, discount, label }
+  const [promoError,    setPromoError]    = useState("");
+  const [promoChecking, setPromoChecking] = useState(false);
 
-  // Price maths
-  const discount    = promoApplied?.discount ?? 0;
-  const orderTotal  = Math.max(0, subtotal + DELIVERY_FEE - discount);
+  // ── Price maths ───────────────────────────────────────────────────────
+  const baseDeliveryFee   = calcDeliveryFee(subtotal);
+  const rawDiscount       = promoApplied?.discount ?? 0;
+
+  // Reward can't discount more than the items subtotal
+  const effectiveDiscount = Math.min(rawDiscount, subtotal);
+  // Any excess reward balance rolls into the delivery fee (customer still pays delivery)
+  const discountOverage   = rawDiscount - effectiveDiscount;
+  const deliveryFee       = baseDeliveryFee + discountOverage;
+
+  const orderTotal = Math.max(0, subtotal - effectiveDiscount + deliveryFee);
+
+  // Payment method availability
+  const cashBlocked = orderTotal > CASH_MAX;
+  const cardBlocked = orderTotal > CARD_MAX;
 
   const handleLogout = () => {
     logout();
@@ -78,7 +109,7 @@ export default function Checkout() {
     if (!raw) { setPromoError("Enter a promo code"); return; }
     setPromoChecking(true);
     setPromoError("");
-    await new Promise(r => setTimeout(r, 500)); // slight delay feels natural
+    await new Promise(r => setTimeout(r, 500));
     const entry = validateCode(raw);
     setPromoChecking(false);
     if (!entry) {
@@ -91,6 +122,14 @@ export default function Checkout() {
   };
 
   const removePromo = () => { setPromoApplied(null); setPromoError(""); setPromoInput(""); };
+
+  // Auto-switch payment method when limit is exceeded
+  const handlePayMethodChange = (id) => {
+    if (id === "cash" && cashBlocked) return;   // blocked — ignore click
+    if (id === "paystack" && cardBlocked) return;
+    setPayMethod(id);
+    setErrors(prev => ({ ...prev, payment: "" }));
+  };
 
   // ── Empty cart ────────────────────────────────────────────────────────
   if (items.length === 0) return (
@@ -126,6 +165,12 @@ export default function Checkout() {
     if (!rawPhone)                                    e.phone = "Phone number is required";
     else if (!/^(0\d{9}|\+27\d{9})$/.test(rawPhone)) e.phone = "Must be 10 digits starting with 0";
     if (!form.delivery_address.trim())                e.delivery_address = "Delivery address is required";
+
+    if (payMethod === "cash" && cashBlocked)
+      e.payment = `Cash on delivery is only available for orders up to ${formatCurrency(CASH_MAX)}. Please pay by card.`;
+    if (payMethod === "paystack" && cardBlocked)
+      e.payment = `Online payment is only available for orders up to ${formatCurrency(CARD_MAX)}. Please call us to arrange a large order.`;
+
     return e;
   };
 
@@ -150,7 +195,8 @@ export default function Checkout() {
         phone:            normPhone,
         delivery_address: form.delivery_address.trim(),
         payment_method:   payMethod,
-        delivery_fee:     DELIVERY_FEE,
+        delivery_fee:     deliveryFee,          // dynamic fee (includes any reward overage)
+        discount:         effectiveDiscount,    // actual amount discounted off items
         items: items.map(i => ({ menu_item_id: i.id, quantity: i.quantity })),
       };
 
@@ -244,8 +290,13 @@ export default function Checkout() {
               <span>{formatCurrency(subtotal)}</span>
             </div>
             <div className="co-price-row">
-              <span>Delivery fee</span>
-              <span>{formatCurrency(DELIVERY_FEE)}</span>
+              <span className="co-fee-label-wrap">
+                Delivery fee
+                <span className="co-fee-tier-badge">
+                  {subtotal <= 50 ? "R0–R50" : subtotal <= 100 ? "R50–R100" : "R100+"}
+                </span>
+              </span>
+              <span>{formatCurrency(baseDeliveryFee)}</span>
             </div>
             {promoApplied && (
               <div className="co-price-row co-price-discount">
@@ -253,13 +304,38 @@ export default function Checkout() {
                   <Gift className="w-3.5 h-3.5" />
                   {promoApplied.label} ({promoApplied.code})
                 </span>
-                <span>− {formatCurrency(promoApplied.discount)}</span>
+                <span>− {formatCurrency(effectiveDiscount)}</span>
+              </div>
+            )}
+            {discountOverage > 0 && (
+              <div className="co-price-row co-price-overage">
+                <span className="co-overage-label">
+                  <Info className="w-3.5 h-3.5" />
+                  Reward balance applied to delivery
+                </span>
+                <span>+ {formatCurrency(discountOverage)}</span>
+              </div>
+            )}
+            {discountOverage > 0 && (
+              <div className="co-price-row" style={{ fontSize: 11, color: "var(--muted)", fontStyle: "italic" }}>
+                <span>Adjusted delivery fee</span>
+                <span>{formatCurrency(deliveryFee)}</span>
               </div>
             )}
             <div className="co-total-row">
               <span>Total</span>
               <span className="co-total-amount">{formatCurrency(orderTotal)}</span>
             </div>
+          </div>
+
+          {/* ── Delivery fee info ── */}
+          <div className="co-fee-info">
+            <Info className="w-3.5 h-3.5" style={{ color: "var(--muted)", flexShrink: 0 }} />
+            <p>
+              Delivery fee: <strong style={{ color: "#FFC72C" }}>R8</strong> (under R50) ·{" "}
+              <strong style={{ color: "#FFC72C" }}>R12</strong> (R50–R100) ·{" "}
+              <strong style={{ color: "#FFC72C" }}>R15</strong> (over R100)
+            </p>
           </div>
         </section>
 
@@ -273,7 +349,10 @@ export default function Checkout() {
                 <div className="co-promo-check"><CheckCircle2 className="w-5 h-5" style={{ color: "#4ade80" }} /></div>
                 <div>
                   <p className="co-promo-applied-label">{promoApplied.label} applied!</p>
-                  <p className="co-promo-applied-code">{promoApplied.code} · saving you {formatCurrency(promoApplied.discount)}</p>
+                  <p className="co-promo-applied-code">
+                    {promoApplied.code} · saving you {formatCurrency(effectiveDiscount)}
+                    {discountOverage > 0 && ` (${formatCurrency(discountOverage)} applied to delivery)`}
+                  </p>
                 </div>
               </div>
               <button className="co-promo-remove" onClick={removePromo} title="Remove code"><X className="w-4 h-4" /></button>
@@ -311,29 +390,75 @@ export default function Checkout() {
         <section className="co-card">
           <h2 className="co-section-label"><CreditCard className="w-4 h-4" /> Payment Method</h2>
           <div className="co-pay-methods">
-            {PAYMENT_METHODS.map(({ id, label, sub, Icon }) => (
-              <button key={id} type="button" onClick={() => setPayMethod(id)}
-                className={"co-pay-option" + (payMethod === id ? " co-pay-active" : "")}>
-                <div className={"co-pay-icon-wrap" + (payMethod === id ? " co-pay-icon-active" : "")}>
-                  <Icon className="w-5 h-5" />
-                </div>
-                <div className="co-pay-text">
-                  <span className="co-pay-label">{label}</span>
-                  <span className="co-pay-sub">{sub}</span>
-                </div>
-                <div className={"co-pay-check" + (payMethod === id ? " co-pay-check-active" : "")}>
-                  <CheckCircle2 className="w-5 h-5" />
-                </div>
-              </button>
-            ))}
+            {PAYMENT_METHODS.map(({ id, label, sub, Icon }) => {
+              const isBlocked = id === "cash" ? cashBlocked : cardBlocked;
+              const isActive  = payMethod === id && !isBlocked;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => handlePayMethodChange(id)}
+                  disabled={isBlocked}
+                  className={`co-pay-option${isActive ? " co-pay-active" : ""}${isBlocked ? " co-pay-blocked" : ""}`}
+                >
+                  <div className={`co-pay-icon-wrap${isActive ? " co-pay-icon-active" : ""}${isBlocked ? " co-pay-icon-blocked" : ""}`}>
+                    <Icon className="w-5 h-5" />
+                  </div>
+                  <div className="co-pay-text">
+                    <span className="co-pay-label">
+                      {label}
+                      {isBlocked && (
+                        <span className="co-pay-limit-badge">
+                          Max {id === "cash" ? formatCurrency(CASH_MAX) : formatCurrency(CARD_MAX)}
+                        </span>
+                      )}
+                    </span>
+                    <span className="co-pay-sub">{sub}</span>
+                  </div>
+                  {!isBlocked && (
+                    <div className={"co-pay-check" + (isActive ? " co-pay-check-active" : "")}>
+                      <CheckCircle2 className="w-5 h-5" />
+                    </div>
+                  )}
+                  {isBlocked && (
+                    <div className="co-pay-blocked-badge">
+                      <AlertCircle className="w-4 h-4" />
+                    </div>
+                  )}
+                </button>
+              );
+            })}
           </div>
-          {payMethod === "cash" && (
-            <div className="co-note co-note-gold">
-              <Banknote className="w-4 h-4 co-note-icon" style={{ color: "#FFC72C" }} />
-              <p>Have <strong>{formatCurrency(orderTotal)}</strong> ready on delivery (incl. R{DELIVERY_FEE} delivery fee{promoApplied ? `, −R${promoApplied.discount} discount` : ""}).</p>
+
+          {/* Payment error */}
+          {errors.payment && (
+            <div className="co-server-error" style={{ marginTop: 8 }}>
+              <AlertCircle className="w-4 h-4" style={{ color: "#f87171", flexShrink: 0 }} />
+              <p>{errors.payment}</p>
             </div>
           )}
-          {payMethod === "paystack" && (
+
+          {/* Limit warnings */}
+          {cashBlocked && !cardBlocked && (
+            <div className="co-note co-note-warn">
+              <AlertCircle className="w-4 h-4 co-note-icon" style={{ color: "#fb923c" }} />
+              <p>Order total exceeds the R{CASH_MAX} cash limit — please pay by card.</p>
+            </div>
+          )}
+          {cardBlocked && (
+            <div className="co-note co-note-warn">
+              <AlertCircle className="w-4 h-4 co-note-icon" style={{ color: "#fb923c" }} />
+              <p>Order total exceeds R{CARD_MAX}. Please call <strong>065 393 5339</strong> to arrange your order.</p>
+            </div>
+          )}
+
+          {payMethod === "cash" && !cashBlocked && (
+            <div className="co-note co-note-gold">
+              <Banknote className="w-4 h-4 co-note-icon" style={{ color: "#FFC72C" }} />
+              <p>Have <strong>{formatCurrency(orderTotal)}</strong> ready on delivery (incl. {formatCurrency(deliveryFee)} delivery fee{effectiveDiscount > 0 ? `, −${formatCurrency(effectiveDiscount)} discount` : ""}).</p>
+            </div>
+          )}
+          {payMethod === "paystack" && !cardBlocked && (
             <div className="co-note co-note-green">
               <CreditCard className="w-4 h-4 co-note-icon" style={{ color: "#4ade80" }} />
               <p>You'll be redirected to <strong>Paystack</strong> to pay <strong>{formatCurrency(orderTotal)}</strong> securely.</p>
@@ -376,9 +501,15 @@ export default function Checkout() {
               </div>
             )}
 
-            <button type="submit" disabled={loading} className="co-submit-btn">
+            <button
+              type="submit"
+              disabled={loading || cardBlocked}
+              className="co-submit-btn"
+            >
               {loading ? (
                 <><Loader2 className="w-5 h-5 co-spin" /> Placing Order…</>
+              ) : cardBlocked ? (
+                <><AlertCircle className="w-5 h-5" /> Order total too high — please call us</>
               ) : payMethod === "cash" ? (
                 <><Banknote className="w-5 h-5" /> Place Order · {formatCurrency(orderTotal)} cash <ChevronRight className="w-4 h-4 co-arrow" /></>
               ) : (
@@ -448,9 +579,16 @@ const styles = `
   .co-price-breakdown{display:flex;flex-direction:column;gap:8px;padding-top:14px;border-top:1px solid var(--border);}
   .co-price-row{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:var(--muted);}
   .co-price-discount{color:#4ade80;}
+  .co-price-overage{color:#fb923c;}
   .co-discount-label{display:flex;align-items:center;gap:6px;font-weight:700;}
+  .co-overage-label{display:flex;align-items:center;gap:6px;font-weight:700;font-size:12px;}
+  .co-fee-label-wrap{display:flex;align-items:center;gap:8px;}
+  .co-fee-tier-badge{background:rgba(255,199,44,0.1);border:1px solid rgba(255,199,44,0.2);color:var(--gold);font-size:9px;font-weight:800;padding:2px 7px;border-radius:50px;letter-spacing:0.05em;}
   .co-total-row{display:flex;align-items:center;justify-content:space-between;padding-top:10px;border-top:1px solid var(--border);font-size:13px;font-weight:700;color:var(--muted);}
   .co-total-amount{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:1px;color:var(--red);}
+
+  /* Delivery fee info row */
+  .co-fee-info{display:flex;align-items:flex-start;gap:8px;font-size:11px;color:var(--muted);line-height:1.5;padding:8px 12px;background:rgba(255,199,44,0.04);border:1px solid rgba(255,199,44,0.08);border-radius:10px;}
 
   /* Promo code */
   .co-promo-row{display:flex;gap:10px;}
@@ -476,19 +614,24 @@ const styles = `
   /* Payment */
   .co-pay-methods{display:flex;flex-direction:column;gap:10px;}
   .co-pay-option{display:flex;align-items:center;gap:14px;background:rgba(255,248,231,0.03);border:1.5px solid var(--border);border-radius:14px;padding:14px 16px;cursor:pointer;transition:all 0.22s;text-align:left;}
-  .co-pay-option:hover{border-color:rgba(255,199,44,0.25);background:rgba(255,199,44,0.04);}
+  .co-pay-option:hover:not(:disabled){border-color:rgba(255,199,44,0.25);background:rgba(255,199,44,0.04);}
   .co-pay-active{border-color:rgba(255,199,44,0.5)!important;background:rgba(255,199,44,0.06)!important;}
+  .co-pay-blocked{opacity:0.45;cursor:not-allowed!important;border-color:rgba(248,113,113,0.15)!important;}
   .co-pay-icon-wrap{width:42px;height:42px;border-radius:11px;flex-shrink:0;background:rgba(255,248,231,0.06);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--muted);transition:all 0.22s;}
   .co-pay-icon-active{background:rgba(255,199,44,0.15)!important;border-color:rgba(255,199,44,0.4)!important;color:var(--gold)!important;}
+  .co-pay-icon-blocked{background:rgba(248,113,113,0.08)!important;color:#f87171!important;}
   .co-pay-text{flex:1;min-width:0;}
-  .co-pay-label{display:block;font-size:14px;font-weight:700;color:var(--text);}
+  .co-pay-label{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:14px;font-weight:700;color:var(--text);}
+  .co-pay-limit-badge{font-size:10px;font-weight:800;padding:2px 8px;border-radius:50px;background:rgba(248,113,113,0.12);border:1px solid rgba(248,113,113,0.25);color:#f87171;letter-spacing:0.02em;}
   .co-pay-sub{display:block;font-size:11px;color:var(--muted);margin-top:2px;}
   .co-pay-check{color:transparent;transition:color 0.2s;flex-shrink:0;}
   .co-pay-check-active{color:var(--gold);}
+  .co-pay-blocked-badge{color:#f87171;flex-shrink:0;}
   .co-note{display:flex;align-items:flex-start;gap:10px;border-radius:12px;padding:12px 14px;font-size:13px;color:var(--text);line-height:1.5;}
   .co-note-gold{background:rgba(255,199,44,0.07);border:1px solid rgba(255,199,44,0.18);}
   .co-note-green{background:rgba(74,222,128,0.07);border:1px solid rgba(74,222,128,0.2);}
-  .co-note strong{color:var(--gold);}.co-note-green strong{color:#4ade80;}
+  .co-note-warn{background:rgba(251,146,60,0.08);border:1px solid rgba(251,146,60,0.25);color:#fb923c;}
+  .co-note strong{color:var(--gold);}.co-note-green strong{color:#4ade80;}.co-note-warn strong{color:#fb923c;}
   .co-note-icon{flex-shrink:0;margin-top:1px;}
 
   /* Form */
