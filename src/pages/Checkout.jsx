@@ -318,11 +318,23 @@ export default function Checkout() {
                 <span>+ {formatCurrency(discountOverage)}</span>
               </div>
             )}
-            {discountOverage > 0 && (
-              <div className="co-price-row" style={{ fontSize: 11, color: "var(--muted)", fontStyle: "italic" }}>
-                <span>Adjusted delivery fee</span>
-                <span>{formatCurrency(deliveryFee)}</span>
-              </div>
+
+            
+    {discountOverage > 0 && (
+    <div className="co-price-row" style={{ fontSize: 11, color: "var(--muted)", fontStyle: "italic" } >
+    <span>Adjusted delivery fee</span>
+    <span className="flex items-center gap-2">
+      {/* Original fee with strikethrough */}
+      <span className="line-through opacity-70">
+        {formatCurrency(deliveryFee)}
+      </span>
+      
+      {/* Adjusted fee */}
+       <span className="font-medium text-green-600">
+          {deliveryFee <= 0 ? "FREE" : formatCurrency(deliveryFee)}
+           </span>
+            </span>
+             </div>
             )}
             <div className="co-total-row">
               <span>Total</span>
