@@ -321,7 +321,7 @@ export default function Checkout() {
 
             
     {discountOverage > 0 && (
-    <div className="co-price-row" style={{ fontSize: 11, color: "var(--muted)", fontStyle: "italic" } >
+    <div className="co-price-row" style={{ fontSize: 11, color: "var(--muted)", fontStyle: "italic" }} >
     <span>Adjusted delivery fee</span>
     <span className="flex items-center gap-2">
       {/* Original fee with strikethrough */}
@@ -336,6 +336,7 @@ export default function Checkout() {
             </span>
              </div>
             )}
+            
             <div className="co-total-row">
               <span>Total</span>
               <span className="co-total-amount">{formatCurrency(orderTotal)}</span>
