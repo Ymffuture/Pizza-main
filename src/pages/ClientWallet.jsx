@@ -201,7 +201,7 @@ export default function ClientWallet() {
                   <p className="cw-claimed-title">{claimedCode.label} claimed!</p>
                   <p className="cw-claimed-sub">{claimedCode.points} pts · valid 30 days · single use</p>
                   <div className="cw-code-row">
-                    <span className="cw-code">{claimedCode.code}</span>
+                    <span className="cw-code text-sm">{claimedCode.code}</span>
                     <button className="cw-copy-btn" onClick={copyCode}>
                       {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                       {copied ? "Copied!" : "Copy"}
