@@ -5,7 +5,7 @@ export default function PageLoader() {
         
         {/* Geometric Loader */}
         <div className="flex justify-center items-center py-10 gap-2">
-          {['bg-cyan-400', 'bg-yellow-500', 'bg-red-500'].map((color, i) => (
+          {['bg-cyan-400', 'bg-red-500', 'bg-yellow-500'].map((color, i) => (
             <div
               key={i}
               className={`w-4 h-4 ${color} rounded-sm animate-[geometric_1.5s_ease-in-out_infinite]`}
@@ -25,13 +25,13 @@ export default function PageLoader() {
           `}</style>
         </div>
 
-        {/* Brand Text with staggered animation */}
+        {/* Brand Text with staggered animation 
         <div className="flex flex-col items-center gap-2">
           <p className="text-xl font-bold text-[#fff8e7] tracking-tight animate-pulse font-['Bebas_Neue'] tracking-[3px]">
              ·    ·    ·    · 
           </p>
         </div>
-
+            */} 
         {/* Progress dots 
         <div className="flex gap-2 mt-2">
           {[0, 1, 2].map((i) => (
