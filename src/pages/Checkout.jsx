@@ -8,7 +8,7 @@ import useOrder            from "../hooks/useOrder";
 import usePayment          from "../hooks/usePayment";
 import { useToast }        from "../components/Toast";
 import { formatCurrency }  from "../utils/formatCurrency";
-import { validateCode, markCodeUsed } from "./ClientWallet";
+import { validateRewardCode, useRewardCode } from "../api/rewards.api"; // ← was localStorage helpers
 import { getBusinessHoursStatus } from "../utils/businessHours";
 import {
   ArrowLeft, CreditCard, Banknote, ShoppingBag,
@@ -25,8 +25,8 @@ function calcDeliveryFee(subtotal) {
 }
 
 // ── Payment method limits ─────────────────────────────────────────────────
-const CASH_MAX = 150;   // Cash on delivery not available above R150
-const CARD_MAX = 250;   // Card not available above R250 (contact store directly)
+const CASH_MAX = 150;
+const CARD_MAX = 250;
 
 const PAYMENT_METHODS = [
   {
@@ -87,12 +87,10 @@ export default function Checkout() {
 
   // Reward can't discount more than the items subtotal
   const effectiveDiscount = Math.min(rawDiscount, subtotal);
-  // Any excess reward balance rolls into the delivery fee (customer still pays delivery)
+  // Any excess reward balance rolls into the delivery fee
   const discountOverage   = rawDiscount - effectiveDiscount;
   const deliveryFee       = baseDeliveryFee - discountOverage;
-  
-  
-  
+
   const orderTotal = Math.max(0, subtotal - effectiveDiscount + deliveryFee);
 
   // Payment method availability
@@ -105,29 +103,42 @@ export default function Checkout() {
     navigate("/login");
   };
 
-  // ── Promo code ────────────────────────────────────────────────────────
+  // ── Promo code — now validated against the DB via API ─────────────────
   const applyPromo = async () => {
     const raw = promoInput.trim();
     if (!raw) { setPromoError("Enter a promo code"); return; }
+
     setPromoChecking(true);
     setPromoError("");
-    await new Promise(r => setTimeout(r, 500));
-    const entry = validateCode(raw);
-    setPromoChecking(false);
-    if (!entry) {
-      setPromoError("Invalid or already-used code. Check /rewards for valid codes.");
-      return;
+
+    try {
+      const { data } = await validateRewardCode(raw);
+
+      if (data.valid) {
+        setPromoApplied({ code: data.code, discount: data.discount, label: data.label });
+        setPromoInput("");
+        toast.show({ type: "success", title: "Code applied!", message: `${data.label} discount added 🎉` });
+      } else {
+        setPromoError(data.reason ?? "Invalid or already-used code. Check /rewards for valid codes.");
+      }
+    } catch (err) {
+      // Network / server failure — give a clear message, don't leave the user stuck
+      const detail = err?.response?.data?.detail;
+      setPromoError(
+        typeof detail === "string"
+          ? detail
+          : "Could not validate code — please try again."
+      );
+    } finally {
+      setPromoChecking(false);
     }
-    setPromoApplied({ code: entry.code, discount: entry.discount, label: entry.label });
-    setPromoInput("");
-    toast.show({ type: "success", title: "Code applied!", message: `${entry.label} discount added 🎉` });
   };
 
   const removePromo = () => { setPromoApplied(null); setPromoError(""); setPromoInput(""); };
 
   // Auto-switch payment method when limit is exceeded
   const handlePayMethodChange = (id) => {
-    if (id === "cash" && cashBlocked) return;   // blocked — ignore click
+    if (id === "cash"     && cashBlocked) return;
     if (id === "paystack" && cardBlocked) return;
     setPayMethod(id);
     setErrors(prev => ({ ...prev, payment: "" }));
@@ -197,16 +208,29 @@ export default function Checkout() {
         phone:            normPhone,
         delivery_address: form.delivery_address.trim(),
         payment_method:   payMethod,
-        delivery_fee:     deliveryFee,          // dynamic fee (includes any reward overage)
-        discount:         effectiveDiscount,    // actual amount discounted off items
+        delivery_fee:     deliveryFee,
+        discount:         effectiveDiscount,
         items: items.map(i => ({ menu_item_id: i.id, quantity: i.quantity })),
       };
 
       const order = await submitOrder(payload);
       setOrder(order);
 
-      // Mark promo code as used so it can't be reused
-      if (promoApplied?.code) markCodeUsed(promoApplied.code);
+      // ── Mark the reward code as used on the server ────────────────
+      // Done AFTER the order is created so we never mark a code used
+      // for an order that failed to save.
+      if (promoApplied?.code) {
+        const orderId = String(order?.id ?? order?._id ?? order?.order_id ?? "");
+        try {
+          await useRewardCode(promoApplied.code, orderId);
+        } catch (codeErr) {
+          // Non-fatal: order exists, just log the failure
+          console.warn(
+            "[Checkout] Could not mark reward code as used:",
+            codeErr?.response?.data?.detail ?? codeErr?.message
+          );
+        }
+      }
 
       clearCart();
 
@@ -315,28 +339,22 @@ export default function Checkout() {
                   <Info className="w-3.5 h-3.5" />
                   Reward balance applied to delivery
                 </span>
-                <span>- {formatCurrency(discountOverage)}</span>
+                <span>− {formatCurrency(discountOverage)}</span>
               </div>
             )}
-
-            
-    {discountOverage > 0 && (
-    <div className="co-price-row" style={{ fontSize: 11, color: "var(--muted)", fontStyle: "italic" }} >
-    <span>Adjusted delivery fee</span>
-    <span className="flex items-center gap-2">
-      {/* Original fee with strikethrough */}
-      <span className="line-through opacity-70">
-        {formatCurrency(baseDeliveryFee)}
-      </span>
-      
-      {/* Adjusted fee */}
-       <span className="font-medium text-green-600">
-          {deliveryFee <= 0 ? "FREE" : formatCurrency(deliveryFee)}
-           </span>
-            </span>
-             </div>
+            {discountOverage > 0 && (
+              <div className="co-price-row" style={{ fontSize: 11, color: "var(--muted)", fontStyle: "italic" }}>
+                <span>Adjusted delivery fee</span>
+                <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ textDecoration: "line-through", opacity: 0.7 }}>
+                    {formatCurrency(baseDeliveryFee)}
+                  </span>
+                  <span style={{ fontWeight: 700, color: "#4ade80" }}>
+                    {deliveryFee <= 0 ? "FREE" : formatCurrency(deliveryFee)}
+                  </span>
+                </span>
+              </div>
             )}
-            
             <div className="co-total-row">
               <span>Total</span>
               <span className="co-total-amount">{formatCurrency(orderTotal)}</span>
@@ -445,7 +463,6 @@ export default function Checkout() {
             })}
           </div>
 
-          {/* Payment error */}
           {errors.payment && (
             <div className="co-server-error" style={{ marginTop: 8 }}>
               <AlertCircle className="w-4 h-4" style={{ color: "#f87171", flexShrink: 0 }} />
@@ -453,7 +470,6 @@ export default function Checkout() {
             </div>
           )}
 
-          {/* Limit warnings */}
           {cashBlocked && !cardBlocked && (
             <div className="co-note co-note-warn">
               <AlertCircle className="w-4 h-4 co-note-icon" style={{ color: "#fb923c" }} />
@@ -546,7 +562,6 @@ const styles = `
 
   .co-root{min-height:100vh;background:radial-gradient(ellipse 80% 35% at 50% 0%,rgba(218,41,28,0.15) 0%,transparent 65%),var(--dark);font-family:'Plus Jakarta Sans',system-ui,sans-serif;color:var(--text);padding-bottom:60px;}
 
-  /* State screens */
   .co-state-screen{min-height:100vh;background:var(--dark);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;text-align:center;font-family:'Plus Jakarta Sans',system-ui,sans-serif;color:var(--text);}
   .co-state-icon{width:72px;height:72px;background:rgba(255,199,44,0.08);border:1px solid rgba(255,199,44,0.18);border-radius:20px;display:flex;align-items:center;justify-content:center;color:var(--gold);}
   .co-state-icon-closed{background:rgba(248,113,113,0.1)!important;border-color:rgba(248,113,113,0.25)!important;color:#f87171!important;}
@@ -559,7 +574,6 @@ const styles = `
   .co-schedule-day{color:var(--muted);font-weight:600;}.co-schedule-hrs{color:rgba(255,248,231,0.7);font-weight:700;}
   .co-schedule-today .co-schedule-day,.co-schedule-today .co-schedule-hrs{color:var(--gold);}
 
-  /* Header */
   .co-header{position:sticky;top:0;z-index:100;background:rgba(14,7,0,0.95);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);}
   .co-header-inner{max-width:680px;margin:0 auto;padding:13px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;}
   .co-header-left{display:flex;align-items:center;gap:10px;}
@@ -575,12 +589,10 @@ const styles = `
   .co-logout-btn{width:34px;height:34px;border-radius:10px;background:rgba(218,41,28,0.08);border:1px solid rgba(218,41,28,0.2);display:flex;align-items:center;justify-content:center;color:rgba(218,41,28,0.6);cursor:pointer;transition:all 0.2s;}
   .co-logout-btn:hover{background:rgba(218,41,28,0.2);color:var(--red);}
 
-  /* Body */
   .co-body{max-width:680px;margin:0 auto;padding:24px 16px;display:flex;flex-direction:column;gap:16px;}
   .co-card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:20px;display:flex;flex-direction:column;gap:14px;}
   .co-section-label{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:var(--gold);}
 
-  /* Items */
   .co-items-list{display:flex;flex-direction:column;gap:10px;}
   .co-item-row{display:flex;align-items:center;gap:12px;}
   .co-item-img{width:44px;height:44px;border-radius:10px;flex-shrink:0;overflow:hidden;background:rgba(255,248,231,0.07);display:flex;align-items:center;justify-content:center;font-size:20px;}
@@ -590,7 +602,6 @@ const styles = `
   .co-item-qty{font-size:11px;color:var(--muted);}
   .co-item-price{font-size:13px;font-weight:800;color:var(--gold);flex-shrink:0;}
 
-  /* Price breakdown */
   .co-price-breakdown{display:flex;flex-direction:column;gap:8px;padding-top:14px;border-top:1px solid var(--border);}
   .co-price-row{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:var(--muted);}
   .co-price-discount{color:#4ade80;}
@@ -602,10 +613,8 @@ const styles = `
   .co-total-row{display:flex;align-items:center;justify-content:space-between;padding-top:10px;border-top:1px solid var(--border);font-size:13px;font-weight:700;color:var(--muted);}
   .co-total-amount{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:1px;color:var(--red);}
 
-  /* Delivery fee info row */
   .co-fee-info{display:flex;align-items:flex-start;gap:8px;font-size:11px;color:var(--muted);line-height:1.5;padding:8px 12px;background:rgba(255,199,44,0.04);border:1px solid rgba(255,199,44,0.08);border-radius:10px;}
 
-  /* Promo code */
   .co-promo-row{display:flex;gap:10px;}
   .co-promo-input-wrap{display:flex;align-items:center;gap:10px;flex:1;background:var(--input-bg);border:1.5px solid var(--border);border-radius:12px;padding:0 14px;transition:border-color 0.2s;}
   .co-promo-input-wrap:focus-within{border-color:rgba(255,199,44,0.4);}
@@ -626,7 +635,6 @@ const styles = `
   .co-promo-remove{width:32px;height:32px;border-radius:8px;background:rgba(255,248,231,0.06);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--muted);cursor:pointer;flex-shrink:0;transition:all 0.2s;}
   .co-promo-remove:hover{color:#f87171;border-color:rgba(248,113,113,0.3);}
 
-  /* Payment */
   .co-pay-methods{display:flex;flex-direction:column;gap:10px;}
   .co-pay-option{display:flex;align-items:center;gap:14px;background:rgba(255,248,231,0.03);border:1.5px solid var(--border);border-radius:14px;padding:14px 16px;cursor:pointer;transition:all 0.22s;text-align:left;}
   .co-pay-option:hover:not(:disabled){border-color:rgba(255,199,44,0.25);background:rgba(255,199,44,0.04);}
@@ -649,7 +657,6 @@ const styles = `
   .co-note strong{color:var(--gold);}.co-note-green strong{color:#4ade80;}.co-note-warn strong{color:#fb923c;}
   .co-note-icon{flex-shrink:0;margin-top:1px;}
 
-  /* Form */
   .co-form{display:flex;flex-direction:column;gap:14px;}
   .co-field{display:flex;flex-direction:column;gap:6px;}
   .co-label{font-size:11px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted);}
