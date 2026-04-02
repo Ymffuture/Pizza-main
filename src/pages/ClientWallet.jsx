@@ -10,6 +10,7 @@ import {
   Zap, Trophy, Lock, CheckCircle2, TrendingUp,
   Loader, Info, Copy, Check, RefreshCw,
 } from "lucide-react";
+import {Loader3} from "../components/Loader" ;
 
 // ── Re-exported so Checkout can import them without touching localStorage ─
 // Checkout should call validateRewardCode() and useRewardCode() from rewards.api.js
@@ -96,7 +97,7 @@ export default function ClientWallet() {
   if (loading) return (
     <div className="cw-root"><style>{styles}</style>
       <div className="cw-center">
-        <Loader className="cw-spin" style={{ width: 36, height: 36, color: "#FFC72C" }} />
+        <Loader3 />
         <p className="cw-sub">Loading rewards…</p>
       </div>
     </div>
