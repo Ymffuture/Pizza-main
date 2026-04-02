@@ -563,7 +563,7 @@ const styles = `
   .cw-claimed-icon{width:44px;height:44px;border-radius:12px;background:rgba(74,222,128,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
   .cw-claimed-info{flex:1;min-width:0;}.cw-claimed-title{font-size:14px;font-weight:800;color:var(--text);}.cw-claimed-sub{font-size:12px;color:var(--muted);margin-top:2px;}
   .cw-code-row{display:flex;align-items:center;gap:10px;margin-top:10px;}
-  .cw-code{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:3px;color:#4ade80;}
+  .cw-code{font-family:'Bebas Neue',sans-serif;font-size:10px;letter-spacing:4px;color:#4ade80;}
   .cw-copy-btn{display:flex;align-items:center;gap:5px;background:rgba(74,222,128,0.15);border:1px solid rgba(74,222,128,0.3);border-radius:8px;padding:5px 10px;color:#4ade80;font-size:11px;font-weight:800;cursor:pointer;transition:all 0.2s;font-family:'Plus Jakarta Sans',sans-serif;}
   .cw-copy-btn:hover{background:rgba(74,222,128,0.25);}
   .cw-code-hint{font-size:11px;color:rgba(74,222,128,0.7);margin-top:6px;font-weight:600;}
