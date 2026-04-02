@@ -20,6 +20,7 @@ import {
   Video, // ✅ ADDED: Video icon for video call button
 } from "lucide-react";
 import VideoCall from "../components/VideoCall"; // ✅ FIXED: Removed getDriverCallToken - not needed
+import {Loader3} from "../components/Loader" ;
 
 
 
@@ -217,7 +218,7 @@ export default function DeliverDashboard() {
       <div className="dd-root">
         <style>{styles}</style>
         <div className="dd-loading">
-          <Loader2 className="dd-spin" style={{ width: 36, height: 36, color: "#FFC72C" }} />
+          <Loader3 />
           <p>Loading dashboard…</p>
         </div>
       </div>
