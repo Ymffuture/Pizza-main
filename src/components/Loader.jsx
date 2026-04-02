@@ -125,7 +125,7 @@ export function Loader1() {
 export function Loader3() {
   return (
     <div className="flex justify-center items-center py-10 gap-2">
-      {['bg-cyan-400', 'bg-purple-500', 'bg-pink-500'].map((color, i) => (
+      {['bg-cyan-400', 'bg-yellow-500', 'bg-red-500'].map((color, i) => (
         <div
           key={i}
           className={`w-4 h-4 ${color} rounded-sm animate-[geometric_1.5s_ease-in-out_infinite]`}
