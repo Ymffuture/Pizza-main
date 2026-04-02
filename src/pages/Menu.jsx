@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { getMenu } from "../api/menu.api";
 import MenuCard from "../components/MenuCard";
-import Loader3 from "../components/Loader";
+import {Loader3} from "../components/Loader";
 import { useNavigate, Link } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { useToast } from "../components/Toast";
