@@ -486,7 +486,7 @@ function HistoryTab() {
 
   if (loading) return (
     <div className="cw-center" style={{ minHeight: "auto", padding: "40px 0" }}>
-      <Loader className="cw-spin" style={{ color: "#FFC72C", width: 28, height: 28 }} />
+      <Loader3 />
     </div>
   );
 
