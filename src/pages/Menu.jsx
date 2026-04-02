@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { getMenu } from "../api/menu.api";
 import MenuCard from "../components/MenuCard";
-import Loader from "../components/Loader";
+import Loader3 from "../components/Loader";
 import { useNavigate, Link } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { useToast } from "../components/Toast";
@@ -105,7 +105,7 @@ export default function Menu() {
     return (
       <div className="mn-loading-screen">
         <style>{styles}</style>
-        <Loader />
+        <Loader3 />
         {wakingUp && (
           <div className="mn-wake-banner">
             <Zap className="mn-wake-icon" />
