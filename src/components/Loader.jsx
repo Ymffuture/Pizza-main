@@ -1,5 +1,5 @@
 // 1. Liquid Morphing Blob
-export default function Loader1() {
+export function Loader1() {
  return (
    <div className="flex justify-center items-center py-10">
      <div className="relative">
@@ -22,7 +22,7 @@ export default function Loader1() {
 }
 
  // 2. Orbital Rings System
- export default function Loader2() {
+ export function Loader2() {
   return (
     <div className="flex justify-center items-center py-10">
       <div className="relative w-24 h-24">
@@ -122,7 +122,7 @@ export default function Loader1() {
 }
 
 //  3. Pulsing Geometric Shapes
-export default function Loader3() {
+export function Loader3() {
   return (
     <div className="flex justify-center items-center py-10 gap-2">
       {['bg-cyan-400', 'bg-purple-500', 'bg-pink-500'].map((color, i) => (
@@ -148,7 +148,7 @@ export default function Loader3() {
 }
 
 // 4. DNA Helix Wave
-export default function Loader4() {
+export function Loader4() {
   return (
     <div className="flex justify-center items-center py-10">
       <div className="flex gap-1">
@@ -175,7 +175,7 @@ export default function Loader4() {
 }
 
  // 5. Glitch Text Effect
-export default function Loader5() {
+export function Loader5() {
   return (
     <div className="flex justify-center items-center py-10">
       <div className="relative font-bold text-2xl tracking-widest text-white">
@@ -197,7 +197,7 @@ export default function Loader5() {
 }
 
 // 6. Neon Pulse Ring
-export default function Loader6() {
+export function Loader6() {
   return (
     <div className="flex justify-center items-center py-10">
       <div className="relative">
@@ -230,7 +230,7 @@ export default function Loader6() {
 }
 
 //7. 3D Cube Rotation
-export default function Loader7() {
+export function Loader7() {
   return (
     <div className="flex justify-center items-center py-10 perspective-200">
       <div className="relative w-12 h-12 animate-[cube-rotate_3s_linear_infinite]" style={{ transformStyle: 'preserve-3d' }}>
@@ -264,7 +264,7 @@ export default function Loader7() {
 }
 
 //8. Magnetic Dots
-export default function Loader8() {
+export function Loader8() {
   return (
     <div className="flex justify-center items-center py-10">
       <div className="relative w-20 h-20">
