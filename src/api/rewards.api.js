@@ -1,24 +1,20 @@
 // src/api/rewards.api.js
-import axios from "axios";
-
-const API = import.meta.env.VITE_API_URL || "https://kotabites.onrender.com";
-
-const authHeader = () => ({
-  headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-});
+import axiosClient from "./axiosClient"; // ← reuse the same client as every other api file
+                                          //   axiosClient already attaches the Bearer token
+                                          //   from sessionStorage("kb_token") automatically
 
 /** GET /rewards/wallet — full wallet state */
 export const getWallet = () =>
-  axios.get(`${API}/rewards/wallet`, authHeader());
+  axiosClient.get("/rewards/wallet");
 
 /** POST /rewards/claim — exchange points for a code */
 export const claimReward = (points) =>
-  axios.post(`${API}/rewards/claim`, { points }, authHeader());
+  axiosClient.post("/rewards/claim", { points });
 
-/** POST /rewards/validate — check a code before applying at checkout (no auth needed) */
+/** POST /rewards/validate — check a code before applying at checkout */
 export const validateRewardCode = (code) =>
-  axios.post(`${API}/rewards/validate`, { code });
+  axiosClient.post("/rewards/validate", { code });
 
 /** POST /rewards/use — mark a code as used after order is created */
 export const useRewardCode = (code, order_id) =>
-  axios.post(`${API}/rewards/use`, { code, order_id }, authHeader());
+  axiosClient.post("/rewards/use", { code, order_id });
