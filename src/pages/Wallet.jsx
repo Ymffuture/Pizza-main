@@ -14,6 +14,7 @@ import {
   ArrowDownRight, Gift, Zap, ShoppingBag,
   Loader, X, Info, ChevronRight, RefreshCw, WifiOff,
 } from "lucide-react";
+import {Loader3} from "../components/Loader" ;
 
 function classifyError(err) {
   if (!err?.response || err?.code === "ERR_NETWORK" || err?.code === "ECONNABORTED") {
@@ -164,7 +165,7 @@ export default function WalletPage() {
   if (loading) return (
     <div className="wl-root"><style>{styles}</style>
       <div className="wl-center">
-        <Loader className="wl-spin" style={{ width: 36, height: 36, color: "#FFC72C" }} />
+        <Loader3 />
         <p className="wl-sub">Loading wallet…</p>
       </div>
     </div>
