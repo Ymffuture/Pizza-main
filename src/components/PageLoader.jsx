@@ -23,10 +23,10 @@ export default function PageLoader() {
         {/* Brand Text with staggered animation */}
         <div className="flex flex-col items-center gap-2">
           <p className="text-xl font-bold text-[#fff8e7] tracking-tight animate-pulse font-['Bebas_Neue'] tracking-[3px]">
-            KotaGO
+            Fresh · Fast · Fire
           </p>
           <p className="text-sm text-[rgba(255,248,231,0.42)] font-medium tracking-wide uppercase">
-            Fresh · Fast · Fire
+          .      .      . 
           </p>
         </div>
 
