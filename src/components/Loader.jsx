@@ -130,8 +130,8 @@ export function Loader3() {
           key={i}
           className={`w-4 h-4 ${color} rounded-sm animate-[geometric_1.5s_ease-in-out_infinite]`}
           style={{
-            animationDelay: `${i * 0.2}s`,
-            boxShadow: `0 0 20px currentColor`
+            animationDelay: `${i * 0.4}s`,
+            boxShadow: `0 0 0 currentColor`
           }}
         />
       ))}
