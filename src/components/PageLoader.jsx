@@ -9,7 +9,7 @@ export default function PageLoader() {
           className={`w-4 h-4 ${color} rounded-sm animate-[geometric_1.5s_ease-in-out_infinite]`}
           style={{
             animationDelay: `${i * 0.4}s`,
-            boxShadow: `0 0 1px currentColor`
+            boxShadow: `0 0 0 currentColor`
           }}
         />
       ))}
