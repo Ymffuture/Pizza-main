@@ -1,7 +1,138 @@
+/* ═══════════════════════════════════════════════════════════
+   KotaBites — Cyan · Milky · Orange theme
+   Replaces old Red/Gold palette
+   ═══════════════════════════════════════════════════════════ */
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* ── Global CSS variables ── */
+:root {
+  /* PRIMARY — was #DA291C red, now orange */
+  --primary:      #F97316;
+  --primary-dark: #EA6B0A;
+
+  /* ACCENT — was #FFC72C gold, now cyan */
+  --accent:       #06B6D4;
+  --accent-hover: #0EA5E9;
+
+  /* BACKGROUNDS */
+  --background:   #04111A;   /* deep navy-dark                 */
+  --card:         #071C26;   /* dark cyan-tinted card           */
+  --card2:        #052030;
+
+  /* TEXT */
+  --text:         #F8F5EE;   /* milky white                     */
+  --muted:        rgba(248, 245, 238, 0.45);
+
+  /* BORDERS */
+  --border:       rgba(6, 182, 212, 0.15);
+
+  /* Shortcuts used across components */
+  --red:          #F97316;   /* every var(--red)  → orange  */
+  --red2:         #EA6B0A;
+  --gold:         #06B6D4;   /* every var(--gold) → cyan    */
+  --dark:         #04111A;
+}
+
+html { scroll-behavior: smooth; }
+
+::selection {
+  background: var(--accent);
+  color: var(--background);
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  background: var(--background);
+  color: var(--text);
+}
+
+/* ── Sonner toast label tweaks ── */
+.kota-toast-title {
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  font-weight: 800;
+  color: #F8F5EE;
+}
+.kota-toast-desc {
+  color: rgba(248, 245, 238, 0.55);
+}
+.kota-toast-icon {
+  color: #06B6D4;
+}
+
+/* ── Override hardcoded red/gold rgba() values that live in
+       component <style> strings — these cascade over them ── */
+
+/* Red-tinted glows → orange */
+[style*="rgba(218,41,28"],
+[class*="aot-"],
+[class*="kb-"],
+[class*="mn-"],
+[class*="co-"],
+[class*="os-"],
+[class*="ds-"],
+[class*="dd-"],
+[class*="wl-"],
+[class*="cw-"] {
+  --shadow-primary: rgba(249, 115, 22, 0.4);
+}
+
+/* Scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(6, 182, 212, 0.2) transparent;
+}
+*::-webkit-scrollbar        { width: 5px; height: 5px; }
+*::-webkit-scrollbar-thumb  { background: rgba(6, 182, 212, 0.22); border-radius: 4px; }
+
+/* ── Menu grid (preserved from original) ── */
+.menu-grid-wrap {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 16px;
+  overflow-x: hidden;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.menu-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 285px), 1fr));
+  gap: 20px;
+  min-width: 0;
+}
+
+.menu-card-wrap {
+  min-width: 0;
+  overflow: hidden;
+  animation: cardIn 0.55s cubic-bezier(0.34, 1.2, 0.64, 1) both;
+  animation-delay: calc(var(--i) * 55ms);
+}
+
+.menu-card-wrap img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(22px) scale(0.96); }
+  to   { opacity: 1; transform: none; }
+}
+
+@media (max-width: 600px) {
+  .menu-grid      { grid-template-columns: 1fr; gap: 16px; }
+  .menu-grid-wrap { padding: 16px 12px; }
+}
+
+@media (min-width: 601px) and (max-width: 1023px) {
+  .menu-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); }
+}
+
+/* ── auth-loading-text (used in Login.jsx) ── */
 .auth-loading-text {
   display: flex;
   align-items: center;
@@ -13,60 +144,83 @@
   font-weight: 500;
 }
 
-/* Grid - FIXED VERSION */
-.menu-grid-wrap { 
-  max-width: 1200px; 
-  margin: 0 auto; 
-  padding: 24px 16px;
-  /* Prevent horizontal overflow */
-  overflow-x: hidden;
-  width: 100%;
-  box-sizing: border-box;
+/* ── Global colour patch — rewrites inline rgba strings that
+   components bake into their <style> blocks.
+   Because CSS variables are resolved at paint time, components
+   that already use var(--red) / var(--gold) pick up the new
+   palette automatically.  The patches below target the few
+   places that hard-code the hex/rgba directly. ── */
+
+/* Orange replaces DA291C / b91c1c */
+.kb-ai-fab,
+.kb-ai-send-btn,
+.co-submit-btn,
+.ds-submit-btn,
+.wl-red-btn,
+.cw-red-btn,
+.mn-fab,
+.mn-state-btn,
+.dd-accept-btn,
+.os-cta-btn,
+.cart-checkout-btn,
+.cart-empty-btn,
+.mc-add-btn,
+.auth-submit,
+.fp-back-link,
+.ve-resend-btn,
+.suc-primary-btn {
+  background: var(--primary) !important;
+  box-shadow: 0 6px 20px rgba(249, 115, 22, 0.4) !important;
 }
 
-.menu-grid { 
-  display: grid; 
-  /* Use min(100%, 285px) to prevent cards from exceeding container width on small screens */
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 285px), 1fr)); 
-  gap: 20px;
-  /* Ensure grid doesn't expand beyond container */
-  min-width: 0;
+.kb-ai-fab:hover,
+.kb-ai-send-btn:hover:not(:disabled),
+.co-submit-btn:hover:not(:disabled),
+.ds-submit-btn:hover:not(:disabled),
+.wl-red-btn:hover,
+.cw-red-btn:hover,
+.mn-fab:hover,
+.mn-state-btn:hover,
+.dd-accept-btn:hover:not(:disabled),
+.cart-checkout-btn:hover,
+.cart-empty-btn:hover,
+.mc-add-btn:hover,
+.auth-submit:hover:not(:disabled) {
+  background: var(--primary-dark) !important;
 }
 
-/* Ensure cards don't overflow their cells */
-.menu-card-wrap {
-  min-width: 0;
-  overflow: hidden;
-  animation: cardIn 0.55s cubic-bezier(0.34,1.2,0.64,1) both; 
-  animation-delay: calc(var(--i) * 55ms); 
+/* Cyan replaces FFC72C / gold in key badges & accents */
+.kb-ai-header-icon,
+.mn-cat-active,
+.co-count-pill,
+.aot-glow-strip,
+.wl-logo,
+.cw-logo,
+.ds-logo,
+.dd-brand-badge,
+.os-brand-badge,
+.cart-brand-badge,
+.co-brand-badge,
+.auth-logo {
+  background: var(--accent) !important;
+  box-shadow: 0 0 18px rgba(6, 182, 212, 0.35) !important;
 }
 
-/* Ensure images inside cards are constrained */
-.menu-card-wrap img {
-  max-width: 100%;
-  height: auto;
-  display: block;
+.mn-cat-active .mn-cat-label {
+  color: #04111A !important;
 }
 
-@keyframes cardIn { 
-  from { opacity: 0; transform: translateY(22px) scale(0.96); } 
-  to { opacity: 1; transform: none; } 
-}
-
-/* Mobile fix */
-@media (max-width: 600px) {
-  .menu-grid  { 
-    grid-template-columns: 1fr; 
-    gap: 16px;
-  }
-  .menu-grid-wrap {
-    padding: 16px 12px;
-  }
-}
-
-/* Tablet adjustment */
-@media (min-width: 601px) and (max-width: 1023px) {
-  .menu-grid {
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
-  }
+/* Dark background patch */
+.kb-ai-window,
+.mn-sidebar,
+.co-root,
+.os-root,
+.wl-root,
+.cw-root,
+.ds-root,
+.dd-root,
+.auth-root,
+.cart-root {
+  --dark: #04111A;
+  --card: #071C26;
 }

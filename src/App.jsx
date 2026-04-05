@@ -5,13 +5,12 @@ import { lazy, Suspense } from "react";
 import { OrderProvider }  from "./context/OrderContext";
 import { CartProvider }   from "./context/CartContext";
 import { AuthProvider }   from "./context/AuthContext";
-import { ToastProvider }  from "./components/Toast";
+import { ToastProvider, KotaToaster } from "./components/Toast";   // ← added KotaToaster
 import RequireAuth        from "./components/RequireAuth";
 import ErrorBoundary      from "./components/ErrorBoundary";
 import PageLoader         from "./components/PageLoader";
 import AiChat             from "./components/AiChat";
 
-// Lazy loaded pages
 const Home             = lazy(() => import("./pages/Home"));
 const Menu             = lazy(() => import("./pages/Menu"));
 const Cart             = lazy(() => import("./pages/Cart"));
@@ -29,11 +28,10 @@ const DeliveryCoverage = lazy(() => import("./pages/DeliveryCoverage"));
 const DeliverSignup    = lazy(() => import("./pages/DeliverSignup"));
 const Wallet           = lazy(() => import("./pages/Wallet"));
 const DeliverDashboard = lazy(() => import("./pages/DeliverDashboard"));
-const ClientWallet     = lazy(() => import("./pages/ClientWallet")); // NEW: customer rewards
+const ClientWallet     = lazy(() => import("./pages/ClientWallet"));
 
 import GitHubCallback  from "./pages/GitHubCallback";
 import SpotifyCallback from "./pages/SpotifyCallback";
-
 
 export default function App() {
   return (
@@ -42,6 +40,9 @@ export default function App() {
         <OrderProvider>
           <CartProvider>
             <ToastProvider>
+              {/* Sonner Toaster — renders outside the tree so it's always on top */}
+              <KotaToaster />
+
               <BrowserRouter>
                 <Suspense fallback={<PageLoader />}>
                   <Routes>
@@ -58,37 +59,28 @@ export default function App() {
                     <Route path="/verify-email"     element={<VerifyEmail />} />
                     <Route path="/auth/github/callback"  element={<GitHubCallback />} />
                     <Route path="/auth/spotify/callback" element={<SpotifyCallback />} />
-   
-                    {/* Protected: driver wallet */}
+
                     <Route path="/wallet" element={
                       <RequireAuth><Wallet /></RequireAuth>
                     } />
-
-                    {/* Protected: customer rewards wallet */}
                     <Route path="/rewards" element={
                       <RequireAuth><ClientWallet /></RequireAuth>
                     } />
-
-                    {/* Protected: driver dashboard */}
                     <Route path="/driver-dashboard" element={
                       <RequireAuth><DeliverDashboard /></RequireAuth>
                     } />
-
                     <Route path="/checkout" element={
                       <RequireAuth><Checkout /></RequireAuth>
                     } />
                     <Route path="/order/:id" element={
                       <RequireAuth><OrderStatus /></RequireAuth>
                     } />
-
                     <Route path="/success"  element={<Success />} />
                     <Route path="*"         element={<ErrorPage />} />
                   </Routes>
                 </Suspense>
 
-                {/* KotaBot AI Chat — always mounted */}
                 <AiChat />
-
               </BrowserRouter>
             </ToastProvider>
           </CartProvider>
