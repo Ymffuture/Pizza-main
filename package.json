@@ -21,6 +21,7 @@
  "leaflet": "^1.9.4",
     "@zegocloud/zego-uikit-prebuilt": "^2.17.3",
 "react-leaflet": "^5.0.0", 
+    "sonner": "^1.7.4",
     "blueimp-md5": "^2.19.0",
     "framer-motion": "^11.3.0",
     "lucide-react": "^0.515.0",
