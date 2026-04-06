@@ -398,11 +398,11 @@ export default function Checkout() {
                   <input
                     type="text"
                     className="co-promo-input"
-                    placeholder="e.g. KB03H9YG"
+                    placeholder="e.g. KB03H9YG..."
                     value={promoInput}
                     onChange={e => { setPromoInput(e.target.value.toUpperCase()); setPromoError(""); }}
                     onKeyDown={e => e.key === "Enter" && applyPromo()}
-                    maxLength={10}
+                    maxLength={26}
                   />
                 </div>
                 <button className="co-promo-btn" onClick={applyPromo} disabled={promoChecking || !promoInput.trim()}>
