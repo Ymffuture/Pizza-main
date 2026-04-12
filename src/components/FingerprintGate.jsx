@@ -1,56 +1,35 @@
-// src/components/FingerprintGate.jsx
-/**
- * Wraps any page requiring biometric verification before access.
- *
- * - Checks if the user has passkeys registered.
- * - If yes  → shows a fingerprint prompt before revealing children.
- * - If no   → passes through (no passkeys = no gate).
- * - Verification is cached in sessionStorage for the tab's lifetime.
- *
- * Usage:
- *   <FingerprintGate pageKey="wallet">
- *     <WalletPage />
- *   </FingerprintGate>
- */
+// src/components/FingerprintGate.jsx — FIXED VERSION
+// Bug 1: was calling /auth/me (doesn't exist) → now reads email from AuthContext
+// Bug 2: waited for button click → now auto-triggers on mount (bank-app UX)
+// Bug 3: verification result cached in sessionStorage per pageKey
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Fingerprint, Loader, ShieldCheck, ShieldX, KeyRound, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import axiosClient from "../api/axiosClient";
-
-// ── base64url ↔ ArrayBuffer ─────────────────────────────────────────────────
+import { useAuth } from "../context/AuthContext";
 
 function b64urlToBuffer(b64url) {
   const base64 = b64url.replace(/-/g, "+").replace(/_/g, "/");
   const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), "=");
-  const binary = atob(padded);
-  return Uint8Array.from(binary, (c) => c.charCodeAt(0)).buffer;
+  return Uint8Array.from(atob(padded), (c) => c.charCodeAt(0)).buffer;
 }
-
 function bufferToB64url(buffer) {
-  const bytes = new Uint8Array(buffer);
   let binary = "";
-  bytes.forEach((b) => (binary += String.fromCharCode(b)));
+  new Uint8Array(buffer).forEach((b) => (binary += String.fromCharCode(b)));
   return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
 }
-
 function prepareGetOptions(opts) {
   return {
     ...opts,
     challenge: b64urlToBuffer(opts.challenge),
-    allowCredentials: (opts.allowCredentials || []).map((c) => ({
-      ...c,
-      id: b64urlToBuffer(c.id),
-    })),
+    allowCredentials: (opts.allowCredentials || []).map((c) => ({ ...c, id: b64urlToBuffer(c.id) })),
   };
 }
-
-function serializeAssertion(credential) {
-  const r = credential.response;
+function serializeAssertion(cred) {
+  const r = cred.response;
   return {
-    id:    credential.id,
-    rawId: bufferToB64url(credential.rawId),
-    type:  credential.type,
+    id: cred.id, rawId: bufferToB64url(cred.rawId), type: cred.type,
     response: {
       clientDataJSON:    bufferToB64url(r.clientDataJSON),
       authenticatorData: bufferToB64url(r.authenticatorData),
@@ -60,339 +39,127 @@ function serializeAssertion(credential) {
   };
 }
 
-// ── Session cache ────────────────────────────────────────────────────────────
-
-function isVerified(pageKey) {
-  return sessionStorage.getItem(`kb_fp_verified_${pageKey}`) === "1";
-}
-
-function markVerified(pageKey) {
-  sessionStorage.setItem(`kb_fp_verified_${pageKey}`, "1");
-}
-
-// ── Main Component ───────────────────────────────────────────────────────────
+const isVerified  = (k) => sessionStorage.getItem(`kb_fp_ok_${k}`) === "1";
+const markVerified = (k) => sessionStorage.setItem(`kb_fp_ok_${k}`, "1");
+const webAuthnOK   = typeof window !== "undefined" && !!window.PublicKeyCredential && !!navigator.credentials;
 
 export default function FingerprintGate({ children, pageKey = "protected" }) {
-  const navigate = useNavigate();
+  const navigate       = useNavigate();
+  const { user }       = useAuth();           // ← FIX: email from context
+  const email          = user?.email || "";
+  const autoFired      = useRef(false);
+  const [gateStatus, setGateStatus] = useState("loading");   // loading|gate|verified|no_passkeys
+  const [step,       setStep]       = useState("idle");       // idle|scanning|verifying|success|error|cancelled
+  const [errMsg,     setErrMsg]     = useState("");
 
-  const [status, setStatus] = useState("loading"); // loading | gate | verified | no_passkeys
-  const [step,   setStep]   = useState("idle");    // idle | scanning | verifying | error | success
-  const [errMsg, setErrMsg] = useState("");
-  const [email,  setEmail]  = useState("");
-
-  const supportsWebAuthn =
-    typeof window !== "undefined" &&
-    window.PublicKeyCredential !== undefined &&
-    navigator.credentials !== undefined;
-
-  // 1. On mount: check cache → check if user has passkeys
+  // Decide whether gate is needed
   useEffect(() => {
-    if (isVerified(pageKey)) { setStatus("verified"); return; }
-    if (!supportsWebAuthn)   { setStatus("no_passkeys"); return; }
-
+    if (isVerified(pageKey))  { setGateStatus("verified");   return; }
+    if (!webAuthnOK || !email){ setGateStatus("no_passkeys"); return; }
     axiosClient.get("/webauthn/credentials")
-      .then(({ data }) => {
-        if (Array.isArray(data) && data.length > 0) {
-          setStatus("gate");
-        } else {
-          setStatus("no_passkeys");
-        }
-      })
-      .catch(() => {
-        // Can't reach server / no auth → skip gate
-        setStatus("no_passkeys");
-      });
+      .then(({ data }) => setGateStatus(Array.isArray(data) && data.length > 0 ? "gate" : "no_passkeys"))
+      .catch(() => setGateStatus("no_passkeys"));
+  }, [pageKey, email]);
 
-    // Pre-fetch user email for the auth/options call
-    axiosClient.get("/auth/me").catch(() => {}).then(res => {
-      if (res?.data?.email) setEmail(res.data.email);
-    });
-  }, [pageKey, supportsWebAuthn]);
-
-  const handleVerify = useCallback(async () => {
-    if (!email) {
-      setStep("error");
-      setErrMsg("Could not determine your account. Please sign in again.");
-      return;
-    }
-
-    setStep("scanning");
-    setErrMsg("");
-
+  const triggerVerify = useCallback(async () => {
+    if (!email) { setStep("error"); setErrMsg("Sign in again — email not found."); return; }
+    setStep("scanning"); setErrMsg("");
     try {
-      // Get challenge
       const { data: opts } = await axiosClient.post("/webauthn/auth/options", { email });
       setStep("verifying");
-
-      // Prompt biometric
-      const assertion = await navigator.credentials.get({
-        publicKey: prepareGetOptions(opts),
-      });
-
+      const assertion = await navigator.credentials.get({ publicKey: prepareGetOptions(opts) });
       if (!assertion) throw new Error("No credential returned");
-
-      // Verify with server (don't need the JWT — just confirm identity)
-      await axiosClient.post("/webauthn/auth/verify", {
-        email,
-        credential: serializeAssertion(assertion),
-      });
-
+      await axiosClient.post("/webauthn/auth/verify", { email, credential: serializeAssertion(assertion) });
       setStep("success");
       markVerified(pageKey);
-      setTimeout(() => setStatus("verified"), 800);
-
+      setTimeout(() => setGateStatus("verified"), 700);
     } catch (err) {
-      const name = err?.name || "";
-      if (name === "NotAllowedError") {
-        setErrMsg("Fingerprint scan was cancelled.");
-      } else if (err?.response?.status === 401 || err?.response?.status === 400) {
-        setErrMsg("Verification failed — identity not confirmed.");
-      } else {
-        setErrMsg(err?.message || "Fingerprint verification failed.");
-      }
-      setStep("error");
+      if (err?.name === "NotAllowedError") { setStep("cancelled"); setErrMsg("Scan cancelled — tap to retry."); }
+      else { setStep("error"); setErrMsg(err?.response?.data?.detail || err?.message || "Verification failed."); }
     }
   }, [email, pageKey]);
 
-  // ── Pass-through states ────────────────────────────────────────────────────
+  // ← FIX: Auto-prompt on mount (bank-app behaviour)
+  useEffect(() => {
+    if (gateStatus === "gate" && !autoFired.current) {
+      autoFired.current = true;
+      setTimeout(triggerVerify, 350); // small delay so UI renders first
+    }
+  }, [gateStatus, triggerVerify]);
 
-  if (status === "loading") {
-    return (
-      <div style={screenStyle}>
-        <Loader style={{ width: 28, height: 28, color: "var(--gold, #FFC72C)", animation: "fpgSpin 0.8s linear infinite" }} />
-        <style>{`@keyframes fpgSpin { to { transform: rotate(360deg); } }`}</style>
-      </div>
-    );
-  }
+  if (gateStatus === "loading") return <div style={ss}><Loader style={{width:28,height:28,color:"var(--gold,#FFC72C)",animation:"fpgSpin .8s linear infinite"}}/><style>{css}</style></div>;
+  if (gateStatus !== "gate")   return <>{children}</>;
 
-  if (status === "no_passkeys" || status === "verified") {
-    return children;
-  }
-
-  // ── Gate UI ────────────────────────────────────────────────────────────────
-
-  const isSuccess = step === "success";
-  const isError   = step === "error";
-  const isScanning = step === "scanning" || step === "verifying";
+  const ok  = step === "success";
+  const bad = step === "error" || step === "cancelled";
+  const busy= step === "scanning" || step === "verifying";
+  const ic  = ok ? "#4ade80" : bad ? "#f87171" : "var(--gold,#FFC72C)";
 
   return (
-    <div style={screenStyle}>
-      <style>{gateStyles}</style>
+    <div style={ss}>
+      <style>{css}</style>
+      <div style={card}>
+        <button onClick={() => navigate(-1)} style={backBtn}><ArrowLeft style={{width:13,height:13}}/><span>Back</span></button>
 
-      <div style={cardStyle}>
-
-        {/* Back button */}
-        <button onClick={() => navigate(-1)} style={backBtnStyle}>
-          <ArrowLeft style={{ width: 14, height: 14 }} />
-          <span>Back</span>
-        </button>
-
-        {/* Icon */}
-        <div style={iconWrapStyle(isSuccess, isError)}>
-          {isSuccess
-            ? <ShieldCheck style={{ width: 36, height: 36, color: "#4ade80" }} />
-            : isError
-              ? <ShieldX style={{ width: 36, height: 36, color: "#f87171" }} />
-              : isScanning
-                ? <Loader style={{ width: 36, height: 36, color: "var(--gold, #FFC72C)", animation: "fpgSpin 0.8s linear infinite" }} />
-                : <Fingerprint style={{ width: 36, height: 36, color: "var(--gold, #FFC72C)" }} />
-          }
-
-          {/* Pulse rings when idle */}
-          {!isScanning && !isSuccess && !isError && (
-            <>
-              <div style={pulseRingStyle(1)} />
-              <div style={pulseRingStyle(2)} />
-            </>
-          )}
+        <div style={{position:"relative",width:120,height:120,display:"flex",alignItems:"center",justifyContent:"center",marginTop:8}}>
+          <div className={busy ? "fpg-spin-ring" : "fpg-pulse-ring"} style={{position:"absolute",inset:0,borderRadius:"50%",border:`2px solid ${ic}`,opacity:.35}}/>
+          <div style={{width:80,height:80,borderRadius:"50%",background:`${ic}15`,border:`1px solid ${ic}30`,display:"flex",alignItems:"center",justifyContent:"center",zIndex:1}}>
+            {ok   ? <ShieldCheck  style={{width:40,height:40,color:ic}}/> :
+             bad  ? <ShieldX      style={{width:40,height:40,color:ic}}/> :
+             busy ? <Loader       style={{width:40,height:40,color:ic,animation:"fpgSpin .8s linear infinite"}}/> :
+                    <Fingerprint  style={{width:40,height:40,color:ic}}/>}
+          </div>
         </div>
 
-        {/* Text */}
-        <h2 style={headingStyle}>
-          {isSuccess  ? "Identity Verified"
-           : isError  ? "Verification Failed"
-           : isScanning ? (step === "scanning" ? "Scanning…" : "Verifying…")
-           : "Secure Access"}
+        <h2 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:28,letterSpacing:"2px",color:"var(--text,#fff8e7)",margin:0,lineHeight:1}}>
+          {ok   ? "Verified ✓" : busy ? (step==="scanning" ? "Ready…" : "Checking…") :
+           bad  ? "Couldn't Verify" : "Confirm It's You"}
         </h2>
 
-        <p style={subStyle}>
-          {isSuccess
-            ? "Welcome! Opening your wallet."
-            : isError
-              ? errMsg
-              : isScanning
-                ? "Touch your fingerprint sensor or use your passkey."
-                : "Your wallet is protected. Verify your identity with your fingerprint or passkey to continue."}
+        <p style={{fontSize:13,color:"var(--muted,rgba(255,248,231,.42))",lineHeight:1.6,maxWidth:270,margin:0,minHeight:40}}>
+          {ok    ? "Identity confirmed. Opening your wallet."
+           : busy ? "Touch your fingerprint sensor or use your passkey."
+           : bad  ? errMsg
+           : "Your wallet requires fingerprint verification each session."}
         </p>
 
-        {/* Verify button (idle + error) */}
-        {(step === "idle" || step === "error") && (
-          <>
-            <button onClick={handleVerify} style={verifyBtnStyle}>
-              <Fingerprint style={{ width: 18, height: 18 }} />
-              {step === "error" ? "Try Again" : "Verify with Fingerprint"}
-            </button>
+        {busy && <div style={{display:"flex",gap:8}}>{[0,1,2].map(i=><div key={i} className="fpg-dot" style={{animationDelay:`${i*.2}s`}}/>)}</div>}
 
-            <button onClick={() => navigate(-1)} style={skipBtnStyle}>
-              <KeyRound style={{ width: 13, height: 13 }} />
-              Use password login instead
+        {(step==="idle"||bad) && (
+          <div style={{width:"100%",display:"flex",flexDirection:"column",gap:10}}>
+            <button onClick={triggerVerify} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10,width:"100%",padding:"14px 20px",background:"var(--red,#DA291C)",border:"none",borderRadius:14,color:"#fff",fontFamily:"'Plus Jakarta Sans',sans-serif",fontWeight:900,fontSize:15,cursor:"pointer",boxShadow:"0 6px 20px rgba(218,41,28,.4)"}}>
+              <Fingerprint style={{width:18,height:18}}/>
+              {bad ? "Try Again" : "Verify Fingerprint"}
             </button>
-          </>
-        )}
-
-        {/* Success checkmark */}
-        {isSuccess && (
-          <div style={successBarStyle}>
-            <ShieldCheck style={{ width: 14, height: 14 }} />
-            Opening wallet…
+            <button onClick={()=>navigate(-1)} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,background:"rgba(255,248,231,.04)",border:"1px solid rgba(255,248,231,.08)",borderRadius:12,color:"rgba(255,248,231,.4)",fontSize:12,fontWeight:700,padding:10,cursor:"pointer",fontFamily:"'Plus Jakarta Sans',sans-serif"}}>
+              <KeyRound style={{width:13,height:13}}/> Cancel
+            </button>
           </div>
         )}
+
+        {ok && (
+          <div style={{display:"flex",alignItems:"center",gap:8,padding:"10px 16px",background:"rgba(74,222,128,.1)",border:"1px solid rgba(74,222,128,.25)",borderRadius:10,color:"#4ade80",fontSize:12,fontWeight:700,width:"100%",justifyContent:"center"}}>
+            <ShieldCheck style={{width:14,height:14}}/> Opening wallet…
+          </div>
+        )}
+
+        {step==="idle" && <p style={{fontSize:11,color:"rgba(255,248,231,.2)",margin:"4px 0 0"}}>🔒 Your fingerprint never leaves this device</p>}
       </div>
     </div>
   );
 }
 
-// ── Styles ───────────────────────────────────────────────────────────────────
+const ss = {minHeight:"100vh",background:"radial-gradient(ellipse 80% 50% at 50% 0%,rgba(255,199,44,.07) 0%,transparent 65%),var(--dark,#0e0700)",display:"flex",alignItems:"center",justifyContent:"center",padding:24,fontFamily:"'Plus Jakarta Sans',system-ui,sans-serif"};
+const card = {width:"100%",maxWidth:360,background:"var(--card,#1a0e00)",border:"1px solid var(--border,rgba(255,199,44,.12))",borderRadius:24,padding:"44px 28px 32px",textAlign:"center",display:"flex",flexDirection:"column",alignItems:"center",gap:16,boxShadow:"0 24px 64px rgba(0,0,0,.5)",position:"relative"};
+const backBtn = {position:"absolute",top:14,left:14,display:"flex",alignItems:"center",gap:5,background:"rgba(255,248,231,.05)",border:"1px solid rgba(255,248,231,.08)",borderRadius:8,padding:"5px 10px",color:"rgba(255,248,231,.4)",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"'Plus Jakarta Sans',sans-serif"};
 
-const screenStyle = {
-  minHeight:      "100vh",
-  background:     "radial-gradient(ellipse 80% 50% at 50% 0%, rgba(255,199,44,0.07) 0%, transparent 65%), var(--dark, #0e0700)",
-  display:        "flex",
-  alignItems:     "center",
-  justifyContent: "center",
-  padding:        24,
-  fontFamily:     "'Plus Jakarta Sans', system-ui, sans-serif",
-};
-
-const cardStyle = {
-  width:          "100%",
-  maxWidth:       380,
-  background:     "var(--card, #1a0e00)",
-  border:         "1px solid var(--border, rgba(255,199,44,0.12))",
-  borderRadius:   24,
-  padding:        "36px 28px",
-  textAlign:      "center",
-  display:        "flex",
-  flexDirection:  "column",
-  alignItems:     "center",
-  gap:            16,
-  boxShadow:      "0 24px 64px rgba(0,0,0,0.5)",
-  position:       "relative",
-};
-
-const backBtnStyle = {
-  position:       "absolute",
-  top:            16,
-  left:           16,
-  display:        "flex",
-  alignItems:     "center",
-  gap:            5,
-  background:     "rgba(255,248,231,0.05)",
-  border:         "1px solid rgba(255,248,231,0.1)",
-  borderRadius:   8,
-  padding:        "5px 10px",
-  color:          "rgba(255,248,231,0.45)",
-  fontSize:       11,
-  fontWeight:     700,
-  cursor:         "pointer",
-  fontFamily:     "'Plus Jakarta Sans', sans-serif",
-};
-
-const iconWrapStyle = (success, error) => ({
-  width:          80,
-  height:         80,
-  borderRadius:   22,
-  background:     success ? "rgba(74,222,128,0.12)"
-                : error   ? "rgba(248,113,113,0.1)"
-                : "rgba(255,199,44,0.08)",
-  border:         `1px solid ${success ? "rgba(74,222,128,0.3)" : error ? "rgba(248,113,113,0.25)" : "rgba(255,199,44,0.2)"}`,
-  display:        "flex",
-  alignItems:     "center",
-  justifyContent: "center",
-  position:       "relative",
-  marginTop:      24,
-});
-
-const pulseRingStyle = (n) => ({
-  position:     "absolute",
-  inset:        n === 1 ? -8 : -18,
-  borderRadius: "50%",
-  border:       "1px solid rgba(255,199,44,0.15)",
-  animation:    `fpgRing ${1.8 + n * 0.4}s ease-out infinite`,
-  animationDelay: `${n * 0.3}s`,
-});
-
-const headingStyle = {
-  fontFamily:    "'Bebas Neue', sans-serif",
-  fontSize:      26,
-  letterSpacing: "2px",
-  color:         "var(--text, #fff8e7)",
-  margin:        0,
-};
-
-const subStyle = {
-  fontSize:   13,
-  color:      "var(--muted, rgba(255,248,231,0.42))",
-  lineHeight: 1.6,
-  maxWidth:   280,
-  margin:     0,
-};
-
-const verifyBtnStyle = {
-  display:        "flex",
-  alignItems:     "center",
-  justifyContent: "center",
-  gap:            10,
-  width:          "100%",
-  padding:        "14px 20px",
-  background:     "var(--red, #DA291C)",
-  border:         "none",
-  borderRadius:   14,
-  color:          "#fff",
-  fontFamily:     "'Plus Jakarta Sans', sans-serif",
-  fontWeight:     900,
-  fontSize:       15,
-  cursor:         "pointer",
-  boxShadow:      "0 6px 20px rgba(218,41,28,0.4)",
-  transition:     "all 0.2s",
-  marginTop:      4,
-};
-
-const skipBtnStyle = {
-  display:        "flex",
-  alignItems:     "center",
-  justifyContent: "center",
-  gap:            6,
-  background:     "none",
-  border:         "none",
-  color:          "rgba(255,248,231,0.35)",
-  fontSize:       12,
-  fontWeight:     600,
-  cursor:         "pointer",
-  fontFamily:     "'Plus Jakarta Sans', sans-serif",
-};
-
-const successBarStyle = {
-  display:       "flex",
-  alignItems:    "center",
-  gap:           8,
-  padding:       "10px 16px",
-  background:    "rgba(74,222,128,0.1)",
-  border:        "1px solid rgba(74,222,128,0.25)",
-  borderRadius:  10,
-  color:         "#4ade80",
-  fontSize:      12,
-  fontWeight:    700,
-  width:         "100%",
-  justifyContent:"center",
-};
-
-const gateStyles = `
-  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
-  @keyframes fpgSpin { to { transform: rotate(360deg); } }
-  @keyframes fpgRing {
-    0%   { opacity: 0.6; transform: scale(0.9); }
-    60%  { opacity: 0.15; }
-    100% { opacity: 0;   transform: scale(1.5); }
-  }
+const css = `
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Plus+Jakarta+Sans:wght@400;600;700;800;900&display=swap');
+  @keyframes fpgSpin      { to { transform: rotate(360deg); } }
+  @keyframes fpgPulseRing { 0%,100%{transform:scale(1);opacity:.35} 50%{transform:scale(1.15);opacity:.65} }
+  @keyframes fpgSpinRing  { 0%{transform:rotate(0deg)} 100%{transform:rotate(360deg)} }
+  @keyframes fpgDot       { 0%,80%,100%{transform:scale(.5);opacity:.3} 40%{transform:scale(1);opacity:1} }
+  .fpg-pulse-ring { animation: fpgPulseRing 1.8s ease-in-out infinite; }
+  .fpg-spin-ring  { animation: fpgSpinRing  1.0s linear infinite; }
+  .fpg-dot        { width:8px;height:8px;border-radius:50%;background:var(--gold,#FFC72C);animation:fpgDot 1.4s ease-in-out infinite; }
 `;
