@@ -2,29 +2,47 @@ import ReactDOM from "react-dom/client";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import App from "./App.jsx";
 import "./index.css";
-import 'leaflet/dist/leaflet.css';
+import "leaflet/dist/leaflet.css";
+import "antd/dist/reset.css";
+
 import { THEMES, applyTheme } from "./hooks/useTheme";
 
-
-// src/main.jsx or src/index.jsx
-import "antd/dist/reset.css";
+// ✅ Service Worker (safe)
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
     navigator.serviceWorker
       .register("/sw.js")
       .then((reg) => console.log("SW registered", reg))
-      .catch((err) => console.log("SW failed:", err));
+      .catch((err) => console.warn("SW failed:", err));
   });
 }
 
-// Before ReactDOM.createRoot:
-const savedId = localStorage.getItem("kb_theme") || "fire";
-const theme = THEMES.find(t => t.id === savedId) || THEMES[0];
-applyTheme(theme);
+// ✅ Theme (safe)
+try {
+  const savedId = localStorage.getItem("kb_theme") || "fire";
+  const theme = THEMES.find(t => t.id === savedId) || THEMES[0];
+  if (theme) applyTheme(theme);
+} catch (e) {
+  console.warn("Theme error:", e);
+}
 
+// ✅ Root check
+const rootEl = document.getElementById("root");
 
-ReactDOM.createRoot(document.getElementById("root")).render(
-  <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
+if (!rootEl) {
+  throw new Error("Root element not found");
+}
+
+// ✅ Env check
+const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
+if (!clientId) {
+  console.error("Missing VITE_GOOGLE_CLIENT_ID");
+}
+
+// ✅ Render
+ReactDOM.createRoot(rootEl).render(
+  <GoogleOAuthProvider clientId={clientId || ""}>
     <App />
   </GoogleOAuthProvider>
 );
