@@ -15,6 +15,19 @@ import {
 import { useAuth } from "../context/AuthContext";
 import { Tooltip } from "antd";
 import ActiveOrderTracker from "../components/ActiveOrderTracker";
+import { Settings } from "lucide-react";
+import SettingsPanel from "../components/SettingsPanel";
+
+// State (top of component):
+const [settingsOpen, setSettingsOpen] = useState(false);
+
+// In sidebar JSX (above logout):
+
+
+// After closing </aside>:
+
+
+
 const CATEGORIES = [
   { label: "All",      emoji: "🍽️" },
   { label: "Kota",     emoji: "🥪" },
@@ -217,6 +230,10 @@ export default function Menu() {
 
             {/* User */}
             <div className="mn-sidebar-user">
+              <button onClick={() => setSettingsOpen(true)} className="mn-nav-link">
+               <Settings className="w-4 h-4" />
+              <span>Settings</span>
+                </button>
               {isAuth ? (
                 <div className="mn-user-row">
                   <Avatar picture={user?.picture || user?.avatar} name={user?.full_name} email={user?.email} size={30} />
@@ -230,10 +247,13 @@ export default function Menu() {
                   Sign In
                 </button>
               )}
+              
             </div>
 
           </div>
         </aside>
+        <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+
 
         {/* ── Main content ── */}
         <div className="mn-content">
