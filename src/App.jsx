@@ -33,7 +33,7 @@ const ClientWallet     = lazy(() => import("./pages/ClientWallet"));
 import GitHubCallback  from "./pages/GitHubCallback";
 import SpotifyCallback from "./pages/SpotifyCallback";
 import FingerprintGate from "./components/FingerprintGate";
-import PKM from "../components/PasskeyManager";
+import PKM from "./components/PasskeyManager";
 
 export default function App() {
   return (
