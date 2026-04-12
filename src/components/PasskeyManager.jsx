@@ -103,7 +103,7 @@ export default function PasskeyManager() {
       <div style={headerStyle}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div style={iconWrapStyle}>
-            <Fingerprint style={{ width: 18, height: 18, color: "#FFC72C" }} />
+            <Fingerprint style={{ width: 18, height: 18, color: "#5BC0BE" }} />
           </div>
           <div>
             <h3 style={titleStyle}>Passkeys & Fingerprints</h3>
@@ -136,11 +136,11 @@ export default function PasskeyManager() {
         </div>
       ) : creds.length === 0 ? (
         <div style={emptyStyle}>
-          <Fingerprint style={{ width: 32, height: 32, opacity: 0.2, marginBottom: 8 }} />
-          <p style={{ color: "rgba(255,248,231,0.35)", fontSize: 13, margin: 0 }}>
+          <Fingerprint style={{ width: 32, height: 32, opacity: 0.2, marginBottom: 8, color: "#5BC0BE" }} />
+          <p style={{ color: "rgba(107,122,143,0.7)", fontSize: 13, margin: 0 }}>
             No passkeys registered yet.
           </p>
-          <p style={{ color: "rgba(255,248,231,0.25)", fontSize: 12, margin: "4px 0 0" }}>
+          <p style={{ color: "rgba(107,122,143,0.5)", fontSize: 12, margin: "4px 0 0" }}>
             Click "Add Fingerprint" to set one up.
           </p>
         </div>
@@ -149,7 +149,7 @@ export default function PasskeyManager() {
           {creds.map((c) => (
             <li key={c.id} style={itemStyle}>
               <div style={itemIconStyle}>
-                <ShieldCheck style={{ width: 16, height: 16, color: "#4ade80" }} />
+                <ShieldCheck style={{ width: 16, height: 16, color: "#5BC0BE" }} />
               </div>
 
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -188,7 +188,7 @@ export default function PasskeyManager() {
                   </button>
                   <button
                     onClick={() => handleDelete(c.id)}
-                    style={{ ...iconBtnStyle, color: "#f87171" }}
+                    style={{ ...iconBtnStyle, color: "#E74C3C" }}
                     title="Remove"
                   >
                     <Trash2 style={{ width: 14, height: 14 }} />
@@ -220,11 +220,11 @@ function Banner({ type, msg }) {
       gap:          10,
       padding:      "10px 14px",
       borderRadius: 12,
-      background:   isError ? "rgba(218,41,28,0.08)" : "rgba(74,222,128,0.08)",
-      border:       `1px solid ${isError ? "rgba(218,41,28,0.25)" : "rgba(74,222,128,0.25)"}`,
+      background:   isError ? "rgba(231,76,60,0.08)" : "rgba(91,192,190,0.08)",
+      border:       `1px solid ${isError ? "rgba(231,76,60,0.25)" : "rgba(91,192,190,0.25)"}`,
       marginBottom: 12,
       fontSize:     13,
-      color:        isError ? "#f87171" : "#4ade80",
+      color:        isError ? "#E74C3C" : "#5BC0BE",
     }}>
       {isError
         ? <AlertCircle style={{ width: 14, height: 14, flexShrink: 0 }} />
@@ -237,8 +237,8 @@ function Banner({ type, msg }) {
 // ── Styles ─────────────────────────────────────────────────────────────────
 
 const containerStyle = {
-  background:   "#1a0e00",
-  border:       "1px solid rgba(255,199,44,0.12)",
+  background:   "#0B132B",
+  border:       "1px solid rgba(91,192,190,0.12)",
   borderRadius: 20,
   padding:      "20px 20px 16px",
   fontFamily:   "'Plus Jakarta Sans', system-ui, sans-serif",
@@ -257,26 +257,26 @@ const iconWrapStyle = {
   width:          36,
   height:         36,
   borderRadius:   10,
-  background:     "rgba(255,199,44,0.1)",
-  border:         "1px solid rgba(255,199,44,0.2)",
+  background:     "rgba(91,192,190,0.1)",
+  border:         "1px solid rgba(91,192,190,0.2)",
   display:        "flex",
   alignItems:     "center",
   justifyContent: "center",
   flexShrink:     0,
 };
 
-const titleStyle    = { color: "#fff8e7", fontSize: 15, fontWeight: 800, margin: 0 };
-const subtitleStyle = { color: "rgba(255,248,231,0.45)", fontSize: 12, margin: "3px 0 0" };
+const titleStyle    = { color: "#F4F1DE", fontSize: 15, fontWeight: 800, margin: 0 };
+const subtitleStyle = { color: "rgba(107,122,143,0.8)", fontSize: 12, margin: "3px 0 0" };
 
 const addBtnStyle = (disabled) => ({
   display:        "flex",
   alignItems:     "center",
   gap:            6,
   padding:        "8px 14px",
-  background:     disabled ? "rgba(255,199,44,0.05)" : "rgba(255,199,44,0.1)",
-  border:         "1px solid rgba(255,199,44,0.25)",
+  background:     disabled ? "rgba(91,192,190,0.05)" : "rgba(91,192,190,0.1)",
+  border:         "1px solid rgba(91,192,190,0.25)",
   borderRadius:   10,
-  color:          "#FFC72C",
+  color:          "#5BC0BE",
   fontSize:       13,
   fontWeight:     700,
   cursor:         disabled ? "not-allowed" : "pointer",
@@ -309,8 +309,8 @@ const itemStyle = {
   alignItems:   "center",
   gap:          12,
   padding:      "12px 14px",
-  background:   "rgba(255,248,231,0.03)",
-  border:       "1px solid rgba(255,248,231,0.06)",
+  background:   "rgba(28,37,65,0.5)",
+  border:       "1px solid rgba(91,192,190,0.08)",
   borderRadius: 12,
 };
 
@@ -318,21 +318,21 @@ const itemIconStyle = {
   width:          32,
   height:         32,
   borderRadius:   9,
-  background:     "rgba(74,222,128,0.08)",
+  background:     "rgba(91,192,190,0.08)",
   display:        "flex",
   alignItems:     "center",
   justifyContent: "center",
   flexShrink:     0,
 };
 
-const credLabelStyle = { color: "#fff8e7",  fontSize: 13, fontWeight: 700, margin: 0 };
-const credMetaStyle  = { color: "rgba(255,248,231,0.4)", fontSize: 11, margin: "3px 0 0" };
+const credLabelStyle = { color: "#F4F1DE",  fontSize: 13, fontWeight: 700, margin: 0 };
+const credMetaStyle  = { color: "rgba(107,122,143,0.7)", fontSize: 11, margin: "3px 0 0" };
 
 const iconBtnStyle = {
   background:   "none",
-  border:       "1px solid rgba(255,248,231,0.08)",
+  border:       "1px solid rgba(91,192,190,0.15)",
   borderRadius: 8,
-  color:        "rgba(255,248,231,0.4)",
+  color:        "rgba(107,122,143,0.6)",
   cursor:       "pointer",
   padding:      "6px",
   display:      "flex",
@@ -342,10 +342,10 @@ const iconBtnStyle = {
 
 const inputStyle = {
   flex:         1,
-  background:   "rgba(255,248,231,0.05)",
-  border:       "1.5px solid rgba(255,199,44,0.35)",
+  background:   "rgba(11,19,43,0.5)",
+  border:       "1.5px solid rgba(91,192,190,0.35)",
   borderRadius: 8,
-  color:        "#fff8e7",
+  color:        "#F4F1DE",
   fontSize:     13,
   padding:      "5px 10px",
   fontFamily:   "'Plus Jakarta Sans', sans-serif",
@@ -354,10 +354,10 @@ const inputStyle = {
 
 const saveStyle = {
   padding:    "5px 12px",
-  background: "rgba(255,199,44,0.15)",
-  border:     "1px solid rgba(255,199,44,0.35)",
+  background: "rgba(91,192,190,0.15)",
+  border:     "1px solid rgba(91,192,190,0.35)",
   borderRadius: 8,
-  color:      "#FFC72C",
+  color:      "#5BC0BE",
   fontSize:   12,
   fontWeight: 700,
   cursor:     "pointer",
@@ -367,13 +367,13 @@ const saveStyle = {
 const cancelStyle = {
   ...saveStyle,
   background: "transparent",
-  border:     "1px solid rgba(255,248,231,0.1)",
-  color:      "rgba(255,248,231,0.5)",
+  border:     "1px solid rgba(107,122,143,0.2)",
+  color:      "rgba(107,122,143,0.6)",
 };
 
 const hintStyle = {
   fontSize:   11,
-  color:      "rgba(255,248,231,0.25)",
+  color:      "rgba(107,122,143,0.5)",
   marginTop:  14,
   textAlign:  "center",
 };
