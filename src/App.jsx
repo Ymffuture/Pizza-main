@@ -32,6 +32,7 @@ const ClientWallet     = lazy(() => import("./pages/ClientWallet"));
 
 import GitHubCallback  from "./pages/GitHubCallback";
 import SpotifyCallback from "./pages/SpotifyCallback";
+import FingerprintGate from "./components/FingerprintGate";
 
 export default function App() {
   return (
@@ -61,8 +62,12 @@ export default function App() {
                     <Route path="/auth/spotify/callback" element={<SpotifyCallback />} />
 
                     <Route path="/wallet" element={
-                      <RequireAuth><Wallet /></RequireAuth>
-                    } />
+  <RequireAuth>
+    <FingerprintGate pageKey="wallet">
+      <Wallet />
+    </FingerprintGate>
+  </RequireAuth>
+} />
                     <Route path="/rewards" element={
                       <RequireAuth><ClientWallet /></RequireAuth>
                     } />
