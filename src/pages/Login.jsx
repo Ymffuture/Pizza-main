@@ -1,11 +1,12 @@
+// src/pages/Login.jsx  (updated — adds FingerprintButton below social buttons)
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../components/Toast";
 import { Flame, Mail, Lock, LogIn, Loader, Eye, EyeOff, AlertCircle } from "lucide-react";
-import GoogleButton   from "../components/GoogleButton";
-import GitHubButton   from "../components/GitHubButton";
-// import FacebookButton from "../components/FacebookButton"; // ← uncomment when Facebook app is ready
+import GoogleButton      from "../components/GoogleButton";
+import GitHubButton      from "../components/GitHubButton";
+import FingerprintButton from "../components/FingerprintButton";   // ← NEW
 
 export default function Login() {
   const navigate = useNavigate();
@@ -28,14 +29,23 @@ export default function Login() {
     return e;
   };
 
-  const handleOAuthSuccess = (data) => {
-    toast.show({ type: "success", title: "Welcome!", message: data.user?.full_name || data.user?.email });
+  // Shared success handler — works for password, OAuth, AND fingerprint
+  const handleSuccess = (data) => {
+    // fingerprint verify returns same shape as /auth/login
+    const token = data.access_token;
+    if (token) {
+      sessionStorage.setItem("kb_token", token);
+    }
+    toast.show({ type: "success", title: "Welcome!", message: data.full_name || data.user?.full_name || data.email });
     navigate(redirect, { replace: true });
   };
 
-  const handleOAuthError = (err) => {
-    toast.show({ type: "error", title: "Sign-in failed", message: err?.message || "Try again" });
-  };
+  const handleOAuthSuccess = (data) => handleSuccess(data.user ? data : { ...data, ...data.user });
+  const handleOAuthError   = (err) => toast.show({ type: "error", title: "Sign-in failed", message: err?.message || "Try again" });
+
+  // Fingerprint callbacks
+  const handleFpSuccess = (data) => handleSuccess(data);
+  const handleFpError   = (err)  => toast.show({ type: "error", title: "Fingerprint failed", message: err?.message || "Try your password" });
 
   const handleChange = (field) => (ev) => {
     setForm((p) => ({ ...p, [field]: ev.target.value }));
@@ -108,7 +118,7 @@ export default function Login() {
               <Mail className="auth-icon" />
               <input
                 type="email" className="auth-input" placeholder="you@example.com"
-                value={form.email.trim().toLowerCase()} onChange={handleChange("email")}
+                value={form.email} onChange={handleChange("email")}
                 autoComplete="email" disabled={loading}
               />
             </div>
@@ -154,9 +164,13 @@ export default function Login() {
             <>
               <GoogleButton  onSuccess={handleOAuthSuccess} onError={handleOAuthError} />
               <GitHubButton  onSuccess={handleOAuthSuccess} onError={handleOAuthError} />
-              {/* Facebook — uncomment the line below once your Facebook app is configured:
-              <FacebookButton onSuccess={handleOAuthSuccess} onError={handleOAuthError} />
-              */}
+
+              {/* ── Fingerprint / Passkey ── */}
+              <FingerprintButton
+                email={form.email}
+                onSuccess={handleFpSuccess}
+                onError={handleFpError}
+              />
             </>
           )}
         </div>
@@ -235,7 +249,7 @@ const authStyles = `
   .auth-pw-toggle:hover { color:var(--text); }
   .auth-error { font-size:11px; font-weight:700; color:#f87171; }
 
-  .auth-submit { display:flex; align-items:center; justify-content:center; gap:10px; background:var(--red); color:white; border:none; cursor:pointer; font-family:'Plus Jakarta Sans',sans-serif; font-weight:900; font-size:15px; padding:15px; border-radius:14px; margin-top:4px; box-shadow:0 6px 20px rgba(218,41,28,0.4); transition:all 0.2s; }
+  .auth-submit { display:flex; align-items:center; justify-content:center; gap:10px; background:var(--red); color:white; border:none; cursor:pointer; font-family:'Plus Jakarta Sans',sans-serif; font-weight:900; font-size:15px; padding:15px; border-radius:14px; margin-top:4px; box-shadow:0 6px 20px rgba(218,41,28,0.4); transition:all 0.2s; width:100%; }
   .auth-submit:hover:not(:disabled) { background:var(--red2); transform:scale(1.02); }
   .auth-submit:disabled { opacity:0.55; cursor:not-allowed; }
 
