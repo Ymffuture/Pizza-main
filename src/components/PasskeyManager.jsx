@@ -1,33 +1,44 @@
 // src/components/PasskeyManager.jsx
 /**
- * Passkey / fingerprint management panel.
- * Drop into any settings or profile page (user must be logged in).
- *
- * Usage:
- *   import PasskeyManager from "../components/PasskeyManager";
- *   <PasskeyManager />
+ * Passkey / fingerprint management panel - Top App Bar Style
  */
 
 import { useState, useEffect, useCallback } from "react";
-import { Fingerprint, Plus, Trash2, Pencil, Loader, ShieldCheck, AlertCircle } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { 
+  Fingerprint, 
+  Plus, 
+  Trash2, 
+  Pencil, 
+  Loader2, 
+  ShieldCheck, 
+  AlertCircle,
+  ChevronLeft,
+  MoreVertical,
+  Lock,
+  Smartphone,
+  KeyRound
+} from "lucide-react";
+import { HiFingerPrint, HiShieldCheck, HiOutlineLockClosed } from "react-icons/hi2";
 import { registerFingerprint } from "./FingerprintButton";
 import axiosClient from "../api/axiosClient";
 
-export default function PasskeyManager() {
-  const [creds, setCreds]     = useState([]);
+export default function PasskeyManager({ onBack }) {
+  const [creds, setCreds] = useState([]);
   const [loading, setLoading] = useState(true);
   const [registering, setRegistering] = useState(false);
-  const [error, setError]     = useState("");
+  const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const [editId, setEditId]   = useState(null);
+  const [editId, setEditId] = useState(null);
   const [editLabel, setEditLabel] = useState("");
+  const [selectedCred, setSelectedCred] = useState(null);
 
   const load = useCallback(async () => {
     try {
       const { data } = await axiosClient.get("/webauthn/credentials");
       setCreds(data);
     } catch {
-      // ignore — user may not have any yet
+      // ignore
     } finally {
       setLoading(false);
     }
@@ -37,7 +48,7 @@ export default function PasskeyManager() {
 
   const notify = (msg, isError = false) => {
     if (isError) { setError(msg); setSuccess(""); }
-    else          { setSuccess(msg); setError(""); }
+    else { setSuccess(msg); setError(""); }
     setTimeout(() => { setError(""); setSuccess(""); }, 4000);
   };
 
@@ -47,7 +58,7 @@ export default function PasskeyManager() {
     try {
       const label = `Passkey ${creds.length + 1}`;
       await registerFingerprint(label);
-      notify("Fingerprint registered! 🔒");
+      notify("Fingerprint registered successfully!");
       await load();
     } catch (err) {
       const name = err?.name || "";
@@ -66,10 +77,11 @@ export default function PasskeyManager() {
     if (!window.confirm("Remove this passkey? You won't be able to use fingerprint login with it anymore.")) return;
     try {
       await axiosClient.delete(`/webauthn/credentials/${id}`);
-      notify("Passkey removed.");
+      notify("Passkey removed");
+      setSelectedCred(null);
       await load();
     } catch {
-      notify("Could not remove passkey.", true);
+      notify("Could not remove passkey", true);
     }
   };
 
@@ -81,7 +93,7 @@ export default function PasskeyManager() {
       setEditLabel("");
       await load();
     } catch {
-      notify("Could not rename passkey.", true);
+      notify("Could not rename passkey", true);
     }
   };
 
@@ -91,289 +103,263 @@ export default function PasskeyManager() {
   };
 
   const formatDate = (dt) => {
-    if (!dt) return "never";
+    if (!dt) return "Never";
     return new Date(dt).toLocaleDateString("en-ZA", {
       day: "numeric", month: "short", year: "numeric",
     });
   };
 
-  return (
-    <div style={containerStyle}>
-      {/* Header */}
-      <div style={headerStyle}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={iconWrapStyle}>
-            <Fingerprint style={{ width: 18, height: 18, color: "#5BC0BE" }} />
-          </div>
-          <div>
-            <h3 style={titleStyle}>Passkeys & Fingerprints</h3>
-            <p style={subtitleStyle}>Sign in without a password using your device's biometrics</p>
-          </div>
-        </div>
+  const getDeviceIcon = (cred) => {
+    if (cred?.backed_up) return <Smartphone className="w-5 h-5 text-[#5BC0BE]" />;
+    return <KeyRound className="w-5 h-5 text-[#5BC0BE]" />;
+  };
 
-        <button
-          onClick={handleRegister}
-          disabled={registering}
-          style={addBtnStyle(registering)}
-        >
-          {registering ? (
-            <Loader style={{ width: 14, height: 14, animation: "pm-spin 0.8s linear infinite" }} />
-          ) : (
-            <Plus style={{ width: 14, height: 14 }} />
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-[#0B132B] via-[#1C2541] to-[#0B132B] flex flex-col">
+      {/* Top App Bar */}
+      <motion.header 
+        className="sticky top-0 z-50 bg-[#0B132B]/90 backdrop-blur-xl border-b border-[#5BC0BE]/20"
+        initial={{ y: -60 }}
+        animate={{ y: 0 }}
+        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+      >
+        <div className="max-w-2xl mx-auto px-4 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            {onBack && (
+              <motion.button
+                whileTap={{ scale: 0.9 }}
+                onClick={onBack}
+                className="p-2 rounded-xl hover:bg-[#5BC0BE]/10 text-[#6B7A8F] hover:text-[#5BC0BE] transition-colors"
+              >
+                <ChevronLeft className="w-6 h-6" />
+              </motion.button>
+            )}
+            <div className="flex items-center gap-2">
+              <div className="p-2 rounded-xl bg-[#5BC0BE]/10 border border-[#5BC0BE]/30">
+                <HiFingerPrint className="w-5 h-5 text-[#5BC0BE]" />
+              </div>
+              <div>
+                <h1 className="text-lg font-bold text-[#F4F1DE]">Passkeys</h1>
+                <p className="text-xs text-[#6B7A8F]">{creds.length} registered</p>
+              </div>
+            </div>
+          </div>
+
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={handleRegister}
+            disabled={registering}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#5BC0BE]/10 border border-[#5BC0BE]/30 text-[#5BC0BE] font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#5BC0BE]/20 transition-colors"
+          >
+            {registering ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Plus className="w-4 h-4" />
+            )}
+            <span className="hidden sm:inline">{registering ? "Adding..." : "Add"}</span>
+          </motion.button>
+        </div>
+      </motion.header>
+
+      {/* Main Content */}
+      <main className="flex-1 max-w-2xl mx-auto w-full p-4 space-y-4">
+        {/* Alerts */}
+        <AnimatePresence mode="wait">
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="flex items-center gap-3 p-4 rounded-xl bg-[#E74C3C]/10 border border-[#E74C3C]/30 text-[#E74C3C]"
+            >
+              <AlertCircle className="w-5 h-5 shrink-0" />
+              <p className="text-sm font-medium">{error}</p>
+            </motion.div>
           )}
-          {registering ? "Touch sensor…" : "Add Fingerprint"}
-        </button>
-      </div>
+          {success && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="flex items-center gap-3 p-4 rounded-xl bg-[#5BC0BE]/10 border border-[#5BC0BE]/30 text-[#5BC0BE]"
+            >
+              <HiShieldCheck className="w-5 h-5 shrink-0" />
+              <p className="text-sm font-medium">{success}</p>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-      {/* Feedback */}
-      {error   && <Banner type="error"   msg={error}   />}
-      {success && <Banner type="success" msg={success} />}
+        {/* Loading State */}
+        {loading && (
+          <div className="flex flex-col items-center justify-center py-20">
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+            >
+              <Loader2 className="w-10 h-10 text-[#5BC0BE]/50" />
+            </motion.div>
+            <p className="mt-4 text-[#6B7A8F] text-sm">Loading passkeys...</p>
+          </div>
+        )}
 
-      {/* List */}
-      {loading ? (
-        <div style={emptyStyle}>
-          <Loader style={{ width: 20, height: 20, animation: "pm-spin 0.8s linear infinite", opacity: 0.4 }} />
-        </div>
-      ) : creds.length === 0 ? (
-        <div style={emptyStyle}>
-          <Fingerprint style={{ width: 32, height: 32, opacity: 0.2, marginBottom: 8, color: "#5BC0BE" }} />
-          <p style={{ color: "rgba(107,122,143,0.7)", fontSize: 13, margin: 0 }}>
-            No passkeys registered yet.
-          </p>
-          <p style={{ color: "rgba(107,122,143,0.5)", fontSize: 12, margin: "4px 0 0" }}>
-            Click "Add Fingerprint" to set one up.
-          </p>
-        </div>
-      ) : (
-        <ul style={listStyle}>
-          {creds.map((c) => (
-            <li key={c.id} style={itemStyle}>
-              <div style={itemIconStyle}>
-                <ShieldCheck style={{ width: 16, height: 16, color: "#5BC0BE" }} />
+        {/* Empty State */}
+        {!loading && creds.length === 0 && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="flex flex-col items-center justify-center py-20 text-center"
+          >
+            <div className="w-24 h-24 rounded-3xl bg-[#5BC0BE]/10 border border-[#5BC0BE]/20 flex items-center justify-center mb-6">
+              <Fingerprint className="w-12 h-12 text-[#5BC0BE]/50" />
+            </div>
+            <h3 className="text-xl font-bold text-[#F4F1DE] mb-2">No Passkeys Yet</h3>
+            <p className="text-[#6B7A8F] max-w-xs mb-6">
+              Add a fingerprint to sign in quickly and securely without a password
+            </p>
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={handleRegister}
+              className="flex items-center gap-2 px-6 py-3 rounded-xl bg-[#5BC0BE] text-[#0B132B] font-bold hover:bg-[#5BC0BE]/80 transition-colors"
+            >
+              <Plus className="w-5 h-5" />
+              Add Your First Passkey
+            </motion.button>
+          </motion.div>
+        )}
+
+        {/* Passkey List */}
+        {!loading && creds.length > 0 && (
+          <div className="space-y-3">
+            <AnimatePresence>
+              {creds.map((c, index) => (
+                <motion.div
+                  key={c.id}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 20 }}
+                  transition={{ delay: index * 0.05 }}
+                  layout
+                  className={`group relative p-4 rounded-2xl border transition-all duration-300 ${
+                    selectedCred?.id === c.id 
+                      ? 'bg-[#5BC0BE]/10 border-[#5BC0BE]/40' 
+                      : 'bg-[#1C2541]/50 border-[#5BC0BE]/10 hover:border-[#5BC0BE]/30 hover:bg-[#1C2541]/70'
+                  }`}
+                >
+                  {editId === c.id ? (
+                    <div className="flex items-center gap-3">
+                      <div className="p-3 rounded-xl bg-[#5BC0BE]/10">
+                        {getDeviceIcon(c)}
+                      </div>
+                      <div className="flex-1">
+                        <input
+                          value={editLabel}
+                          onChange={(e) => setEditLabel(e.target.value)}
+                          onKeyDown={(e) => { 
+                            if (e.key === "Enter") handleRename(c.id); 
+                            if (e.key === "Escape") setEditId(null); 
+                          }}
+                          autoFocus
+                          className="w-full px-3 py-2 rounded-lg bg-[#0B132B]/50 border border-[#5BC0BE]/30 text-[#F4F1DE] text-sm font-semibold focus:outline-none focus:border-[#5BC0BE]"
+                          placeholder="Passkey name"
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <motion.button
+                          whileTap={{ scale: 0.9 }}
+                          onClick={() => handleRename(c.id)}
+                          className="p-2 rounded-lg bg-[#5BC0BE]/20 text-[#5BC0BE] hover:bg-[#5BC0BE]/30"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </motion.button>
+                        <motion.button
+                          whileTap={{ scale: 0.9 }}
+                          onClick={() => setEditId(null)}
+                          className="p-2 rounded-lg bg-[#6B7A8F]/20 text-[#6B7A8F] hover:bg-[#6B7A8F]/30"
+                        >
+                          <span className="text-lg leading-none">×</span>
+                        </motion.button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-4">
+                      <div className="p-3 rounded-2xl bg-[#5BC0BE]/10 border border-[#5BC0BE]/20">
+                        {getDeviceIcon(c)}
+                      </div>
+                      
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-semibold text-[#F4F1DE] truncate">
+                            {c.label || "Passkey"}
+                          </h4>
+                          {c.backed_up && (
+                            <span className="px-2 py-0.5 rounded-full bg-[#5BC0BE]/20 text-[#5BC0BE] text-[10px] font-bold uppercase tracking-wider">
+                              Synced
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3 mt-1 text-xs text-[#6B7A8F]">
+                          <span>Added {formatDate(c.created_at)}</span>
+                          {c.last_used_at && (
+                            <>
+                              <span className="w-1 h-1 rounded-full bg-[#3A506B]" />
+                              <span>Last used {formatDate(c.last_used_at)}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <motion.button
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                          onClick={() => startEdit(c)}
+                          className="p-2 rounded-xl text-[#6B7A8F] hover:text-[#5BC0BE] hover:bg-[#5BC0BE]/10 transition-colors"
+                          title="Rename"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </motion.button>
+                        <motion.button
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                          onClick={() => handleDelete(c.id)}
+                          className="p-2 rounded-xl text-[#6B7A8F] hover:text-[#E74C3C] hover:bg-[#E74C3C]/10 transition-colors"
+                          title="Remove"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </motion.button>
+                      </div>
+                    </div>
+                  )}
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
+        )}
+
+        {/* Security Info Card */}
+        {!loading && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="mt-6 p-4 rounded-2xl bg-[#1C2541]/30 border border-[#5BC0BE]/10"
+          >
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-xl bg-[#5BC0BE]/10">
+                <HiOutlineLockClosed className="w-5 h-5 text-[#5BC0BE]" />
               </div>
-
-              <div style={{ flex: 1, minWidth: 0 }}>
-                {editId === c.id ? (
-                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                    <input
-                      value={editLabel}
-                      onChange={(e) => setEditLabel(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === "Enter") handleRename(c.id); if (e.key === "Escape") setEditId(null); }}
-                      autoFocus
-                      style={inputStyle}
-                    />
-                    <button onClick={() => handleRename(c.id)} style={saveStyle}>Save</button>
-                    <button onClick={() => setEditId(null)}    style={cancelStyle}>×</button>
-                  </div>
-                ) : (
-                  <>
-                    <p style={credLabelStyle}>{c.label || "Passkey"}</p>
-                    <p style={credMetaStyle}>
-                      Added {formatDate(c.created_at)}
-                      {c.last_used_at && ` · Last used ${formatDate(c.last_used_at)}`}
-                      {c.backed_up && " · ☁️ Synced"}
-                    </p>
-                  </>
-                )}
+              <div>
+                <h4 className="font-semibold text-[#F4F1DE] text-sm mb-1">Secure by Design</h4>
+                <p className="text-xs text-[#6B7A8F] leading-relaxed">
+                  Your fingerprint never leaves your device. Passkeys are stored in your device's secure enclave and cannot be extracted or copied.
+                </p>
               </div>
-
-              {editId !== c.id && (
-                <div style={{ display: "flex", gap: 6 }}>
-                  <button
-                    onClick={() => startEdit(c)}
-                    style={iconBtnStyle}
-                    title="Rename"
-                  >
-                    <Pencil style={{ width: 14, height: 14 }} />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(c.id)}
-                    style={{ ...iconBtnStyle, color: "#E74C3C" }}
-                    title="Remove"
-                  >
-                    <Trash2 style={{ width: 14, height: 14 }} />
-                  </button>
-                </div>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
-
-      <p style={hintStyle}>
-        🔒 Passkeys use your device's secure enclave — your fingerprint never leaves your device.
-      </p>
-
-      <style>{`@keyframes pm-spin { to { transform: rotate(360deg); } }`}</style>
+            </div>
+          </motion.div>
+        )}
+      </main>
     </div>
   );
 }
-
-// ── Sub-components ─────────────────────────────────────────────────────────
-
-function Banner({ type, msg }) {
-  const isError = type === "error";
-  return (
-    <div style={{
-      display:      "flex",
-      alignItems:   "center",
-      gap:          10,
-      padding:      "10px 14px",
-      borderRadius: 12,
-      background:   isError ? "rgba(231,76,60,0.08)" : "rgba(91,192,190,0.08)",
-      border:       `1px solid ${isError ? "rgba(231,76,60,0.25)" : "rgba(91,192,190,0.25)"}`,
-      marginBottom: 12,
-      fontSize:     13,
-      color:        isError ? "#E74C3C" : "#5BC0BE",
-    }}>
-      {isError
-        ? <AlertCircle style={{ width: 14, height: 14, flexShrink: 0 }} />
-        : <ShieldCheck  style={{ width: 14, height: 14, flexShrink: 0 }} />}
-      {msg}
-    </div>
-  );
-}
-
-// ── Styles ─────────────────────────────────────────────────────────────────
-
-const containerStyle = {
-  background:   "#0B132B",
-  border:       "1px solid rgba(91,192,190,0.12)",
-  borderRadius: 20,
-  padding:      "20px 20px 16px",
-  fontFamily:   "'Plus Jakarta Sans', system-ui, sans-serif",
-};
-
-const headerStyle = {
-  display:        "flex",
-  alignItems:     "flex-start",
-  justifyContent: "space-between",
-  gap:            12,
-  marginBottom:   16,
-  flexWrap:       "wrap",
-};
-
-const iconWrapStyle = {
-  width:          36,
-  height:         36,
-  borderRadius:   10,
-  background:     "rgba(91,192,190,0.1)",
-  border:         "1px solid rgba(91,192,190,0.2)",
-  display:        "flex",
-  alignItems:     "center",
-  justifyContent: "center",
-  flexShrink:     0,
-};
-
-const titleStyle    = { color: "#F4F1DE", fontSize: 15, fontWeight: 800, margin: 0 };
-const subtitleStyle = { color: "rgba(107,122,143,0.8)", fontSize: 12, margin: "3px 0 0" };
-
-const addBtnStyle = (disabled) => ({
-  display:        "flex",
-  alignItems:     "center",
-  gap:            6,
-  padding:        "8px 14px",
-  background:     disabled ? "rgba(91,192,190,0.05)" : "rgba(91,192,190,0.1)",
-  border:         "1px solid rgba(91,192,190,0.25)",
-  borderRadius:   10,
-  color:          "#5BC0BE",
-  fontSize:       13,
-  fontWeight:     700,
-  cursor:         disabled ? "not-allowed" : "pointer",
-  opacity:        disabled ? 0.6 : 1,
-  fontFamily:     "'Plus Jakarta Sans', sans-serif",
-  whiteSpace:     "nowrap",
-  transition:     "all 0.2s",
-  flexShrink:     0,
-});
-
-const emptyStyle = {
-  display:        "flex",
-  flexDirection:  "column",
-  alignItems:     "center",
-  padding:        "28px 0",
-  textAlign:      "center",
-};
-
-const listStyle = {
-  listStyle:    "none",
-  margin:       0,
-  padding:      0,
-  display:      "flex",
-  flexDirection:"column",
-  gap:          8,
-};
-
-const itemStyle = {
-  display:      "flex",
-  alignItems:   "center",
-  gap:          12,
-  padding:      "12px 14px",
-  background:   "rgba(28,37,65,0.5)",
-  border:       "1px solid rgba(91,192,190,0.08)",
-  borderRadius: 12,
-};
-
-const itemIconStyle = {
-  width:          32,
-  height:         32,
-  borderRadius:   9,
-  background:     "rgba(91,192,190,0.08)",
-  display:        "flex",
-  alignItems:     "center",
-  justifyContent: "center",
-  flexShrink:     0,
-};
-
-const credLabelStyle = { color: "#F4F1DE",  fontSize: 13, fontWeight: 700, margin: 0 };
-const credMetaStyle  = { color: "rgba(107,122,143,0.7)", fontSize: 11, margin: "3px 0 0" };
-
-const iconBtnStyle = {
-  background:   "none",
-  border:       "1px solid rgba(91,192,190,0.15)",
-  borderRadius: 8,
-  color:        "rgba(107,122,143,0.6)",
-  cursor:       "pointer",
-  padding:      "6px",
-  display:      "flex",
-  alignItems:   "center",
-  transition:   "all 0.2s",
-};
-
-const inputStyle = {
-  flex:         1,
-  background:   "rgba(11,19,43,0.5)",
-  border:       "1.5px solid rgba(91,192,190,0.35)",
-  borderRadius: 8,
-  color:        "#F4F1DE",
-  fontSize:     13,
-  padding:      "5px 10px",
-  fontFamily:   "'Plus Jakarta Sans', sans-serif",
-  outline:      "none",
-};
-
-const saveStyle = {
-  padding:    "5px 12px",
-  background: "rgba(91,192,190,0.15)",
-  border:     "1px solid rgba(91,192,190,0.35)",
-  borderRadius: 8,
-  color:      "#5BC0BE",
-  fontSize:   12,
-  fontWeight: 700,
-  cursor:     "pointer",
-  fontFamily: "'Plus Jakarta Sans', sans-serif",
-};
-
-const cancelStyle = {
-  ...saveStyle,
-  background: "transparent",
-  border:     "1px solid rgba(107,122,143,0.2)",
-  color:      "rgba(107,122,143,0.6)",
-};
-
-const hintStyle = {
-  fontSize:   11,
-  color:      "rgba(107,122,143,0.5)",
-  marginTop:  14,
-  textAlign:  "center",
-};
