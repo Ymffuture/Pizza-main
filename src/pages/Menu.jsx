@@ -18,14 +18,6 @@ import ActiveOrderTracker from "../components/ActiveOrderTracker";
 import { Settings } from "lucide-react";
 import SettingsPanel from "../components/SettingsPanel";
 
-// State (top of component):
-const [settingsOpen, setSettingsOpen] = useState(false);
-
-// In sidebar JSX (above logout):
-
-
-// After closing </aside>:
-
 
 
 const CATEGORIES = [
@@ -42,7 +34,8 @@ export default function Menu() {
   const [activeCategory, setActiveCategory] = useState("All");
   const [search,         setSearch]         = useState("");
   const [sidebarOpen,    setSidebarOpen]    = useState(false);
-
+  const [settingsOpen, setSettingsOpen] = useState(false);
+ 
   const navigate          = useNavigate();
   const { addItem, count } = useCart();
   const { logout, isAuth, user } = useAuth();
