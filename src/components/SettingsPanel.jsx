@@ -139,7 +139,7 @@ export default function SettingsPanel({ open, onClose }) {
             <SectionLabel icon={<Shield style={{ width: 12, height: 12 }} />} label="Security" />
             <div style={listStyle}>
               <Link
-                to="/wallet"
+                to="/pkm"
                 onClick={onClose}
                 style={listItemStyle}
               >
