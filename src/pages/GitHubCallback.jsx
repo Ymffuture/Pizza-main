@@ -5,7 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import { useToast } from "../components/Toast";
 import { Github, XCircle, CheckCircle2, Shield } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import Loader3 from "../components/Loader";
+import { Loader3} from "../components/Loader";
 import axios from "axios";
 
 const API = import.meta.env.VITE_API_URL;
