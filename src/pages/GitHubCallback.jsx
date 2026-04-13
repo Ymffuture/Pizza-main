@@ -3,30 +3,31 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../components/Toast";
-import { Flame, Loader, XCircle } from "lucide-react";
+import { Github, XCircle, CheckCircle2, Shield } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import Loader3 from "../components/Loader3";
 import axios from "axios";
 
 const API = import.meta.env.VITE_API_URL;
 const REDIRECT_URI = `${window.location.origin}/auth/github/callback`;
 
 export default function GitHubCallback() {
-  const navigate  = useNavigate();
+  const navigate = useNavigate();
   const { loginWithOAuth } = useAuth();
-  const toast     = useToast();
-  const ran       = useRef(false);
+  const toast = useToast();
+  const ran = useRef(false);
 
-  const [status,  setStatus]  = useState("loading"); // "loading" | "error"
-  const [message, setMessage] = useState("Connecting your GitHub account…");
-  const [errMsg,  setErrMsg]  = useState("");
+  const [status, setStatus] = useState("loading"); // "loading" | "success" | "error"
+  const [message, setMessage] = useState("Connecting to GitHub...");
+  const [errMsg, setErrMsg] = useState("");
 
   useEffect(() => {
-    // StrictMode fires effects twice in dev — guard against double-call
     if (ran.current) return;
     ran.current = true;
 
     const params = new URLSearchParams(window.location.search);
-    const code   = params.get("code");
-    const error  = params.get("error");
+    const code = params.get("code");
+    const error = params.get("error");
 
     if (error || !code) {
       setStatus("error");
@@ -40,25 +41,28 @@ export default function GitHubCallback() {
 
     (async () => {
       try {
-        setMessage("Verifying with GitHub…");
+        setMessage("Verifying with GitHub...");
         const { data } = await axios.post(`${API}/auth/github`, {
           code,
           redirect_uri: REDIRECT_URI,
         });
 
-        setMessage("Signing you in…");
-        // loginWithOAuth stores the token + user in context/localStorage
+        setMessage("Signing you in...");
         await loginWithOAuth(data.access_token, data.user);
 
+        setStatus("success");
+        
         toast.show({
-          type:    "success",
-          title:   "Welcome!",
+          type: "success",
+          title: "Welcome!",
           message: data.user?.full_name || data.user?.email,
         });
 
-        const redirectTo = sessionStorage.getItem("oauth_redirect") || "/menu";
-        sessionStorage.removeItem("oauth_redirect");
-        navigate(redirectTo, { replace: true });
+        setTimeout(() => {
+          const redirectTo = sessionStorage.getItem("oauth_redirect") || "/menu";
+          sessionStorage.removeItem("oauth_redirect");
+          navigate(redirectTo, { replace: true });
+        }, 1500);
 
       } catch (err) {
         const detail =
@@ -74,151 +78,159 @@ export default function GitHubCallback() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div style={styles.root}>
-      <style>{keyframes}</style>
-      <div style={styles.card}>
+    <div className="min-h-screen bg-[#0d1117] flex items-center justify-center p-6">
+      {/* GitHub-style dot pattern background */}
+      <div 
+        className="fixed inset-0 opacity-[0.03]"
+        style={{
+          backgroundImage: `radial-gradient(#58a6ff 1px, transparent 1px)`,
+          backgroundSize: '24px 24px'
+        }}
+      />
 
-        {/* Brand */}
-        <div style={styles.logoWrap}>
-          <div style={styles.logo}>
-            <Flame style={{ width: 22, height: 22, color: "#0e0700" }} />
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="relative w-full max-w-md"
+      >
+        {/* Main Card */}
+        <div className="bg-[#161b22] border border-[#30363d] rounded-2xl p-8 shadow-2xl">
+          
+          {/* Header / Logo */}
+          <div className="flex flex-col items-center mb-8">
+            <motion.div 
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: "spring", stiffness: 200, damping: 15 }}
+              className="w-16 h-16 rounded-2xl bg-[#21262d] border border-[#30363d] flex items-center justify-center mb-4"
+            >
+              <Github className="w-8 h-8 text-[#f0f6fc]" />
+            </motion.div>
+            <h1 className="text-xl font-semibold text-[#f0f6fc]">
+              Nemo Online Exam
+            </h1>
+            <p className="text-sm text-[#8b949e] mt-1">
+              Secure authentication
+            </p>
           </div>
-          <span style={styles.brand}>KOTABITES</span>
+
+          {/* Content */}
+          <AnimatePresence mode="wait">
+            {status === "loading" && (
+              <motion.div
+                key="loading"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="flex flex-col items-center py-8"
+              >
+                <div className="relative mb-6">
+                  <div className="w-20 h-20 rounded-full border-2 border-[#30363d] flex items-center justify-center">
+                    <Loader3 size={40} className="text-[#58a6ff]" />
+                  </div>
+                  {/* Orbiting dots */}
+                  <motion.div 
+                    className="absolute inset-0"
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+                  >
+                    <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-[#58a6ff]" />
+                  </motion.div>
+                </div>
+                
+                <h2 className="text-lg font-medium text-[#f0f6fc] mb-2">
+                  Connecting to GitHub
+                </h2>
+                <p className="text-sm text-[#8b949e] text-center">
+                  {message}
+                </p>
+
+                {/* Progress steps */}
+                <div className="flex items-center gap-2 mt-6">
+                  <div className="w-2 h-2 rounded-full bg-[#238636] animate-pulse" />
+                  <div className="w-2 h-2 rounded-full bg-[#30363d] animate-pulse delay-75" />
+                  <div className="w-2 h-2 rounded-full bg-[#30363d] animate-pulse delay-150" />
+                </div>
+              </motion.div>
+            )}
+
+            {status === "success" && (
+              <motion.div
+                key="success"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0 }}
+                className="flex flex-col items-center py-8"
+              >
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: "spring", stiffness: 200, damping: 15 }}
+                  className="w-20 h-20 rounded-full bg-[#238636]/20 border-2 border-[#238636] flex items-center justify-center mb-6"
+                >
+                  <CheckCircle2 className="w-10 h-10 text-[#3fb950]" />
+                </motion.div>
+                
+                <h2 className="text-lg font-medium text-[#f0f6fc] mb-2">
+                  Authentication Successful
+                </h2>
+                <p className="text-sm text-[#8b949e] text-center">
+                  Redirecting you to the dashboard...
+                </p>
+              </motion.div>
+            )}
+
+            {status === "error" && (
+              <motion.div
+                key="error"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="flex flex-col items-center py-6"
+              >
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: "spring", stiffness: 200, damping: 15 }}
+                  className="w-16 h-16 rounded-full bg-[#f85149]/10 border-2 border-[#f85149]/30 flex items-center justify-center mb-6"
+                >
+                  <XCircle className="w-8 h-8 text-[#f85149]" />
+                </motion.div>
+                
+                <h2 className="text-lg font-medium text-[#f0f6fc] mb-2">
+                  Authentication Failed
+                </h2>
+                <p className="text-sm text-[#f85149] text-center mb-6 px-4">
+                  {errMsg}
+                </p>
+
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => navigate("/login", { replace: true })}
+                  className="flex items-center gap-2 px-6 py-3 rounded-lg bg-[#21262d] hover:bg-[#30363d] border border-[#30363d] text-[#f0f6fc] font-medium transition-colors"
+                >
+                  Back to Login
+                </motion.button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Security Footer */}
+          <div className="mt-8 pt-6 border-t border-[#21262d] flex items-center justify-center gap-2 text-xs text-[#8b949e]">
+            <Shield className="w-3 h-3" />
+            <span>Secured with OAuth 2.0</span>
+            <span className="text-[#484f58]">•</span>
+            <span>GitHub</span>
+          </div>
         </div>
 
-        {status === "loading" ? (
-          <>
-            <div style={styles.iconWrap}>
-              <GitHubMark size={44} />
-              <div style={styles.spinnerRing} />
-            </div>
-            <h2 style={styles.title}>Signing in with GitHub</h2>
-            <p style={styles.sub}>{message}</p>
-            <Loader style={{ ...styles.loader, animation: "spin 0.9s linear infinite" }} />
-          </>
-        ) : (
-          <>
-            <XCircle style={{ width: 44, height: 44, color: "#f87171", margin: "0 auto 16px" }} />
-            <h2 style={styles.title}>Sign-in Failed</h2>
-            <p style={{ ...styles.sub, color: "#fca5a5", marginBottom: 24 }}>{errMsg}</p>
-            <button
-              onClick={() => navigate("/login", { replace: true })}
-              style={styles.btn}
-            >
-              Back to Login
-            </button>
-          </>
-        )}
-      </div>
+        {/* GitHub Octocat watermark */}
+        <div className="absolute -bottom-20 left-1/2 -translate-x-1/2 opacity-[0.03] pointer-events-none">
+          <Github className="w-64 h-64" />
+        </div>
+      </motion.div>
     </div>
   );
 }
-
-function GitHubMark({ size = 32 }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="#f0f6fc">
-      <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z" />
-    </svg>
-  );
-}
-
-const styles = {
-  root: {
-    minHeight:       "100vh",
-    background:      "radial-gradient(ellipse 80% 50% at 50% 0%, rgba(218,41,28,0.15) 0%, transparent 65%), #0e0700",
-    display:         "flex",
-    alignItems:      "center",
-    justifyContent:  "center",
-    padding:         24,
-    fontFamily:      "'Plus Jakarta Sans', system-ui, sans-serif",
-  },
-  card: {
-    width:        "100%",
-    maxWidth:     380,
-    background:   "#1a0e00",
-    border:       "1px solid rgba(255,199,44,0.12)",
-    borderRadius: 24,
-    padding:      "40px 32px",
-    textAlign:    "center",
-    boxShadow:    "0 24px 64px rgba(0,0,0,0.5)",
-  },
-  logoWrap: {
-    display:        "flex",
-    alignItems:     "center",
-    justifyContent: "center",
-    gap:            10,
-    marginBottom:   32,
-  },
-  logo: {
-    width:          38, height: 38,
-    background:     "#FFC72C",
-    borderRadius:   10,
-    display:        "flex",
-    alignItems:     "center",
-    justifyContent: "center",
-    boxShadow:      "0 0 20px rgba(255,199,44,0.3)",
-  },
-  brand: {
-    fontFamily:    "'Bebas Neue', sans-serif",
-    fontSize:      22,
-    letterSpacing: 3,
-    color:         "#fff8e7",
-  },
-  iconWrap: {
-    position:       "relative",
-    width:          70,
-    height:         70,
-    margin:         "0 auto 20px",
-    display:        "flex",
-    alignItems:     "center",
-    justifyContent: "center",
-  },
-  spinnerRing: {
-    position:     "absolute",
-    inset:        0,
-    borderRadius: "50%",
-    border:       "2px solid rgba(255,199,44,0.15)",
-    borderTop:    "2px solid #FFC72C",
-    animation:    "spin 1s linear infinite",
-  },
-  title: {
-    fontFamily:    "'Bebas Neue', sans-serif",
-    fontSize:      26,
-    letterSpacing: 2,
-    color:         "#fff8e7",
-    margin:        "0 0 8px",
-  },
-  sub: {
-    fontSize:   13,
-    color:      "rgba(255,248,231,0.45)",
-    lineHeight: 1.5,
-    margin:     0,
-  },
-  loader: {
-    width:     20,
-    height:    20,
-    color:     "#FFC72C",
-    marginTop: 20,
-  },
-  btn: {
-    display:        "inline-flex",
-    alignItems:     "center",
-    justifyContent: "center",
-    background:     "#DA291C",
-    color:          "#fff",
-    border:         "none",
-    borderRadius:   12,
-    padding:        "13px 28px",
-    fontFamily:     "'Plus Jakarta Sans', sans-serif",
-    fontWeight:     800,
-    fontSize:       14,
-    cursor:         "pointer",
-    boxShadow:      "0 6px 20px rgba(218,41,28,0.35)",
-    transition:     "all 0.2s",
-  },
-};
-
-const keyframes = `
-  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Plus+Jakarta+Sans:wght@400;700;800&display=swap');
-  @keyframes spin { to { transform: rotate(360deg); } }
-`;
