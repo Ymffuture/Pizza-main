@@ -412,9 +412,9 @@ if (pendingId) botMsg.pendingCancelId = pendingId;
           {/* Header */}
           <div className="kb-ai-header">
             <div className="kb-ai-header-left">
-              <div className="kb-ai-header-icon">
-                <BotMessageSquare className="w-2 h-2" style={{ color: "#0e0700" }} />
-              </div>
+              {/*  <div className="kb-ai-header-icon">
+                 <BotMessageSquare className="w-2 h-2" style={{ color: "#0e0700" }} />
+              </div>*/} 
               <div>
                 <p className="kb-ai-header-name">KotaBot</p>
                 <p className="kb-ai-header-sub">
