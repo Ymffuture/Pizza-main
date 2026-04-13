@@ -13,6 +13,9 @@ import { useParams, Link} from "react-router-dom";
 import { getBusinessHoursStatus } from "../utils/businessHours";
 import { Tooltip } from "antd";
 import Avatar from "./Avatar";
+import {Loader3} from "./Loader";
+
+
 function extractOrderId(text) {
   const full = text.match(/\b([0-9a-fA-F]{24})\b/);
   return full ? full[1] : null;
@@ -396,7 +399,7 @@ if (pendingId) botMsg.pendingCancelId = pendingId;
       />
 
       {unread >0 || loading  && (
-        <span className="kb-ai-unread animate-pulse">Typing...</span>
+        <span className="kb-ai-unread"><Loader3/></span>
       )}
     </button>
   </Tooltip>
@@ -410,7 +413,7 @@ if (pendingId) botMsg.pendingCancelId = pendingId;
           <div className="kb-ai-header">
             <div className="kb-ai-header-left">
               <div className="kb-ai-header-icon">
-                <BotMessageSquare className="w-4 h-4" style={{ color: "#0e0700" }} />
+                <BotMessageSquare className="w-2 h-2" style={{ color: "#0e0700" }} />
               </div>
               <div>
                 <p className="kb-ai-header-name">KotaBot</p>
@@ -556,7 +559,7 @@ const styles = `
   .kb-ai-unread {
     position:absolute; top:-6px; right:-6px;
     min-width:20px; height:20px; border-radius:50px;
-    background:#FFC72C; color:#0e0700;
+    background:; color:;
     font-size:11px; font-weight:900;
     display:flex; align-items:center; justify-content:center; padding:0 5px;
     animation:kbPop 0.3s cubic-bezier(0.34,1.56,0.64,1);
