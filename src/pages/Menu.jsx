@@ -23,7 +23,10 @@ import SettingsPanel from "../components/SettingsPanel";
 const CATEGORIES = [
   { label: "All",      emoji: "🍽️" },
   { label: "Kota",     emoji: "🥪" },
-  
+  { label: "Drinks",   emoji: "🥤" },
+  { label: "Sides",    emoji: "🍟" },
+  { label: "Combos",   emoji: "🔥" },
+  { label: "Desserts", emoji: "🍰" },
 ];
 
 export default function Menu() {
