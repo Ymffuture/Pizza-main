@@ -17,7 +17,8 @@ import {Loader3} from "./Loader";
 
 
 function extractOrderId(text) {
-  const full = text.match(/\b([0-9a-fA-F]{24})\b/);
+  // Only match if surrounded by non-alphanumeric chars (not mid-word in code)
+  const full = text.match(/(?<![a-zA-Z0-9_])([0-9a-fA-F]{24})(?![a-zA-Z0-9_])/);
   return full ? full[1] : null;
 }
 
@@ -302,7 +303,6 @@ export default function AiChat() {
 
   /* ── Send ── */
   // Key section of fixes in handleSend function:
-/* ── Detect if bot reply needs cancel confirmation ── */
 function shouldShowCancelConfirm(userText, botReply, cancelResult) {
   if (cancelResult) return false;
 
@@ -310,20 +310,17 @@ function shouldShowCancelConfirm(userText, botReply, cancelResult) {
   const lowerReply = (botReply || "").toLowerCase();
 
   const userWantsCancel =
-    lowerText.includes("cancel") ||
-    lowerText.includes("cancel my order") ||
-    lowerText.includes("cancel order");
+    lowerText.includes("cancel") && lowerText.includes("order");
 
   const botConfirming =
     lowerReply.includes("confirm") ||
     lowerReply.includes("are you sure") ||
-    lowerReply.includes("proceed") ||
-    lowerReply.includes("sure you want") ||
-    lowerReply.includes("cancel") ||
-    lowerReply.includes("?");
+    lowerReply.includes("sure you want to cancel");
 
-  return userWantsCancel || botConfirming;
+  // Require BOTH — not OR
+  return userWantsCancel && botConfirming;
 }
+  
 /* ── Send ── */
 const handleSend = async () => {
   const text = input.trim();
@@ -502,19 +499,24 @@ if (pendingId) botMsg.pendingCancelId = pendingId;
 
               {/* Input */}
               <div className="kb-ai-input-row">
-                <input
-                  ref={inputRef}
-                  className="kb-ai-input"
-                  placeholder={
-                    !isAuth     ? "Sign in to chat"
-                    : !isOpen   ? "Ask about your order…"
-                    : "Ask KotaBot anything…"
-                  }
-                  value={input}
-                  disabled={loading || !isAuth}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
-                />
+  <textarea
+  ref={inputRef}
+  className="kb-ai-input"
+  rows={1}
+  placeholder={
+        !isAuth     ? "Sign in to chat"
+         : !isOpen   ? "Ask about your order…"
+         : "Ask KotaBot anything…"
+     }
+  value={input}
+  disabled={loading || !isAuth}
+  onChange={(e) => {
+  if (e.target.value.length > 2000) return; // guard against huge pastes
+  setInput(e.target.value);
+}}
+  onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && (e.preventDefault(), handleSend())}
+  style={{ resize: "none", overflow: "hidden" }}
+/>
                 <button
                   className="kb-ai-send-btn"
                   onClick={handleSend}
