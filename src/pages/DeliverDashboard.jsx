@@ -76,14 +76,19 @@ export default function DeliverDashboard() {
   const [toast, setToast]                     = useState(null);
   const [driverCallMode, setDriverCallMode]   = useState(null); // ✅ ADDED: State for video call modal
 
-  const showToast = (msg, type = "success") => {
-    setToast({ msg, type, id: Date.now() });
-    setTimeout(() => setToast(null), 4500);
-  };
+  const [callOrderId, setCallOrderId] = useState(null);
 
-  const fetchAll = useCallback(async (silent = false) => {
-    if (!silent) setLoading(true);
-    else setRefreshing(true);
+const toastTimer = useRef(null);
+
+const showToast = (msg, type = "success") => {
+  if (toastTimer.current) clearTimeout(toastTimer.current);
+  setToast({ msg, type, id: Date.now() });
+  toastTimer.current = setTimeout(() => setToast(null), 4500);
+};
+
+  const fetchAll = useCallback(async (silent = false, showSpinner = true) => {
+  if (!silent) setLoading(true);
+  else if (showSpinner) setRefreshing(true);
     setError(null);
 
     try {
@@ -146,7 +151,7 @@ export default function DeliverDashboard() {
   // Auto-refresh every 15s when online
   useEffect(() => {
     if (!profile?.is_available) return;
-    const id = setInterval(() => fetchAll(true), 15000);
+    const id = setInterval(() => fetchAll(true, false), 15000);
     return () => clearInterval(id);
   }, [profile?.is_available, fetchAll]);
 
@@ -461,7 +466,10 @@ export default function DeliverDashboard() {
                       <button 
                         className="dd-delivery-action-btn" 
                         style={{ marginTop: 12, marginBottom: 8, background: "rgba(96,165,250,0.15)", border: "1px solid rgba(96,165,250,0.3)", color: "#60a5fa" }}
-                        onClick={() => setDriverCallMode("video")}
+                        onClick={() => {
+                               setCallOrderId(activeDelivery.order_id); // snapshot it
+                              setDriverCallMode("video");
+                             }}
                       >
                         <Video className="w-4 h-4" /> Video Call Customer
                       </button>
@@ -709,13 +717,13 @@ export default function DeliverDashboard() {
       {/* ✅ FIXED: Video Call Modal - placed at root level, outside all tabs */}
       {driverCallMode && activeDelivery && profile && (
         <VideoCall
-          orderId={activeDelivery.order_id}
+          orderId={callOrderId}
           driverName={profile.full_name}
           driverPhone={profile.phone}
           customerName={activeDelivery.customer_name}
           userId={profile.id}
           mode={driverCallMode}
-          onClose={() => setDriverCallMode(null)}
+          onClose={() => { setDriverCallMode(null); setCallOrderId(null); }}
         />
       )}
     </div>
