@@ -169,34 +169,60 @@ export default function Login() {
         </div>
 
         {/* Social circles */}
-        <div className="ds-socials">
-          {loading ? (
-            <div className="ds-loading"><Loader2 size={16} className="ds-spin" /><span>Signing in…</span></div>
-          ) : (
-            <>
-              <button type="button" className="ds-social-btn" onClick={() => triggerHidden(googleRef)} aria-label="Continue with Google">
-                <FcGoogle size={22} />
-              </button>
-              <button type="button" className="ds-social-btn" onClick={() => triggerHidden(githubRef)} aria-label="Continue with GitHub">
-                <FaGithub size={20} color="var(--kb-text)" />
-              </button>
-              <button type="button" className="ds-social-btn" onClick={() => triggerHidden(fpRef)} aria-label="Sign in with fingerprint">
-                <BsFingerprint size={22} color="var(--kb-gold)" />
-              </button>
+<div className="ds-socials">
+  <button
+    type="button"
+    className="ds-social-btn"
+    onClick={() => !loading && triggerHidden(googleRef)}
+    disabled={loading}
+    aria-label="Continue with Google"
+  >
+    {loading ? (
+      <Loader2 size={22} className="ds-spin" color="var(--kb-muted)" />
+    ) : (
+      <FcGoogle size={22} />
+    )}
+  </button>
 
-              {/* Hidden auth components — handle the real OAuth / passkey flows */}
-              <div ref={googleRef} style={{ display: "none" }}>
-                <GoogleButton onSuccess={handleOAuthSuccess} onError={handleOAuthError} />
-              </div>
-              <div ref={githubRef} style={{ display: "none" }}>
-                <GitHubButton onSuccess={handleOAuthSuccess} onError={handleOAuthError} />
-              </div>
-              <div ref={fpRef} style={{ display: "none" }}>
-                <FingerprintButton email={form.email} onSuccess={handleFpSuccess} onError={handleFpError} />
-              </div>
-            </>
-          )}
-        </div>
+  <button
+    type="button"
+    className="ds-social-btn"
+    onClick={() => !loading && triggerHidden(githubRef)}
+    disabled={loading}
+    aria-label="Continue with GitHub"
+  >
+    {loading ? (
+      <Loader2 size={22} className="ds-spin" color="var(--kb-muted)" />
+    ) : (
+      <FaGithub size={20} color="var(--kb-text)" />
+    )}
+  </button>
+
+  <button
+    type="button"
+    className="ds-social-btn"
+    onClick={() => !loading && triggerHidden(fpRef)}
+    disabled={loading}
+    aria-label="Sign in with fingerprint"
+  >
+    {loading ? (
+      <Loader2 size={22} className="ds-spin" color="var(--kb-muted)" />
+    ) : (
+      <BsFingerprint size={22} color="var(--kb-gold)" />
+    )}
+  </button>
+
+  {/* Hidden auth components */}
+  <div ref={googleRef} style={{ display: "none" }}>
+    <GoogleButton onSuccess={handleOAuthSuccess} onError={handleOAuthError} />
+  </div>
+  <div ref={githubRef} style={{ display: "none" }}>
+    <GitHubButton onSuccess={handleOAuthSuccess} onError={handleOAuthError} />
+  </div>
+  <div ref={fpRef} style={{ display: "none" }}>
+    <FingerprintButton email={form.email} onSuccess={handleFpSuccess} onError={handleFpError} />
+  </div>
+</div>
 
         {/* Security badge */}
         <div className="ds-secure">
