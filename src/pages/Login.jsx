@@ -3,7 +3,7 @@ import { useState, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../components/Toast";
-import { Flame, Eye, EyeOff, Loader, AlertCircle, ShieldCheck } from "lucide-react";
+import { Flame, Eye, EyeOff, Loader, AlertCircle, ShieldCheck, Loader2} from "lucide-react";
 import { FcGoogle }      from "react-icons/fc";
 import { FaGithub }      from "react-icons/fa";
 import { BsFingerprint } from "react-icons/bs";
@@ -171,7 +171,7 @@ export default function Login() {
         {/* Social circles */}
         <div className="ds-socials">
           {loading ? (
-            <div className="ds-loading"><Loader size={16} className="ds-spin" /><span>Signing in…</span></div>
+            <div className="ds-loading"><Loader2 size={16} className="ds-spin" /><span>Signing in…</span></div>
           ) : (
             <>
               <button type="button" className="ds-social-btn" onClick={() => triggerHidden(googleRef)} aria-label="Continue with Google">
