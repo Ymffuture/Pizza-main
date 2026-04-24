@@ -1,12 +1,12 @@
-// src/pages/Login.jsx  (updated — adds FingerprintButton below social buttons)
+// src/pages/Login.jsx  — DeepSeek-style layout · KOTABITES branding
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../components/Toast";
-import { Flame, Mail, Lock, LogIn, Loader, Eye, EyeOff, AlertCircle } from "lucide-react";
+import { Flame, Eye, EyeOff, Loader, AlertCircle } from "lucide-react";
 import GoogleButton      from "../components/GoogleButton";
 import GitHubButton      from "../components/GitHubButton";
-import FingerprintButton from "../components/FingerprintButton";   // ← NEW
+import FingerprintButton from "../components/FingerprintButton";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -29,23 +29,17 @@ export default function Login() {
     return e;
   };
 
-  // Shared success handler — works for password, OAuth, AND fingerprint
   const handleSuccess = (data) => {
-    // fingerprint verify returns same shape as /auth/login
     const token = data.access_token;
-    if (token) {
-      sessionStorage.setItem("kb_token", token);
-    }
+    if (token) sessionStorage.setItem("kb_token", token);
     toast.show({ type: "success", title: "Welcome!", message: data.full_name || data.user?.full_name || data.email });
     navigate(redirect, { replace: true });
   };
 
   const handleOAuthSuccess = (data) => handleSuccess(data.user ? data : { ...data, ...data.user });
   const handleOAuthError   = (err) => toast.show({ type: "error", title: "Sign-in failed", message: err?.message || "Try again" });
-
-  // Fingerprint callbacks
-  const handleFpSuccess = (data) => handleSuccess(data);
-  const handleFpError   = (err)  => toast.show({ type: "error", title: "Fingerprint failed", message: err?.message || "Try your password" });
+  const handleFpSuccess    = (data) => handleSuccess(data);
+  const handleFpError      = (err)  => toast.show({ type: "error", title: "Fingerprint failed", message: err?.message || "Try your password" });
 
   const handleChange = (field) => (ev) => {
     setForm((p) => ({ ...p, [field]: ev.target.value }));
@@ -60,7 +54,6 @@ export default function Login() {
 
     setLoading(true);
     setNeedsVerification(false);
-
     try {
       await login(form);
       toast.show({ type: "success", title: "Welcome back!", message: form.email.trim().toLowerCase() });
@@ -71,7 +64,6 @@ export default function Login() {
         err?.response?.data?.message ||
         err.message ||
         "Login failed";
-
       if (msg.toLowerCase().includes("verify") || msg.toLowerCase().includes("verification")) {
         setNeedsVerification(true);
         toast.show({ type: "error", title: "Email not verified", message: "Please verify your email before logging in." });
@@ -84,189 +76,427 @@ export default function Login() {
   };
 
   return (
-    <div className="auth-root">
-      <style>{authStyles}</style>
+    <div className="ds-root">
+      <style>{styles}</style>
 
-      <div className="auth-card">
-        <div className="auth-logo-wrap">
-          <div className="auth-logo">
-            <Flame className="w-6 h-6" style={{ color: "#0e0700" }} />
+      <div className="ds-card">
+
+        {/* ── Brand ── */}
+        <div className="ds-brand">
+          <div className="ds-flame">
+            <Flame size={22} color="#0e0700" strokeWidth={2.5} />
           </div>
-          <h1 className="auth-brand">KOTABITES</h1>
+          <span className="ds-wordmark">KOTABITES</span>
         </div>
 
-        <div className="auth-heading">
-          <h2 className="auth-title">Welcome back</h2>
-          <p className="auth-sub">Sign in to place your order</p>
-        </div>
-
+        {/* ── Verification banner ── */}
         {needsVerification && (
-          <div className="verification-banner">
-            <AlertCircle className="w-4 h-4" style={{ flexShrink: 0 }} />
-            <div style={{ flex: 1 }}>
-              <p className="verification-title">Email Not Verified</p>
-              <p className="verification-text">Please check your inbox and click the verification link.</p>
+          <div className="ds-banner">
+            <AlertCircle size={15} style={{ flexShrink: 0, color: "#f87171" }} />
+            <div>
+              <p className="ds-banner-title">Email not verified</p>
+              <p className="ds-banner-body">Check your inbox for the verification link.</p>
             </div>
-            <Link to="/verify-email" className="verification-link">Resend →</Link>
+            <Link to="/verify-email" className="ds-banner-link">Resend →</Link>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="auth-form">
-          <div className="auth-field">
-            <label className="auth-label">Email</label>
-            <div className={`auth-input-wrap${errors.email ? " auth-input-error" : ""}`}>
-              <Mail className="auth-icon" />
-              <input
-                type="email" className="auth-input" placeholder="you@example.com"
-                value={form.email} onChange={handleChange("email")}
-                autoComplete="email" disabled={loading}
-              />
-            </div>
-            {errors.email && <p className="auth-error">{errors.email}</p>}
+        {/* ── Form ── */}
+        <form onSubmit={handleSubmit} className="ds-form">
+
+          {/* Email pill */}
+          <div className="ds-field">
+            <input
+              type="email"
+              className={`ds-input${errors.email ? " ds-input--err" : ""}`}
+              placeholder="Phone number / email address"
+              value={form.email}
+              onChange={handleChange("email")}
+              autoComplete="email"
+              disabled={loading}
+            />
+            {errors.email && <p className="ds-err">{errors.email}</p>}
           </div>
 
-          <div className="auth-field">
-            <label className="auth-label">Password</label>
-            <div className={`auth-input-wrap${errors.password ? " auth-input-error" : ""}`}>
-              <Lock className="auth-icon" />
+          {/* Password pill */}
+          <div className="ds-field">
+            <div className={`ds-pw-wrap${errors.password ? " ds-input--err" : ""}`}>
               <input
-                type={showPw ? "text" : "password"} className="auth-input" placeholder="••••••••"
-                value={form.password} onChange={handleChange("password")}
-                autoComplete="current-password" disabled={loading}
+                type={showPw ? "text" : "password"}
+                className="ds-input ds-input--pw"
+                placeholder="Password"
+                value={form.password}
+                onChange={handleChange("password")}
+                autoComplete="current-password"
+                disabled={loading}
               />
-              <button type="button" className="auth-pw-toggle" onClick={() => setShowPw((s) => !s)} tabIndex={-1}>
-                {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              <button
+                type="button"
+                className="ds-eye"
+                onClick={() => setShowPw((s) => !s)}
+                tabIndex={-1}
+                aria-label={showPw ? "Hide password" : "Show password"}
+              >
+                {showPw ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
-            {errors.password && <p className="auth-error">{errors.password}</p>}
+            {errors.password && <p className="ds-err">{errors.password}</p>}
           </div>
 
-          <button type="submit" disabled={loading} className="auth-submit">
+          {/* Terms */}
+          <p className="ds-terms">
+            By signing in you agree to KOTABITES&rsquo;{" "}
+            <Link to="/terms" className="ds-terms-link">Terms of Use</Link>{" "}
+            and{" "}
+            <Link to="/privacy" className="ds-terms-link">Privacy Policy</Link>.
+          </p>
+
+          {/* Forgot / Sign up row */}
+          <div className="ds-row">
+            <Link to="/forgot-password" className="ds-text-link">Forgot password?</Link>
+            <Link
+              to={`/register${redirect !== "/menu" ? `?redirect=${redirect}` : ""}`}
+              className="ds-text-link"
+            >
+              Sign up
+            </Link>
+          </div>
+
+          {/* CTA */}
+          <button type="submit" disabled={loading} className="ds-cta">
             {loading
-              ? <><Loader className="w-5 h-5 auth-spin" /> Signing in…</>
-              : <><LogIn className="w-5 h-5" /> Sign In</>}
+              ? <><Loader size={18} className="ds-spin" /> Signing in…</>
+              : "Sign in"}
           </button>
         </form>
 
-        <div className="auth-divider">
-          <div className="auth-divider-line" />
-          <span className="auth-divider-text">OR</span>
-          <div className="auth-divider-line" />
+        {/* ── Divider ── */}
+        <div className="ds-divider">
+          <div className="ds-divider-line" />
+          <div className="ds-divider-line" />
         </div>
 
-        <div className="social-stack">
+        {/* ── Social circles ── */}
+        <div className="ds-socials">
           {loading ? (
-            <div className="auth-loading-text">
-              <Loader className="w-4 h-4 auth-spin" />
-              <span>Signing in with email...</span>
+            <div className="ds-loading">
+              <Loader size={16} className="ds-spin" />
+              <span>Signing in…</span>
             </div>
           ) : (
             <>
-              <GoogleButton  onSuccess={handleOAuthSuccess} onError={handleOAuthError} />
-              <GitHubButton  onSuccess={handleOAuthSuccess} onError={handleOAuthError} />
-
-              {/* ── Fingerprint / Passkey ── */}
+              <GoogleButton
+                onSuccess={handleOAuthSuccess}
+                onError={handleOAuthError}
+                compact
+              />
+              <GitHubButton
+                onSuccess={handleOAuthSuccess}
+                onError={handleOAuthError}
+                compact
+              />
               <FingerprintButton
                 email={form.email}
                 onSuccess={handleFpSuccess}
                 onError={handleFpError}
+                compact
               />
             </>
           )}
         </div>
 
-        <p style={{ textAlign: "center", marginTop: 14 }}>
-          <Link to="/forgot-password" className="auth-link" style={{ fontSize: 13 }}>
-            Forgot your password?
-          </Link>
-        </p>
-
-        <p className="auth-switch">
-          Don&apos;t have an account?{" "}
-          <Link to={`/register${redirect !== "/menu" ? `?redirect=${redirect}` : ""}`} className="auth-link">
-            Create one
-          </Link>
-        </p>
       </div>
     </div>
   );
 }
 
-const authStyles = `
+/* ─────────────────────────────────────────────────────────────────────────── */
+
+const styles = `
   @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
   :root {
-    --red:#DA291C; --red2:#b91c1c; --gold:#FFC72C;
-    --dark:#0e0700; --card:#1a0e00;
-    --border:rgba(255,199,44,0.12); --text:#fff8e7;
-    --muted:rgba(255,248,231,0.42); --input-bg:rgba(255,248,231,0.05);
+    --kb-red:    #DA291C;
+    --kb-red2:   #b91c1c;
+    --kb-gold:   #FFC72C;
+    --kb-dark:   #0e0700;
+    --kb-card:   #1a0e00;
+    --kb-border: rgba(255,199,44,0.14);
+    --kb-text:   #fff8e7;
+    --kb-muted:  rgba(255,248,231,0.42);
+    --kb-input:  rgba(255,248,231,0.05);
+    --kb-ring:   rgba(255,199,44,0.35);
   }
 
-  .auth-root {
-    min-height:100vh;
+  /* ── Root ── */
+  .ds-root {
+    min-height: 100vh;
     background:
-      radial-gradient(ellipse 80% 50% at 50% 0%,rgba(218,41,28,0.2) 0%,transparent 65%),
-      radial-gradient(ellipse 50% 40% at 50% 100%,rgba(255,199,44,0.08) 0%,transparent 60%),
-      var(--dark);
-    display:flex; align-items:center; justify-content:center;
-    padding:24px 16px;
-    font-family:'Plus Jakarta Sans',system-ui,sans-serif;
+      radial-gradient(ellipse 90% 55% at 50% -10%, rgba(218,41,28,0.18) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 50% 110%, rgba(255,199,44,0.07) 0%, transparent 55%),
+      var(--kb-dark);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 16px;
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
   }
 
-  .auth-card {
-    width:100%; max-width:420px;
-    background:var(--card); border:1px solid var(--border);
-    border-radius:24px; padding:36px 32px;
-    box-shadow:0 24px 64px rgba(0,0,0,0.5),0 0 0 1px rgba(255,199,44,0.06);
+  /* ── Card ── */
+  .ds-card {
+    width: 100%;
+    max-width: 400px;
+    padding: 48px 36px 40px;
+    background: var(--kb-card);
+    border: 1px solid var(--kb-border);
+    border-radius: 28px;
+    box-shadow:
+      0 32px 72px rgba(0,0,0,0.55),
+      0 0 0 1px rgba(255,199,44,0.05);
   }
 
-  .auth-logo-wrap { display:flex; align-items:center; gap:10px; justify-content:center; margin-bottom:28px; }
-  .auth-logo { width:40px; height:40px; background:var(--gold); border-radius:11px; display:flex; align-items:center; justify-content:center; box-shadow:0 0 20px rgba(255,199,44,0.3); }
-  .auth-brand { font-family:'Bebas Neue',sans-serif; font-size:24px; letter-spacing:3px; color:var(--text); line-height:1; }
+  /* ── Brand ── */
+  .ds-brand {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 40px;
+  }
+  .ds-flame {
+    width: 38px; height: 38px;
+    background: var(--kb-gold);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 22px rgba(255,199,44,0.32);
+  }
+  .ds-wordmark {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 26px;
+    letter-spacing: 4px;
+    color: var(--kb-text);
+    line-height: 1;
+  }
 
-  .auth-heading { text-align:center; margin-bottom:28px; }
-  .auth-title { font-family:'Bebas Neue',sans-serif; font-size:30px; letter-spacing:2px; color:var(--text); line-height:1; }
-  .auth-sub { font-size:13px; color:var(--muted); margin-top:4px; }
+  /* ── Verification banner ── */
+  .ds-banner {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    background: rgba(218,41,28,0.08);
+    border: 1px solid rgba(218,41,28,0.22);
+    border-radius: 14px;
+    padding: 12px 14px;
+    margin-bottom: 20px;
+    animation: kbSlide 0.28s ease;
+  }
+  @keyframes kbSlide {
+    from { opacity:0; transform:translateY(-8px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+  .ds-banner-title { font-size: 12px; font-weight: 800; color: var(--kb-text); margin: 0 0 2px; }
+  .ds-banner-body  { font-size: 11px; color: var(--kb-muted); margin: 0; line-height: 1.4; }
+  .ds-banner-link  { color: var(--kb-gold); font-size: 12px; font-weight: 700; text-decoration: none; white-space: nowrap; margin-left: auto; }
+  .ds-banner-link:hover { opacity: 0.8; }
 
-  .verification-banner { display:flex; align-items:flex-start; gap:12px; background:rgba(218,41,28,0.08); border:1px solid rgba(218,41,28,0.25); border-radius:14px; padding:12px 14px; margin-bottom:20px; animation:slideIn 0.3s ease; }
-  @keyframes slideIn { from{opacity:0;transform:translateY(-10px)} to{opacity:1;transform:translateY(0)} }
-  .verification-banner > svg { color:#f87171; margin-top:2px; }
-  .verification-title { font-size:12px; font-weight:800; color:var(--text); margin:0 0 3px; }
-  .verification-text  { font-size:11px; color:var(--muted); line-height:1.4; margin:0; }
-  .verification-link  { color:var(--gold); font-size:12px; font-weight:700; text-decoration:none; white-space:nowrap; transition:opacity 0.2s; }
-  .verification-link:hover { opacity:0.8; }
+  /* ── Form ── */
+  .ds-form {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
 
-  .auth-form  { display:flex; flex-direction:column; gap:16px; }
-  .auth-field { display:flex; flex-direction:column; gap:6px; }
-  .auth-label { font-size:11px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:var(--muted); }
-  .auth-input-wrap { display:flex; align-items:center; gap:10px; background:var(--input-bg); border:1.5px solid var(--border); border-radius:12px; padding:0 14px; transition:border-color 0.2s; }
-  .auth-input-wrap:focus-within { border-color:rgba(255,199,44,0.4); }
-  .auth-input-error { border-color:rgba(218,41,28,0.5)!important; }
-  .auth-icon { width:16px; height:16px; color:var(--muted); flex-shrink:0; }
-  .auth-input { flex:1; background:none; border:none; outline:none; color:var(--text); font-size:14px; font-weight:500; font-family:'Plus Jakarta Sans',sans-serif; padding:13px 0; }
-  .auth-input::placeholder { color:var(--muted); }
-  .auth-pw-toggle { color:var(--muted); background:none; border:none; cursor:pointer; display:flex; align-items:center; padding:0; transition:color 0.2s; }
-  .auth-pw-toggle:hover { color:var(--text); }
-  .auth-error { font-size:11px; font-weight:700; color:#f87171; }
+  /* ── Field / pill input ── */
+  .ds-field { display: flex; flex-direction: column; gap: 5px; }
 
-  .auth-submit { display:flex; align-items:center; justify-content:center; gap:10px; background:var(--red); color:white; border:none; cursor:pointer; font-family:'Plus Jakarta Sans',sans-serif; font-weight:900; font-size:15px; padding:15px; border-radius:14px; margin-top:4px; box-shadow:0 6px 20px rgba(218,41,28,0.4); transition:all 0.2s; width:100%; }
-  .auth-submit:hover:not(:disabled) { background:var(--red2); transform:scale(1.02); }
-  .auth-submit:disabled { opacity:0.55; cursor:not-allowed; }
+  .ds-input {
+    width: 100%;
+    box-sizing: border-box;
+    background: var(--kb-input);
+    border: 1.5px solid var(--kb-border);
+    border-radius: 999px;
+    padding: 14px 20px;
+    color: var(--kb-text);
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .ds-input::placeholder { color: var(--kb-muted); }
+  .ds-input:focus {
+    border-color: var(--kb-ring);
+    box-shadow: 0 0 0 3px rgba(255,199,44,0.08);
+  }
+  .ds-input--err { border-color: rgba(218,41,28,0.55) !important; }
 
-  @keyframes spin { to { transform:rotate(360deg); } }
-  .auth-spin { animation:spin 0.8s linear infinite; }
+  /* password wrapper keeps pill shape + eye button */
+  .ds-pw-wrap {
+    display: flex;
+    align-items: center;
+    background: var(--kb-input);
+    border: 1.5px solid var(--kb-border);
+    border-radius: 999px;
+    padding: 0 16px 0 20px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .ds-pw-wrap:focus-within {
+    border-color: var(--kb-ring);
+    box-shadow: 0 0 0 3px rgba(255,199,44,0.08);
+  }
+  .ds-pw-wrap.ds-input--err { border-color: rgba(218,41,28,0.55) !important; }
+  .ds-input--pw {
+    flex: 1;
+    background: none;
+    border: none;
+    border-radius: 0;
+    padding: 14px 0;
+    box-shadow: none !important;
+  }
+  .ds-input--pw:focus { box-shadow: none; }
+  .ds-eye {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--kb-muted);
+    display: flex;
+    align-items: center;
+    padding: 0;
+    transition: color 0.2s;
+    flex-shrink: 0;
+  }
+  .ds-eye:hover { color: var(--kb-text); }
 
-  .auth-divider { display:flex; align-items:center; gap:12px; margin:20px 0 16px; }
-  .auth-divider-line { flex:1; height:1px; background:var(--border); }
-  .auth-divider-text { font-size:11px; color:var(--muted); font-weight:600; }
+  .ds-err { font-size: 11px; font-weight: 700; color: #f87171; padding-left: 8px; }
 
-  .social-stack { display:flex; flex-direction:column; gap:10px; }
+  /* ── Terms ── */
+  .ds-terms {
+    font-size: 12px;
+    color: var(--kb-muted);
+    line-height: 1.5;
+    margin: 0;
+  }
+  .ds-terms-link {
+    color: var(--kb-text);
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    text-decoration-color: rgba(255,248,231,0.25);
+  }
+  .ds-terms-link:hover { color: var(--kb-gold); text-decoration-color: var(--kb-gold); }
 
-  .auth-loading-text { display:flex; align-items:center; justify-content:center; gap:8px; font-size:13px; color:var(--muted); padding:10px 0; }
+  /* ── Forgot / Sign up row ── */
+  .ds-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .ds-text-link {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--kb-gold);
+    text-decoration: none;
+    transition: opacity 0.2s;
+  }
+  .ds-text-link:hover { opacity: 0.75; }
 
-  .auth-switch { text-align:center; font-size:13px; color:var(--muted); margin-top:20px; }
-  .auth-link { color:var(--gold); font-weight:700; text-decoration:none; transition:opacity 0.2s; }
-  .auth-link:hover { opacity:0.8; }
+  /* ── CTA button ── */
+  .ds-cta {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 15px;
+    background: var(--kb-red);
+    color: #fff;
+    border: none;
+    border-radius: 999px;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    box-shadow: 0 6px 22px rgba(218,41,28,0.38);
+    transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+    margin-top: 4px;
+  }
+  .ds-cta:hover:not(:disabled) {
+    background: var(--kb-red2);
+    transform: scale(1.015);
+    box-shadow: 0 8px 28px rgba(218,41,28,0.46);
+  }
+  .ds-cta:active:not(:disabled) { transform: scale(0.99); }
+  .ds-cta:disabled { opacity: 0.5; cursor: not-allowed; }
 
-  @media (max-width:480px) { .auth-card { padding:28px 20px; } }
+  /* ── Divider (two lines, no text — DeepSeek style) ── */
+  .ds-divider {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin: 28px 0 20px;
+  }
+  .ds-divider-line {
+    flex: 1;
+    height: 1px;
+    background: var(--kb-border);
+  }
+
+  /* ── Social circles ── */
+  .ds-socials {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+  }
+
+  /* Compact / icon-only override — wrap GoogleButton / GitHubButton / FingerprintButton
+     inside a circle shell if those components don't already support compact prop.
+     These rules target the outermost element they render. */
+  .ds-socials > * {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 52px !important;
+    height: 52px !important;
+    border-radius: 50% !important;
+    padding: 0 !important;
+    background: var(--kb-input) !important;
+    border: 1.5px solid var(--kb-border) !important;
+    box-shadow: none !important;
+    transition: border-color 0.2s, background 0.2s !important;
+    overflow: hidden !important;
+    cursor: pointer !important;
+    min-width: unset !important;
+    min-height: unset !important;
+  }
+  .ds-socials > *:hover {
+    border-color: rgba(255,199,44,0.35) !important;
+    background: rgba(255,248,231,0.09) !important;
+  }
+
+  /* Hide any text labels rendered inside the social buttons */
+  .ds-socials > * span,
+  .ds-socials > * p {
+    display: none !important;
+  }
+
+  /* Loading state */
+  .ds-loading {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--kb-muted);
+    justify-content: center;
+  }
+
+  /* Spinner */
+  @keyframes kbSpin { to { transform: rotate(360deg); } }
+  .ds-spin { animation: kbSpin 0.8s linear infinite; }
+
+  /* ── Responsive ── */
+  @media (max-width: 480px) {
+    .ds-card { padding: 36px 22px 32px; }
+    .ds-wordmark { font-size: 22px; }
+  }
 `;
