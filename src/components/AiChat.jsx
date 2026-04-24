@@ -1,23 +1,22 @@
 // src/components/AiChat.jsx
 import { useState, useRef, useEffect } from "react";
 import {
-  MessageCircle, X, Send, BotMessageSquare, User,Forward, CornerRightUp, 
-  Loader, Minimize2, Maximize2, XCircle, CheckCircle, Clock,CircleFadingPlus, CircleUser, Bot, 
-  Copy, Check, Link as LinkIcon
+  X, Send, BotMessageSquare, User, Forward, CornerRightUp,
+  Loader, Minimize2, Maximize2, XCircle, CheckCircle, Clock,
+  CircleUser, Bot, Copy, Check, Link as LinkIcon
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import axiosClient from "../api/axiosClient";
 import { useAuth } from "../context/AuthContext";
-import { useParams, Link} from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { getBusinessHoursStatus } from "../utils/businessHours";
-import { Tooltip } from "antd";
 import Avatar from "./Avatar";
-import {Loader3} from "./Loader";
+import { Loader3 } from "./Loader";
 
+const AVATAR_URL = "https://api.dicebear.com/9.x/avataaars/svg?seed=ai";
 
 function extractOrderId(text) {
-  // Only match if surrounded by non-alphanumeric chars (not mid-word in code)
   const full = text.match(/(?<![a-zA-Z0-9_])([0-9a-fA-F]{24})(?![a-zA-Z0-9_])/);
   return full ? full[1] : null;
 }
@@ -31,8 +30,7 @@ function CopyOrderId({ orderId }) {
       await navigator.clipboard.writeText(orderId);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      // Fallback for older browsers
+    } catch {
       const textArea = document.createElement("textarea");
       textArea.value = orderId;
       document.body.appendChild(textArea);
@@ -45,11 +43,7 @@ function CopyOrderId({ orderId }) {
   };
 
   return (
-    <button
-      className="kb-copy-order-btn"
-      onClick={handleCopy}
-      title="Copy Order ID"
-    >
+    <button className="kb-copy-order-btn" onClick={handleCopy} title="Copy Order ID">
       {copied ? (
         <Check className="w-3 h-3" style={{ color: "#4ade80" }} />
       ) : (
@@ -62,13 +56,13 @@ function CopyOrderId({ orderId }) {
 
 /* ── Markdown components ── */
 const markdownComponents = {
-  p:      ({ children }) => <p className="kb-md-p">{children}</p>,
+  p: ({ children }) => <p className="kb-md-p">{children}</p>,
   strong: ({ children }) => <strong className="kb-md-strong">{children}</strong>,
-  em:     ({ children }) => <em className="kb-md-em">{children}</em>,
-  ul:     ({ children }) => <ul className="kb-md-ul">{children}</ul>,
-  ol:     ({ children }) => <ol className="kb-md-ol">{children}</ol>,
-  li:     ({ children }) => <li className="kb-md-li">{children}</li>,
-  a:      ({ href, children }) => (
+  em: ({ children }) => <em className="kb-md-em">{children}</em>,
+  ul: ({ children }) => <ul className="kb-md-ul">{children}</ul>,
+  ol: ({ children }) => <ol className="kb-md-ol">{children}</ol>,
+  li: ({ children }) => <li className="kb-md-li">{children}</li>,
+  a: ({ href, children }) => (
     <a href={href} target="_blank" rel="noopener noreferrer" className="kb-md-a">{children}</a>
   ),
   code: ({ inline, children }) =>
@@ -96,13 +90,13 @@ function HoursBanner({ status }) {
   );
 }
 
-/* ── Closed schedule card shown instead of messages when closed ── */
+/* ── Closed schedule card ── */
 function ClosedNotice({ status }) {
   if (!status || status.isOpen) return null;
   return (
     <div className="kb-closed-wrap">
       <div className="kb-closed-icon">
-        <Clock style={{ width: 22, height: 22, color: "#FFC72C" }} />
+        <Clock style={{ width: 22, height: 22, color: "#00E5FF" }} />
       </div>
       <p className="kb-closed-title">We are closed</p>
       <p className="kb-closed-msg">{status.message}</p>
@@ -153,18 +147,13 @@ function SignInPrompt() {
   return (
     <div className="kb-signin-prompt">
       <div className="kb-signin-icon">
-        <LinkIcon style={{ width: 18, height: 18, color: "#FFC72C" }} />
+        <LinkIcon style={{ width: 18, height: 18, color: "#00E5FF" }} />
       </div>
       <div className="kb-signin-content">
         <p className="kb-signin-title">Sign in required</p>
         <p className="kb-signin-text">
           Please{" "}
-          <Link
-            to="/login" 
-            className="kb-signin-link"
-          >
-            sign in
-          </Link>
+          <Link to="/login" className="kb-signin-link">sign in</Link>
           {" "}to chat with KotaBot
         </p>
       </div>
@@ -173,14 +162,16 @@ function SignInPrompt() {
 }
 
 /* ── Message bubble ── */
-function Bubble({ msg, onCancelConfirm, cancellingId, user}) {
+function Bubble({ msg, onCancelConfirm, cancellingId, user }) {
   const isUser = msg.role === "user";
   const orderId = !isUser ? extractOrderId(msg.content) : null;
 
   return (
     <div className={`kb-ai-bubble-row ${isUser ? "kb-ai-bubble-user" : "kb-ai-bubble-bot"}`}>
       {!isUser && (
-        <div className="kb-ai-avatar kb-ai-avatar-bot"><img src="https://api.dicebear.com/9.x/avataaars/svg?seed=ai" alt="profile picture" className="w-5 h-5" /></div>
+        <div className="kb-ai-avatar kb-ai-avatar-bot">
+          <img src={AVATAR_URL} alt="AI avatar" className="w-5 h-5" />
+        </div>
       )}
       <div className={`kb-ai-bubble ${isUser ? "kb-ai-bubble-u" : "kb-ai-bubble-b"}`}>
         {isUser ? (
@@ -190,15 +181,12 @@ function Bubble({ msg, onCancelConfirm, cancellingId, user}) {
             <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
               {msg.content}
             </ReactMarkdown>
-            {/* Copy Order ID button if order ID found */}
             {orderId && (
               <div className="kb-order-id-row">
                 <span className="kb-order-id-label">Order ID detected:</span>
                 <CopyOrderId orderId={orderId} />
               </div>
             )}
-
-            
             {msg.pendingCancelId && (
               <div className="kb-confirm-row">
                 <p className="kb-confirm-text">Confirm cancellation?</p>
@@ -223,7 +211,7 @@ function Bubble({ msg, onCancelConfirm, cancellingId, user}) {
       </div>
       {isUser && (
         <div className="kb-ai-avatar kb-ai-avatar-user">
-          {user?.picture || user?.avatar                       
+          {user?.picture || user?.avatar
             ? <Avatar picture={user?.picture || user?.avatar} name={user?.full_name} email={user?.email} size={24} />
             : <CircleUser className="w-4 h-4" />}
         </div>
@@ -234,19 +222,17 @@ function Bubble({ msg, onCancelConfirm, cancellingId, user}) {
 
 /* ── Main component ── */
 export default function AiChat() {
-  const { isAuth, user } = useAuth(); 
+  const { isAuth, user } = useAuth();
   const params = useParams();
   const pageOrderId = params?.id || null;
 
-  // ── Hours state — DRIVES the UI ──────────────────────────────────────
   const [hoursStatus, setHoursStatus] = useState(() => getBusinessHoursStatus());
-
-  const [open, setOpen]           = useState(false);
-  const [minimised, setMin]       = useState(false);
-  const [input, setInput]         = useState("");
-  const [loading, setLoading]     = useState(false);
-  const [unread, setUnread]       = useState(0);
-  const [contextId, setCtxId]     = useState(pageOrderId);
+  const [open, setOpen] = useState(false);
+  const [minimised, setMin] = useState(false);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [unread, setUnread] = useState(0);
+  const [contextId, setCtxId] = useState(pageOrderId);
   const [cancellingId, setCancellingId] = useState(null);
   const [cancelResult, setCancelResult] = useState(null);
   const [messages, setMessages] = useState([
@@ -258,7 +244,8 @@ export default function AiChat() {
   ]);
 
   const bottomRef = useRef(null);
-  const inputRef  = useRef(null);
+  const inputRef = useRef(null);
+  const abortRef = useRef(null);
 
   // Refresh hours every 60 seconds
   useEffect(() => {
@@ -267,7 +254,7 @@ export default function AiChat() {
   }, []);
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, loading]);
-  useEffect(() => { if (open && !minimised) inputRef.current?.focus(); }, [open, minimised]);
+  useEffect(() => { if (open && !minimised) inputRef.current?.focus(); }, [open, minimised, inputRef]);
   useEffect(() => { if (pageOrderId) setCtxId(pageOrderId); }, [pageOrderId]);
 
   const isOpen = hoursStatus.isOpen;
@@ -301,76 +288,75 @@ export default function AiChat() {
     }
   };
 
-  /* ── Send ── */
-  // Key section of fixes in handleSend function:
-function shouldShowCancelConfirm(userText, botReply, cancelResult) {
-  if (cancelResult) return false;
-
-  const lowerText  = userText.toLowerCase();
-  const lowerReply = (botReply || "").toLowerCase();
-
-  const userWantsCancel =
-    lowerText.includes("cancel") && lowerText.includes("order");
-
-  const botConfirming =
-    lowerReply.includes("confirm") ||
-    lowerReply.includes("are you sure") ||
-    lowerReply.includes("sure you want to cancel");
-
-  // Require BOTH — not OR
-  return userWantsCancel && botConfirming;
-}
-  
-/* ── Send ── */
-const handleSend = async () => {
-  const text = input.trim();
-  if (!text || loading) return;
-
-  const detectedId = extractOrderId(text);
-  if (detectedId) setCtxId(detectedId);
-
-  const userMsg = { role: "user", content: text };
-  const updated = [...messages, userMsg];
-  setMessages(updated);
-  setInput("");
-  setLoading(true);
-  setCancelResult(null);
-
-  const firstUserIdx = updated.findIndex((m) => m.role === "user");
-  const apiMessages  = firstUserIdx >= 0 ? updated.slice(firstUserIdx) : updated;
-
-  try {
-    const { data } = await axiosClient.post("/ai/chat", {
-      messages: apiMessages,
-      order_id: detectedId || contextId || null,
-    });
-
-    const botMsg = { role: "assistant", content: data.reply };
-
-    if (data.cancel_result) setCancelResult(data.cancel_result);
-
-/* ── Detect if bot reply needs cancel confirmation ── */
-const pendingId = (() => {
-  const orderId = detectedId || contextId;
-  return shouldShowCancelConfirm(text, data.reply, data.cancel_result) && orderId
-    ? orderId
-    : undefined;
-})();
-
-if (pendingId) botMsg.pendingCancelId = pendingId;
-    
-    setMessages([...updated, botMsg]);
-    if (!open) setUnread((u) => u + 1);
-  } catch (err) {
-    const errMsg =
-      err?.response?.status === 401
-        ? "Please **sign in** to chat with KotaBot."
-        : "Eish, something went wrong. Try again in a moment.";
-    setMessages([...updated, { role: "assistant", content: errMsg }]);
-  } finally {
-    setLoading(false);
+  /* ── Cancel detection helper ── */
+  function shouldShowCancelConfirm(userText, botReply, cancelResult) {
+    if (cancelResult) return false;
+    const lowerText = userText.toLowerCase();
+    const lowerReply = (botReply || "").toLowerCase();
+    const userWantsCancel = lowerText.includes("cancel") && lowerText.includes("order");
+    const botConfirming =
+      lowerReply.includes("confirm") ||
+      lowerReply.includes("are you sure") ||
+      lowerReply.includes("sure you want to cancel");
+    return userWantsCancel && botConfirming;
   }
-};
+
+  /* ── Send ── */
+  const handleSend = async () => {
+    const text = input.trim();
+    if (!text || loading) return;
+
+    const detectedId = extractOrderId(text);
+    if (detectedId) setCtxId(detectedId);
+
+    const userMsg = { role: "user", content: text };
+    const updated = [...messages, userMsg];
+    setMessages(updated);
+    setInput("");
+    setLoading(true);
+    setCancelResult(null);
+
+    const firstUserIdx = updated.findIndex((m) => m.role === "user");
+    const apiMessages = firstUserIdx >= 0 ? updated.slice(firstUserIdx) : updated;
+
+    // Abort previous request if any
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    try {
+      const { data } = await axiosClient.post("/ai/chat", {
+        messages: apiMessages,
+        order_id: detectedId || contextId || null,
+      }, { signal: controller.signal });
+
+      const botMsg = { role: "assistant", content: data.reply };
+
+      if (data.cancel_result) setCancelResult(data.cancel_result);
+
+      const pendingId = (() => {
+        const orderId = detectedId || contextId;
+        return shouldShowCancelConfirm(text, data.reply, data.cancel_result) && orderId
+          ? orderId
+          : undefined;
+      })();
+
+      if (pendingId) botMsg.pendingCancelId = pendingId;
+
+      setMessages([...updated, botMsg]);
+      if (!open) setUnread((u) => u + 1);
+    } catch (err) {
+      if (err.name === "AbortError" || err.name === "CanceledError") return;
+      const errMsg =
+        err?.response?.status === 401
+          ? "Please **sign in** to chat with KotaBot."
+          : "Eish, something went wrong. Try again in a moment.";
+      setMessages([...updated, { role: "assistant", content: errMsg }]);
+    } finally {
+      setLoading(false);
+      abortRef.current = null;
+    }
+  };
 
   const handleOpen = () => { setOpen(true); setMin(false); setUnread(0); };
 
@@ -379,28 +365,25 @@ if (pendingId) botMsg.pendingCancelId = pendingId;
       <style>{styles}</style>
 
       {/* ── FAB ── */}
-      
-{!open && (
-  <Tooltip title="KotaBot" placement="topLeft">
-    <button
-      className="kb-ai-fab"
-      onClick={handleOpen}
-      aria-label="Open KotaBot"
-    >
-      <BotMessageSquare className="w-6 h-6" />
-
-      {/* Green dot = open, red dot = closed */}
-      <span
-        className="kb-fab-status-dot"
-        style={{ background: isOpen ? "#4ade80" : "#f87171" }}
-      />
-
-      {unread >0 || loading  && (
-        <span className="kb-ai-unread"><Loader3/></span>
+      {!open && (
+        <button
+          className="kb-ai-fab"
+          onClick={handleOpen}
+          aria-label="Open KotaBot"
+          title="KotaBot"
+        >
+          <BotMessageSquare className="w-6 h-6" />
+          <span
+            className="kb-fab-status-dot"
+            style={{ background: isOpen ? "#00E5FF" : "#FF4081" }}
+          />
+          {(unread > 0 || loading) && (
+            <span className="kb-ai-unread">
+              {loading ? <Loader3 /> : unread}
+            </span>
+          )}
+        </button>
       )}
-    </button>
-  </Tooltip>
-)}
 
       {/* ── Chat window ── */}
       {open && (
@@ -409,18 +392,15 @@ if (pendingId) botMsg.pendingCancelId = pendingId;
           {/* Header */}
           <div className="kb-ai-header">
             <div className="kb-ai-header-left">
-              {/*  <div className="kb-ai-header-icon">
-                 <BotMessageSquare className="w-2 h-2" style={{ color: "#0e0700" }} />
-              </div>*/} 
               <div>
                 <p className="kb-ai-header-name">KotaBot</p>
                 <p className="kb-ai-header-sub">
                   {loading ? (
                     <span className="kb-ai-typing">typing…</span>
                   ) : isOpen ? (
-                    <span style={{ color: "#4ade80", fontWeight: 700 }}>● Delivery open</span>
+                    <span style={{ color: "#00E5FF", fontWeight: 700 }}>● Delivery open</span>
                   ) : (
-                    <span style={{ color: "#f87171", fontWeight: 700 }}>● Delivery closed</span>
+                    <span style={{ color: "#FF4081", fontWeight: 700 }}>● Delivery closed</span>
                   )}
                 </p>
               </div>
@@ -441,21 +421,16 @@ if (pendingId) botMsg.pendingCancelId = pendingId;
 
           {!minimised && (
             <>
-              {/* Hours banner — always shown */}
-              <Tooltip title={hoursStatus} placement="topLeft">
               <HoursBanner status={hoursStatus} />
-              </Tooltip>
-              {/* Cancel result banner */}
+
               {cancelResult && (
                 <CancelCard cancelResult={cancelResult} onDismiss={() => setCancelResult(null)} />
               )}
 
-              {/* Sign In Prompt for unauthenticated users */}
               {!isAuth && <SignInPrompt />}
 
               {/* Messages area */}
               <div className="kb-ai-messages">
-                {/* Show closed notice instead of messages on first open when closed */}
                 {!isOpen && messages.length === 1 ? (
                   <ClosedNotice status={hoursStatus} />
                 ) : (
@@ -472,7 +447,7 @@ if (pendingId) botMsg.pendingCancelId = pendingId;
                 {loading && (
                   <div className="kb-ai-bubble-row kb-ai-bubble-bot">
                     <div className="kb-ai-avatar kb-ai-avatar-bot">
-                      <img src="https://api.dicebear.com/9.x/avataaars/svg?seed=ai" alt="profile picture" className="w-3.5 h-3.5" />
+                      <img src={AVATAR_URL} alt="AI avatar" className="w-3.5 h-3.5" />
                     </div>
                     <div className="kb-ai-bubble kb-ai-bubble-b kb-ai-typing-bubble">
                       <span /><span /><span />
@@ -482,13 +457,13 @@ if (pendingId) botMsg.pendingCancelId = pendingId;
                 <div ref={bottomRef} />
               </div>
 
-              {/* Quick chips — only when open + no conversation yet + authenticated */}
+              {/* Quick chips */}
               {isAuth && isOpen && messages.length === 1 && (
                 <div className="kb-ai-quick-row">
-                  {["Track my order", "Cancel an order", "What's on the menu?","Change Language", "View all orders ", "Leave feedback"].map((q) => (
+                  {["Track my order", "Cancel an order", "What's on the menu?", "Change Language", "View all orders", "Leave feedback"].map((q) => (
                     <button
                       key={q}
-                      className="kb-ai-quick-chip flex gap-2 "
+                      className="kb-ai-quick-chip flex gap-2"
                       onClick={() => { setInput(q); setTimeout(() => inputRef.current?.focus(), 50); }}
                     >
                       <Forward className="w-3 h-3" /> {q}
@@ -499,24 +474,24 @@ if (pendingId) botMsg.pendingCancelId = pendingId;
 
               {/* Input */}
               <div className="kb-ai-input-row">
-  <textarea
-  ref={inputRef}
-  className="kb-ai-input"
-  rows={1}
-  placeholder={
-        !isAuth     ? "Sign in to chat"
-         : !isOpen   ? "Ask about your order…"
-         : "Ask KotaBot anything…"
-     }
-  value={input}
-  disabled={loading || !isAuth}
-  onChange={(e) => {
-  if (e.target.value.length > 2000) return; // guard against huge pastes
-  setInput(e.target.value);
-}}
-  onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && (e.preventDefault(), handleSend())}
-  style={{ resize: "none", overflow: "hidden" }}
-/>
+                <textarea
+                  ref={inputRef}
+                  className="kb-ai-input"
+                  rows={1}
+                  placeholder={
+                    !isAuth ? "Sign in to chat"
+                      : !isOpen ? "Ask about your order…"
+                        : "Ask KotaBot anything…"
+                  }
+                  value={input}
+                  disabled={loading || !isAuth}
+                  onChange={(e) => {
+                    if (e.target.value.length > 2000) return;
+                    setInput(e.target.value);
+                  }}
+                  onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && (e.preventDefault(), handleSend())}
+                  style={{ resize: "none", overflow: "hidden" }}
+                />
                 <button
                   className="kb-ai-send-btn"
                   onClick={handleSend}
@@ -539,292 +514,307 @@ if (pendingId) botMsg.pendingCancelId = pendingId;
 const styles = `
   @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
+  :root {
+    --kb-cyan:    #00E5FF;
+    --kb-cyan2:   #00B8D4;
+    --kb-purple:  #7C4DFF;
+    --kb-purple2: #651FFF;
+    --kb-silver:  #C0C0C0;
+    --kb-silver2: #A0A0B0;
+    --kb-dark:    #0D0D1A;
+    --kb-card:    #141428;
+    --kb-text:    #E8E8F0;
+    --kb-muted:   rgba(200,200,220,0.55);
+    --kb-input:   rgba(200,200,220,0.07);
+    --kb-ring:    rgba(0,229,255,0.35);
+  }
+
   /* ── FAB ── */
   .kb-ai-fab {
-    position:fixed; bottom:24px; right:24px; z-index:9998;
-    display:flex; align-items:center; gap:8px;
-    background:#DA291C; color:white; border:none; cursor:pointer;
-    font-family:'Plus Jakarta Sans',sans-serif; font-weight:800; font-size:13px;
-    padding:13px 20px; border-radius:50px;
-    box-shadow:0 8px 28px rgba(218,41,28,0.55),0 0 0 2px rgba(255,199,44,0.25);
-    transition:all 0.25s; animation:kbAiFabIn 0.4s cubic-bezier(0.34,1.56,0.64,1);
-    position:fixed;
+    position: fixed; bottom: 24px; right: 24px; z-index: 9998;
+    display: flex; align-items: center; gap: 8px;
+    background: linear-gradient(135deg, var(--kb-purple) 0%, var(--kb-cyan2) 100%);
+    color: white; border: none; cursor: pointer;
+    font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 800; font-size: 13px;
+    padding: 13px 20px; border-radius: 50px;
+    box-shadow: 0 8px 28px rgba(124,77,255,0.45), 0 0 0 2px rgba(0,229,255,0.25);
+    transition: all 0.25s; animation: kbAiFabIn 0.4s cubic-bezier(0.34,1.56,0.64,1);
   }
-  .kb-ai-fab:hover { transform:scale(1.06); background:#b91c1c; }
+  .kb-ai-fab:hover { transform: scale(1.06); filter: brightness(1.1); }
 
   .kb-fab-status-dot {
-    width:9px; height:9px; border-radius:50%; flex-shrink:0;
-    border:2px solid rgba(14,7,0,0.5);
-    box-shadow:0 0 6px currentColor;
+    width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0;
+    border: 2px solid rgba(13,13,26,0.5);
+    box-shadow: 0 0 8px currentColor;
   }
 
   .kb-ai-unread {
-    position:absolute; top:-6px; right:-6px;
-    min-width:20px; height:20px; border-radius:50px;
-    background:; color:;
-    font-size:11px; font-weight:900;
-    display:flex; align-items:center; justify-content:center; padding:0 5px;
-    animation:kbPop 0.3s cubic-bezier(0.34,1.56,0.64,1);
+    position: absolute; top: -6px; right: -6px;
+    min-width: 20px; height: 20px; border-radius: 50px;
+    background: var(--kb-cyan); color: var(--kb-dark);
+    font-size: 11px; font-weight: 900;
+    display: flex; align-items: center; justify-content: center; padding: 0 5px;
+    animation: kbPop 0.3s cubic-bezier(0.34,1.56,0.64,1);
   }
   @keyframes kbAiFabIn { from{opacity:0;transform:translateY(20px) scale(0.85)} to{opacity:1;transform:none} }
   @keyframes kbPop { from{transform:scale(0)} to{transform:scale(1)} }
 
   /* ── Window ── */
   .kb-ai-window {
-    position:fixed; bottom:24px; right:24px; z-index:9999;
-    width:min(400px,calc(100vw - 32px));
-    background:#1a0e00; border:1px solid rgba(255,199,44,0.15); border-radius:22px;
-    box-shadow:0 24px 60px rgba(0,0,0,0.7),0 0 0 1px rgba(255,199,44,0.06);
-    display:flex; flex-direction:column;
-    font-family:'Plus Jakarta Sans',system-ui,sans-serif;
-    overflow:hidden; animation:kbWindowIn 0.3s cubic-bezier(0.34,1.2,0.64,1);
-    max-height:calc(100vh - 48px);
+    position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+    width: min(400px, calc(100vw - 32px));
+    background: var(--kb-card);
+    border: 1px solid rgba(0,229,255,0.12);
+    border-radius: 22px;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.7), 0 0 0 1px rgba(124,77,255,0.08);
+    display: flex; flex-direction: column;
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    overflow: hidden; animation: kbWindowIn 0.3s cubic-bezier(0.34,1.2,0.64,1);
+    max-height: calc(100vh - 48px);
   }
-  .kb-ai-minimised { height:auto !important; }
+  .kb-ai-minimised { height: auto !important; }
   @keyframes kbWindowIn { from{opacity:0;transform:translateY(16px) scale(0.96)} to{opacity:1;transform:none} }
 
   /* ── Header ── */
   .kb-ai-header {
-    display:flex; align-items:center; justify-content:space-between; padding:14px 16px;
-    background:linear-gradient(135deg,rgba(218,41,28,0.18) 0%,rgba(255,199,44,0.06) 100%);
-    border-bottom:1px solid rgba(255,199,44,0.1); flex-shrink:0;
+    display: flex; align-items: center; justify-content: space-between; padding: 14px 16px;
+    background: linear-gradient(135deg, rgba(124,77,255,0.15) 0%, rgba(0,229,255,0.06) 100%);
+    border-bottom: 1px solid rgba(0,229,255,0.1); flex-shrink: 0;
   }
-  .kb-ai-header-left { display:flex; align-items:center; gap:10px; }
-  .kb-ai-header-icon {
-    width:34px; height:34px; background:#FFC72C; border-radius:10px;
-    display:flex; align-items:center; justify-content:center; flex-shrink:0;
-    box-shadow:0 0 16px rgba(255,199,44,0.35);
-  }
-  .kb-ai-header-name { font-family:'Bebas Neue',sans-serif; font-size:17px; letter-spacing:2px; color:#fff8e7; line-height:1; }
-  .kb-ai-header-sub  { font-size:10px; color:rgba(255,248,231,0.5); font-weight:600; margin-top:2px; }
-  .kb-ai-typing { color:#FFC72C; animation:kbBlink 1s ease infinite; }
+  .kb-ai-header-left { display: flex; align-items: center; gap: 10px; }
+  .kb-ai-header-name { font-family: 'Bebas Neue', sans-serif; font-size: 17px; letter-spacing: 2px; color: var(--kb-text); line-height: 1; }
+  .kb-ai-header-sub  { font-size: 10px; color: rgba(200,200,220,0.5); font-weight: 600; margin-top: 2px; }
+  .kb-ai-typing { color: var(--kb-cyan); animation: kbBlink 1s ease infinite; }
   @keyframes kbBlink { 0%,100%{opacity:1} 50%{opacity:0.4} }
-  .kb-ai-header-actions { display:flex; align-items:center; gap:4px; }
+  .kb-ai-header-actions { display: flex; align-items: center; gap: 4px; }
   .kb-ai-icon-btn {
-    width:30px; height:30px; border-radius:8px;
-    background:rgba(255,248,231,0.06); border:1px solid rgba(255,199,44,0.12);
-    display:flex; align-items:center; justify-content:center;
-    color:rgba(255,248,231,0.5); cursor:pointer; transition:all 0.18s;
+    width: 30px; height: 30px; border-radius: 8px;
+    background: rgba(200,200,220,0.06); border: 1px solid rgba(0,229,255,0.12);
+    display: flex; align-items: center; justify-content: center;
+    color: rgba(200,200,220,0.5); cursor: pointer; transition: all 0.18s;
   }
-  .kb-ai-icon-btn:hover { color:#fff8e7; border-color:rgba(255,199,44,0.3); }
-  .kb-ai-close-btn:hover { background:rgba(218,41,28,0.25); color:#DA291C; border-color:rgba(218,41,28,0.3); }
+  .kb-ai-icon-btn:hover { color: var(--kb-text); border-color: rgba(0,229,255,0.3); }
+  .kb-ai-close-btn:hover { background: rgba(255,64,129,0.2); color: #FF4081; border-color: rgba(255,64,129,0.3); }
 
   /* ── Sign In Prompt ── */
   .kb-signin-prompt {
-    display:flex; align-items:center; gap:12px;
-    margin:10px 12px 0; padding:12px 14px;
-    background:linear-gradient(135deg,rgba(218,41,28,0.12) 0%,rgba(255,199,44,0.08) 100%);
-    border:1px solid rgba(255,199,44,0.2); border-radius:12px;
-    animation:kbWindowIn 0.25s ease; flex-shrink:0;
+    display: flex; align-items: center; gap: 12px;
+    margin: 10px 12px 0; padding: 12px 14px;
+    background: linear-gradient(135deg, rgba(124,77,255,0.12) 0%, rgba(0,229,255,0.08) 100%);
+    border: 1px solid rgba(0,229,255,0.2); border-radius: 12px;
+    animation: kbWindowIn 0.25s ease; flex-shrink: 0;
   }
   .kb-signin-icon {
-    width:36px; height:36px; border-radius:10px;
-    background:rgba(255,199,44,0.15); border:1px solid rgba(255,199,44,0.25);
-    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+    width: 36px; height: 36px; border-radius: 10px;
+    background: rgba(0,229,255,0.12); border: 1px solid rgba(0,229,255,0.25);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
   }
-  .kb-signin-content { flex:1; }
+  .kb-signin-content { flex: 1; }
   .kb-signin-title {
-    font-family:'Bebas Neue',sans-serif; font-size:14px; letter-spacing:1.5px;
-    color:#fff8e7; margin-bottom:2px;
+    font-family: 'Bebas Neue', sans-serif; font-size: 14px; letter-spacing: 1.5px;
+    color: var(--kb-text); margin-bottom: 2px;
   }
   .kb-signin-text {
-    font-size:11px; color:rgba(255,248,231,0.6); line-height:1.4;
+    font-size: 11px; color: rgba(200,200,220,0.6); line-height: 1.4;
   }
   .kb-signin-link {
-    color:#FFC72C; font-weight:700; text-decoration:none;
-    border-bottom:1px solid rgba(255,199,44,0.4);
-    transition:all 0.18s;
+    color: var(--kb-cyan); font-weight: 700; text-decoration: none;
+    border-bottom: 1px solid rgba(0,229,255,0.4);
+    transition: all 0.18s;
   }
   .kb-signin-link:hover {
-    color:#fff8e7; border-bottom-color:#FFC72C;
+    color: var(--kb-text); border-bottom-color: var(--kb-cyan);
   }
 
   /* ── Hours banner ── */
   .kb-hours-banner {
-    display:flex; align-items:center; gap:6px;
-    padding:7px 16px; font-size:11px; font-weight:700;
-    flex-shrink:0;
+    display: flex; align-items: center; gap: 6px;
+    padding: 7px 16px; font-size: 11px; font-weight: 700;
+    flex-shrink: 0;
   }
-  .kb-hours-open   { background:rgba(74,222,128,0.08);  color:#4ade80; border-bottom:1px solid rgba(74,222,128,0.15); }
-  .kb-hours-warn   { background:rgba(255,199,44,0.1);   color:#FFC72C; border-bottom:1px solid rgba(255,199,44,0.2); }
-  .kb-hours-closed { background:rgba(248,113,113,0.08); color:#f87171; border-bottom:1px solid rgba(248,113,113,0.15); }
+  .kb-hours-open   { background: rgba(0,229,255,0.08);  color: var(--kb-cyan); border-bottom: 1px solid rgba(0,229,255,0.15); }
+  .kb-hours-warn   { background: rgba(255,193,7,0.1);    color: #FFD740; border-bottom: 1px solid rgba(255,193,7,0.2); }
+  .kb-hours-closed { background: rgba(255,64,129,0.08);  color: #FF4081; border-bottom: 1px solid rgba(255,64,129,0.15); }
 
   /* ── Closed notice ── */
   .kb-closed-wrap {
-    display:flex; flex-direction:column; align-items:center;
-    gap:10px; padding:20px 16px; text-align:center;
+    display: flex; flex-direction: column; align-items: center;
+    gap: 10px; padding: 20px 16px; text-align: center;
   }
   .kb-closed-icon {
-    width:48px; height:48px; border-radius:14px;
-    background:rgba(255,199,44,0.1); border:1px solid rgba(255,199,44,0.2);
-    display:flex; align-items:center; justify-content:center;
+    width: 48px; height: 48px; border-radius: 14px;
+    background: rgba(0,229,255,0.1); border: 1px solid rgba(0,229,255,0.2);
+    display: flex; align-items: center; justify-content: center;
   }
   .kb-closed-title {
-    font-family:'Bebas Neue',sans-serif; font-size:20px; letter-spacing:2px; color:#fff8e7;
+    font-family: 'Bebas Neue', sans-serif; font-size: 20px; letter-spacing: 2px; color: var(--kb-text);
   }
-  .kb-closed-msg { font-size:12px; color:rgba(255,248,231,0.55); line-height:1.5; max-width:240px; }
+  .kb-closed-msg { font-size: 12px; color: rgba(200,200,220,0.55); line-height: 1.5; max-width: 240px; }
   .kb-closed-sched {
-    width:100%; background:rgba(255,248,231,0.03);
-    border:1px solid rgba(255,199,44,0.1); border-radius:12px;
-    padding:12px 14px; display:flex; flex-direction:column; gap:6px;
+    width: 100%; background: rgba(200,200,220,0.03);
+    border: 1px solid rgba(0,229,255,0.1); border-radius: 12px;
+    padding: 12px 14px; display: flex; flex-direction: column; gap: 6px;
   }
-  .kb-closed-row { display:flex; justify-content:space-between; font-size:11px; }
-  .kb-closed-day  { color:rgba(255,248,231,0.45); font-weight:600; }
-  .kb-closed-hrs  { color:rgba(255,248,231,0.7);  font-weight:700; }
-  .kb-closed-today .kb-closed-day { color:#FFC72C; }
-  .kb-closed-today .kb-closed-hrs { color:#FFC72C; }
+  .kb-closed-row { display: flex; justify-content: space-between; font-size: 11px; }
+  .kb-closed-day  { color: rgba(200,200,220,0.45); font-weight: 600; }
+  .kb-closed-hrs  { color: rgba(200,200,220,0.7);  font-weight: 700; }
+  .kb-closed-today .kb-closed-day { color: var(--kb-cyan); }
+  .kb-closed-today .kb-closed-hrs { color: var(--kb-cyan); }
 
   /* ── Cancel result banner ── */
   .kb-cancel-card {
-    display:flex; align-items:flex-start; gap:10px;
-    margin:10px 12px 0; padding:10px 13px; border-radius:12px;
-    border:1px solid; flex-shrink:0; animation:kbWindowIn 0.25s ease;
+    display: flex; align-items: flex-start; gap: 10px;
+    margin: 10px 12px 0; padding: 10px 13px; border-radius: 12px;
+    border: 1px solid; flex-shrink: 0; animation: kbWindowIn 0.25s ease;
   }
-  .kb-cancel-success { background:rgba(74,222,128,0.08);  border-color:rgba(74,222,128,0.25); }
-  .kb-cancel-fail    { background:rgba(248,113,113,0.08); border-color:rgba(248,113,113,0.25); }
-  .kb-cancel-title   { font-size:12px; font-weight:800; color:#fff8e7; }
-  .kb-cancel-sub     { font-size:11px; color:rgba(255,248,231,0.55); margin-top:2px; }
+  .kb-cancel-success { background: rgba(0,229,255,0.08);  border-color: rgba(0,229,255,0.25); }
+  .kb-cancel-fail    { background: rgba(255,64,129,0.08); border-color: rgba(255,64,129,0.25); }
+  .kb-cancel-title   { font-size: 12px; font-weight: 800; color: var(--kb-text); }
+  .kb-cancel-sub     { font-size: 11px; color: rgba(200,200,220,0.55); margin-top: 2px; }
   .kb-cancel-dismiss {
-    background:none; border:none; color:rgba(255,248,231,0.4);
-    cursor:pointer; font-size:16px; line-height:1; padding:0 0 0 4px; flex-shrink:0;
+    background: none; border: none; color: rgba(200,200,220,0.4);
+    cursor: pointer; font-size: 16px; line-height: 1; padding: 0 0 0 4px; flex-shrink: 0;
   }
-  .kb-cancel-dismiss:hover { color:#fff8e7; }
+  .kb-cancel-dismiss:hover { color: var(--kb-text); }
 
   /* ── Copy Order ID ── */
   .kb-order-id-row {
-    display:flex; align-items:center; gap:8px;
-    margin-top:10px; padding-top:10px;
-    border-top:1px solid rgba(255,199,44,0.12);
+    display: flex; align-items: center; gap: 8px;
+    margin-top: 10px; padding-top: 10px;
+    border-top: 1px solid rgba(0,229,255,0.12);
   }
   .kb-order-id-label {
-    font-size:10px; color:rgba(255,248,231,0.4); font-weight:600;
+    font-size: 10px; color: rgba(200,200,220,0.4); font-weight: 600;
   }
   .kb-copy-order-btn {
-    display:flex; align-items:center; gap:5px;
-    padding:5px 10px; border-radius:8px;
-    background:rgba(255,199,44,0.1); border:1px solid rgba(255,199,44,0.25);
-    color:rgba(255,248,231,0.7); font-size:10px; font-weight:700;
-    cursor:pointer; transition:all 0.18s; font-family:'Plus Jakarta Sans',sans-serif;
+    display: flex; align-items: center; gap: 5px;
+    padding: 5px 10px; border-radius: 8px;
+    background: rgba(0,229,255,0.1); border: 1px solid rgba(0,229,255,0.25);
+    color: rgba(200,200,220,0.7); font-size: 10px; font-weight: 700;
+    cursor: pointer; transition: all 0.18s; font-family: 'Plus Jakarta Sans', sans-serif;
   }
   .kb-copy-order-btn:hover {
-    background:rgba(255,199,44,0.2); border-color:rgba(255,199,44,0.4);
-    color:#fff8e7;
+    background: rgba(0,229,255,0.2); border-color: rgba(0,229,255,0.4);
+    color: var(--kb-text);
   }
-  .kb-copy-text { white-space:nowrap; }
+  .kb-copy-text { white-space: nowrap; }
 
   /* ── Cancel confirm inside bubble ── */
-  .kb-confirm-row { margin-top:10px; padding-top:10px; border-top:1px solid rgba(255,199,44,0.12); }
-  .kb-confirm-text { font-size:11px; font-weight:700; color:rgba(255,248,231,0.6); margin-bottom:8px; }
-  .kb-confirm-btns { display:flex; gap:8px; }
+  .kb-confirm-row { margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(0,229,255,0.12); }
+  .kb-confirm-text { font-size: 11px; font-weight: 700; color: rgba(200,200,220,0.6); margin-bottom: 8px; }
+  .kb-confirm-btns { display: flex; gap: 8px; }
   .kb-confirm-yes {
-    flex:1; display:flex; align-items:center; justify-content:center; gap:5px;
-    background:#DA291C; color:white; border:none; cursor:pointer;
-    font-family:'Plus Jakarta Sans',sans-serif; font-weight:800; font-size:11px;
-    padding:8px 12px; border-radius:8px; transition:all 0.18s;
+    flex: 1; display: flex; align-items: center; justify-content: center; gap: 5px;
+    background: linear-gradient(135deg, var(--kb-purple) 0%, var(--kb-purple2) 100%);
+    color: white; border: none; cursor: pointer;
+    font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 800; font-size: 11px;
+    padding: 8px 12px; border-radius: 8px; transition: all 0.18s;
   }
-  .kb-confirm-yes:hover:not(:disabled) { background:#b91c1c; }
-  .kb-confirm-yes:disabled { opacity:0.55; cursor:not-allowed; }
+  .kb-confirm-yes:hover:not(:disabled) { filter: brightness(1.15); }
+  .kb-confirm-yes:disabled { opacity: 0.55; cursor: not-allowed; }
   .kb-confirm-no {
-    flex:1; background:rgba(255,248,231,0.06); border:1px solid rgba(255,199,44,0.15);
-    color:rgba(255,248,231,0.6); cursor:pointer;
-    font-family:'Plus Jakarta Sans',sans-serif; font-weight:700; font-size:11px;
-    padding:8px 12px; border-radius:8px; transition:all 0.18s;
+    flex: 1; background: rgba(200,200,220,0.06); border: 1px solid rgba(0,229,255,0.15);
+    color: rgba(200,200,220,0.6); cursor: pointer;
+    font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700; font-size: 11px;
+    padding: 8px 12px; border-radius: 8px; transition: all 0.18s;
   }
-  .kb-confirm-no:hover { color:#fff8e7; border-color:rgba(255,199,44,0.3); }
+  .kb-confirm-no:hover { color: var(--kb-text); border-color: rgba(0,229,255,0.3); }
 
   /* ── Messages ── */
   .kb-ai-messages {
-    flex:1; overflow-y:auto; padding:14px 14px 6px;
-    display:flex; flex-direction:column; gap:10px;
-    max-height:360px; min-height:160px;
-    scrollbar-width:thin; scrollbar-color:rgba(255,199,44,0.18) transparent;
+    flex: 1; overflow-y: auto; padding: 14px 14px 6px;
+    display: flex; flex-direction: column; gap: 10px;
+    max-height: 360px; min-height: 160px;
+    scrollbar-width: thin; scrollbar-color: rgba(0,229,255,0.18) transparent;
   }
-  .kb-ai-messages::-webkit-scrollbar { width:4px; }
-  .kb-ai-messages::-webkit-scrollbar-thumb { background:rgba(255,199,44,0.18); border-radius:4px; }
+  .kb-ai-messages::-webkit-scrollbar { width: 4px; }
+  .kb-ai-messages::-webkit-scrollbar-thumb { background: rgba(0,229,255,0.18); border-radius: 4px; }
 
   /* ── Bubbles ── */
-  .kb-ai-bubble-row { display:flex; align-items:flex-end; gap:7px; }
-  .kb-ai-bubble-user { flex-direction:row-reverse; }
-  .kb-ai-bubble-bot  { flex-direction:row; }
+  .kb-ai-bubble-row { display: flex; align-items: flex-end; gap: 7px; }
+  .kb-ai-bubble-user { flex-direction: row-reverse; }
+  .kb-ai-bubble-bot  { flex-direction: row; }
   .kb-ai-avatar {
-    width:26px; height:26px; border-radius:8px; flex-shrink:0;
-    display:flex; align-items:center; justify-content:center;
+    width: 26px; height: 26px; border-radius: 8px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
   }
-  .kb-ai-avatar-bot  { background:rgba(255,199,44,0.15); color:#FFC72C; }
-  .kb-ai-avatar-user { background:rgba(218,41,28,0.2);  color:#DA291C; }
+  .kb-ai-avatar-bot  { background: rgba(0,229,255,0.15); color: var(--kb-cyan); }
+  .kb-ai-avatar-user { background: rgba(124,77,255,0.2);  color: var(--kb-purple); }
   .kb-ai-bubble {
-    max-width:80%; padding:10px 14px; border-radius:14px;
-    font-size:13px; font-weight:500; line-height:1.6; word-break:break-word;
+    max-width: 80%; padding: 10px 14px; border-radius: 14px;
+    font-size: 13px; font-weight: 500; line-height: 1.6; word-break: break-word;
   }
   .kb-ai-bubble-b {
-    background:rgba(255,248,231,0.06); border:1px solid rgba(255,199,44,0.1);
-    color:#fff8e7; border-bottom-left-radius:4px;
+    background: rgba(200,200,220,0.06); border: 1px solid rgba(0,229,255,0.1);
+    color: var(--kb-text); border-bottom-left-radius: 4px;
   }
   .kb-ai-bubble-u {
-    background:#DA291C; color:white; border-bottom-right-radius:4px;
-    box-shadow:0 2px 10px rgba(218,41,28,0.3);
+    background: linear-gradient(135deg, var(--kb-purple) 0%, var(--kb-purple2) 100%);
+    color: white; border-bottom-right-radius: 4px;
+    box-shadow: 0 2px 10px rgba(124,77,255,0.3);
   }
 
   /* ── Markdown ── */
-  .kb-md-p { margin:0 0 6px 0; } .kb-md-p:last-child { margin-bottom:0; }
-  .kb-md-strong { color:#FFC72C; font-weight:800; }
-  .kb-md-em     { color:rgba(255,248,231,0.75); font-style:italic; }
-  .kb-md-ul,.kb-md-ol { margin:6px 0; padding-left:18px; display:flex; flex-direction:column; gap:3px; }
-  .kb-md-li { font-size:13px; line-height:1.5; color:#fff8e7; }
-  .kb-md-ul .kb-md-li { list-style:disc; } .kb-md-ol .kb-md-li { list-style:decimal; }
-  .kb-md-a { color:#FFC72C; text-decoration:underline; text-underline-offset:2px; font-weight:600; }
-  .kb-md-a:hover { color:#fff8e7; }
-  .kb-md-code-inline { background:rgba(255,199,44,0.12); border:1px solid rgba(255,199,44,0.2); color:#FFC72C; font-family:monospace; font-size:12px; padding:1px 5px; border-radius:5px; }
-  .kb-md-pre { background:rgba(0,0,0,0.35); border:1px solid rgba(255,199,44,0.12); border-radius:8px; padding:10px 12px; margin:6px 0; overflow-x:auto; font-size:11px; font-family:monospace; color:#fff8e7; line-height:1.6; }
-  .kb-md-blockquote { border-left:3px solid #FFC72C; padding:4px 10px; margin:6px 0; background:rgba(255,199,44,0.06); border-radius:0 6px 6px 0; color:rgba(255,248,231,0.75); font-style:italic; font-size:12px; }
-  .kb-md-h  { font-weight:800; color:#FFC72C; font-size:14px; margin:4px 0 2px; }
-  .kb-md-h3 { font-weight:700; color:#fff8e7; font-size:13px; margin:4px 0 2px; }
-  .kb-md-hr { border:none; border-top:1px solid rgba(255,199,44,0.15); margin:8px 0; }
+  .kb-md-p { margin: 0 0 6px 0; } .kb-md-p:last-child { margin-bottom: 0; }
+  .kb-md-strong { color: var(--kb-cyan); font-weight: 800; }
+  .kb-md-em     { color: rgba(200,200,220,0.75); font-style: italic; }
+  .kb-md-ul,.kb-md-ol { margin: 6px 0; padding-left: 18px; display: flex; flex-direction: column; gap: 3px; }
+  .kb-md-li { font-size: 13px; line-height: 1.5; color: var(--kb-text); }
+  .kb-md-ul .kb-md-li { list-style: disc; } .kb-md-ol .kb-md-li { list-style: decimal; }
+  .kb-md-a { color: var(--kb-cyan); text-decoration: underline; text-underline-offset: 2px; font-weight: 600; }
+  .kb-md-a:hover { color: var(--kb-text); }
+  .kb-md-code-inline { background: rgba(0,229,255,0.12); border: 1px solid rgba(0,229,255,0.2); color: var(--kb-cyan); font-family: monospace; font-size: 12px; padding: 1px 5px; border-radius: 5px; }
+  .kb-md-pre { background: rgba(0,0,0,0.35); border: 1px solid rgba(0,229,255,0.12); border-radius: 8px; padding: 10px 12px; margin: 6px 0; overflow-x: auto; font-size: 11px; font-family: monospace; color: var(--kb-text); line-height: 1.6; }
+  .kb-md-blockquote { border-left: 3px solid var(--kb-cyan); padding: 4px 10px; margin: 6px 0; background: rgba(0,229,255,0.06); border-radius: 0 6px 6px 0; color: rgba(200,200,220,0.75); font-style: italic; font-size: 12px; }
+  .kb-md-h  { font-weight: 800; color: var(--kb-cyan); font-size: 14px; margin: 4px 0 2px; }
+  .kb-md-h3 { font-weight: 700; color: var(--kb-text); font-size: 13px; margin: 4px 0 2px; }
+  .kb-md-hr { border: none; border-top: 1px solid rgba(0,229,255,0.15); margin: 8px 0; }
 
   /* ── Typing dots ── */
-  .kb-ai-typing-bubble { display:flex; align-items:center; gap:5px; padding:10px 14px; }
-  .kb-ai-typing-bubble span { width:6px; height:6px; border-radius:50%; background:rgba(255,199,44,0.6); animation:kbDot 1.2s ease infinite; }
-  .kb-ai-typing-bubble span:nth-child(2) { animation-delay:0.2s; }
-  .kb-ai-typing-bubble span:nth-child(3) { animation-delay:0.4s; }
+  .kb-ai-typing-bubble { display: flex; align-items: center; gap: 5px; padding: 10px 14px; }
+  .kb-ai-typing-bubble span { width: 6px; height: 6px; border-radius: 50%; background: rgba(0,229,255,0.6); animation: kbDot 1.2s ease infinite; }
+  .kb-ai-typing-bubble span:nth-child(2) { animation-delay: 0.2s; }
+  .kb-ai-typing-bubble span:nth-child(3) { animation-delay: 0.4s; }
   @keyframes kbDot { 0%,80%,100%{transform:scale(0.6);opacity:0.5} 40%{transform:scale(1);opacity:1} }
 
   /* ── Quick chips ── */
-  .kb-ai-quick-row { display:flex; flex-wrap:wrap; gap:6px; padding:6px 14px 10px; flex-shrink:0; }
+  .kb-ai-quick-row { display: flex; flex-wrap: wrap; gap: 6px; padding: 6px 14px 10px; flex-shrink: 0; }
   .kb-ai-quick-chip {
-    padding:5px 11px; border-radius:10px;
-    background:rgba(255,199,44,0.07); border:1px solid rgba(255,199,44,0.2);
-    color:rgba(255,248,231,0.7); font-size:11px; font-weight:700; cursor:pointer;
-    transition:all 0.18s; font-family:'Plus Jakarta Sans',sans-serif; white-space:nowrap;
+    padding: 5px 11px; border-radius: 10px;
+    background: rgba(0,229,255,0.07); border: 1px solid rgba(0,229,255,0.2);
+    color: rgba(200,200,220,0.7); font-size: 11px; font-weight: 700; cursor: pointer;
+    transition: all 0.18s; font-family: 'Plus Jakarta Sans', sans-serif; white-space: nowrap;
   }
-  .kb-ai-quick-chip:hover { background:rgba(255,199,44,0.15); color:#fff8e7; border-color:rgba(255,199,44,0.4); }
+  .kb-ai-quick-chip:hover { background: rgba(0,229,255,0.15); color: var(--kb-text); border-color: rgba(0,229,255,0.4); }
 
   /* ── Input row ── */
   .kb-ai-input-row {
-    display:flex; align-items:center; gap:8px; padding:10px 12px 14px; flex-shrink:0;
-    border-top:1px solid rgba(255,199,44,0.08);
+    display: flex; align-items: center; gap: 8px; padding: 10px 12px 14px; flex-shrink: 0;
+    border-top: 1px solid rgba(0,229,255,0.08);
   }
   .kb-ai-input {
-    flex:1; background:rgba(255,248,231,0.05); border:1.5px solid rgba(255,199,44,0.12);
-    border-radius:12px; padding:9px 13px; color:#fff8e7;
-    font-size:13px; font-weight:500; font-family:'Plus Jakarta Sans',sans-serif;
-    outline:none; transition:border-color 0.2s;
+    flex: 1; background: rgba(200,200,220,0.05); border: 1.5px solid rgba(0,229,255,0.12);
+    border-radius: 12px; padding: 9px 13px; color: var(--kb-text);
+    font-size: 13px; font-weight: 500; font-family: 'Plus Jakarta Sans', sans-serif;
+    outline: none; transition: border-color 0.2s;
   }
-  .kb-ai-input:focus { border-color:rgba(255,199,44,0.4); }
-  .kb-ai-input::placeholder { color:rgba(255,248,231,0.3); }
-  .kb-ai-input:disabled { opacity:0.5; cursor:not-allowed; }
+  .kb-ai-input:focus { border-color: rgba(0,229,255,0.4); }
+  .kb-ai-input::placeholder { color: rgba(200,200,220,0.3); }
+  .kb-ai-input:disabled { opacity: 0.5; cursor: not-allowed; }
   .kb-ai-send-btn {
-    width:38px; height:38px; border-radius:11px; flex-shrink:0;
-    background:#DA291C; border:none; cursor:pointer;
-    display:flex; align-items:center; justify-content:center;
-    color:white; transition:all 0.18s; box-shadow:0 3px 12px rgba(218,41,28,0.4);
+    width: 38px; height: 38px; border-radius: 11px; flex-shrink: 0;
+    background: linear-gradient(135deg, var(--kb-purple) 0%, var(--kb-cyan2) 100%);
+    border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    color: white; transition: all 0.18s; box-shadow: 0 3px 12px rgba(124,77,255,0.4);
   }
-  .kb-ai-send-btn:hover:not(:disabled) { background:#b91c1c; transform:scale(1.05); }
-  .kb-ai-send-btn:disabled { opacity:0.45; cursor:not-allowed; transform:none; }
-  @keyframes kbSpin { to { transform:rotate(360deg); } }
-  .kb-ai-spin { animation:kbSpin 0.75s linear infinite; }
+  .kb-ai-send-btn:hover:not(:disabled) { filter: brightness(1.15); transform: scale(1.05); }
+  .kb-ai-send-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+  @keyframes kbSpin { to { transform: rotate(360deg); } }
+  .kb-ai-spin { animation: kbSpin 0.75s linear infinite; }
 
-  @media (max-width:480px) {
-    .kb-ai-window { right:12px; bottom:12px; width:calc(100vw - 24px); }
-    .kb-ai-fab    { right:12px; bottom:12px; }
+  @media (max-width: 480px) {
+    .kb-ai-window { right: 12px; bottom: 12px; width: calc(100vw - 24px); }
+    .kb-ai-fab    { right: 12px; bottom: 12px; }
   }
 `;
