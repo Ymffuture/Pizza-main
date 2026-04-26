@@ -85,30 +85,21 @@ User message:
       }
     );
 
+    if (!res.ok) throw new Error(`Gemini ${res.status}`);
     const data = await res.json();
-
-    // 🔥 Safe extraction (VERY IMPORTANT)
-    const text =
-      data?.candidates?.[0]?.content?.parts?.[0]?.text || "[]";
-
-    let steps;
-
-    try {
-      steps = JSON.parse(text);
-    } catch {
-      // fallback if model slightly breaks format
-      steps = [];
+    const raw  = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? "";
+ 
+    // Strip any accidental markdown fences
+    const clean = raw.replace(/```json|```/gi, "").trim();
+    const steps = JSON.parse(clean);
+ 
+    if (Array.isArray(steps) && steps.length >= 2 && steps.length <= 6) {
+      return steps.map((s) => String(s));
     }
-
-    // 🧠 Enforce constraints manually (defensive programming)
-    if (!Array.isArray(steps)) return [];
-
-    return steps.slice(0, 5).map((s) =>
-      typeof s === "string" ? s.trim() : ""
-    );
-  } catch (err) {
-    console.error("Gemini error:", err);
-    return [];
+    throw new Error("Bad shape");
+  } catch {
+    // Silent fallback — user never sees an error here
+    return getFallbackSteps(userText);
   }
 }
 
