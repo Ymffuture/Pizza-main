@@ -18,53 +18,71 @@ import { Loader3 } from "./Loader";
 const AVATAR_URL = "https://api.dicebear.com/9.x/avataaars/svg?seed=ai";
 
 /* ─────────────────────────────────────────────────────────────────────────── */
-/*  REASONING CONFIG                                                           */
+/*  REASONING — AI-GENERATED (Claude Haiku) + keyword fallback               */
 /* ─────────────────────────────────────────────────────────────────────────── */
 
-const REASONING_PATHS = {
-  track: [
-    "Identifying order reference in your message…",
-    "Querying order records in the database…",
-    "Fetching current delivery status…",
-    "Checking estimated arrival time…",
-    "Formatting status for you…",
-  ],
-  cancel: [
-    "Parsing cancellation request…",
-    "Verifying order ID…",
-    "Checking cancellation eligibility window…",
-    "Confirming order hasn't been dispatched…",
-    "Preparing confirmation prompt…",
-  ],
-  menu: [
-    "Scanning today's available items…",
-    "Checking stock and specials…",
-    "Matching options to your preferences…",
-    "Curating the best recommendations…",
-  ],
-  feedback: [
-    "Understood — logging your feedback context…",
-    "Identifying the relevant order or item…",
-    "Preparing feedback response…",
-  ],
-  default: [
-    "Reading your message carefully…",
-    "Analysing intent and context…",
-    "Checking relevant information…",
-    "Composing the best reply…",
-  ],
+/* Fallback buckets used when the API call fails / times out */
+const FALLBACK_STEPS = {
+  track:    ["Identifying order reference…", "Querying order records…", "Fetching delivery status…", "Formatting result for you…"],
+  cancel:   ["Parsing cancellation intent…", "Verifying order ID…", "Checking eligibility window…", "Preparing confirmation prompt…"],
+  menu:     ["Scanning available items…", "Checking today's specials…", "Matching your preferences…", "Curating recommendations…"],
+  feedback: ["Logging your feedback context…", "Identifying the relevant item…", "Preparing response…"],
+  default:  ["Reading your message carefully…", "Analysing intent and context…", "Checking relevant info…", "Composing reply…"],
 };
 
-function getReasoningSteps(text) {
+function getFallbackSteps(text) {
   const t = text.toLowerCase();
   if (t.includes("track") || t.includes("where") || t.includes("status") ||
-      (t.includes("order") && !t.includes("cancel"))) return REASONING_PATHS.track;
-  if (t.includes("cancel"))   return REASONING_PATHS.cancel;
-  if (t.includes("menu") || t.includes("suggest") || t.includes("kota") ||
-      t.includes("eat") || t.includes("food"))  return REASONING_PATHS.menu;
-  if (t.includes("feedback") || t.includes("complain") || t.includes("review"))
-    return REASONING_PATHS.feedback;
-  return REASONING_PATHS.default;
+      (t.includes("order") && !t.includes("cancel"))) return FALLBACK_STEPS.track;
+  if (t.includes("cancel"))                          return FALLBACK_STEPS.cancel;
+  if (t.includes("menu") || t.includes("suggest") ||
+      t.includes("kota") || t.includes("eat") ||
+      t.includes("food"))                            return FALLBACK_STEPS.menu;
+  if (t.includes("feedback") || t.includes("complain") ||
+      t.includes("review"))                          return FALLBACK_STEPS.feedback;
+  return FALLBACK_STEPS.default;
+}
+
+/* Calls Claude Haiku to generate 3-5 reasoning steps for the user's message */
+async function generateReasoningSteps(userText) {
+  const SYSTEM = `You are the internal reasoning engine for KotaBot, a South African food-ordering chatbot for KOTABITES.
+Given a user message, return ONLY a JSON array of 3 to 5 short reasoning steps (strings) that KotaBot would think through before replying.
+Rules:
+- Each step must be max 9 words, ending with "…"
+- Steps must be specific to the user's actual message — no generic filler
+- Use active present-tense verbs (e.g. "Checking…", "Verifying…", "Scanning…")
+- If the message mentions an order ID, reference it in a step
+- Return ONLY valid JSON array, no markdown, no explanation
+Example output: ["Identifying the order ID in message…","Querying delivery status from records…","Checking estimated arrival window…","Formatting a clear status update…"]`;
+
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 180,
+        system: SYSTEM,
+        messages: [{ role: "user", content: userText }],
+      }),
+    });
+
+    if (!res.ok) throw new Error(`Haiku ${res.status}`);
+    const data = await res.json();
+    const raw  = data?.content?.[0]?.text?.trim() ?? "";
+
+    // Strip any accidental markdown fences
+    const clean = raw.replace(/```json|```/gi, "").trim();
+    const steps = JSON.parse(clean);
+
+    if (Array.isArray(steps) && steps.length >= 2 && steps.length <= 6) {
+      return steps.map((s) => String(s));
+    }
+    throw new Error("Bad shape");
+  } catch {
+    // Silent fallback — user never sees an error here
+    return getFallbackSteps(userText);
+  }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────── */
@@ -496,7 +514,11 @@ export default function AiChat() {
   }
 
   /* ─────────────────────────────────────────────────────────
-     SEND — orchestrates: reasoning stream → API → preTyping → typewriter
+     SEND — reasoning gen + chat API fire in true parallel
+     Flow: [Haiku reasoning] ──┐
+                               ├─ steps resolved first → animate them in
+           [/ai/chat]    ──────┘  await chat if still pending → close thinking
+                               → preTyping dots → typewriter
   ───────────────────────────────────────────────────────── */
   const handleSend = async () => {
     const text = input.trim();
@@ -512,36 +534,50 @@ export default function AiChat() {
     setLoading(true);
     setCancelResult(null);
 
-    /* ── 1. Insert a placeholder bot message that starts in "thinking" state ── */
-    const reasoningSteps = getReasoningSteps(text);
+    /* ── 1. Insert placeholder — thinking block open, steps empty ── */
     startTimeRef.current = Date.now();
+    setMessages([...updated, {
+      role: "assistant", content: "", preTyping: false, streaming: false,
+      reasoning: { thinking: true, steps: [], elapsed: 0 },
+    }]);
 
-    const placeholder = {
-      role: "assistant",
-      content: "",
-      preTyping: false,
-      streaming: false,
-      reasoning: {
-        thinking: true,
-        steps: [],          // will fill in one-by-one
-        elapsed: 0,
-      },
-    };
-    setMessages([...updated, placeholder]);
+    /* ── 2. Fire BOTH calls simultaneously ── */
+    const firstUserIdx = updated.findIndex((m) => m.role === "user");
+    const apiMessages  = firstUserIdx >= 0 ? updated.slice(firstUserIdx) : updated;
 
-    /* ── 2. Stream reasoning steps in one by one ── */
-    let stepIdx = 0;
-    const STEP_INTERVAL = 380; // ms between each reasoning line
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current  = controller;
+
+    // Reasoning generation (Haiku — fast, small)
+    const reasoningPromise = generateReasoningSteps(text);
+
+    // Main chat call
+    const chatPromise = axiosClient
+      .post("/ai/chat",
+        { messages: apiMessages, order_id: detectedId || contextId || null },
+        { signal: controller.signal })
+      .then((r) => r.data)
+      .catch((err) => {
+        if (err.name === "AbortError" || err.name === "CanceledError") throw err;
+        return { __error: err };
+      });
+
+    /* ── 3. As soon as reasoning resolves, animate steps in ── */
+    //  Chat call keeps running in background during this animation
+    const reasoningSteps = await reasoningPromise;
+    const STEP_INTERVAL  = 360;
 
     await new Promise((resolve) => {
+      let idx = 0;
       const tick = () => {
-        if (stepIdx < reasoningSteps.length) {
-          const nextSteps = reasoningSteps.slice(0, stepIdx + 1);
-          stepIdx++;
+        if (idx < reasoningSteps.length) {
+          const slice = reasoningSteps.slice(0, idx + 1);
+          idx++;
           setMessages((prev) => {
             const next = [...prev];
             const last = { ...next[next.length - 1] };
-            last.reasoning = { ...last.reasoning, steps: nextSteps };
+            last.reasoning = { ...last.reasoning, steps: slice };
             next[next.length - 1] = last;
             return next;
           });
@@ -553,23 +589,13 @@ export default function AiChat() {
       thinkTimerRef.current = setTimeout(tick, STEP_INTERVAL);
     });
 
-    /* ── 3. Fire API in parallel (already resolving by now or await it) ── */
-    const firstUserIdx = updated.findIndex((m) => m.role === "user");
-    const apiMessages  = firstUserIdx >= 0 ? updated.slice(firstUserIdx) : updated;
-
-    abortRef.current?.abort();
-    const controller = new AbortController();
-    abortRef.current = controller;
-
-    let apiData = null;
+    /* ── 4. Await chat (may already be resolved, or still pending) ── */
+    let apiData  = null;
     let apiError = null;
     try {
-      const { data } = await axiosClient.post(
-        "/ai/chat",
-        { messages: apiMessages, order_id: detectedId || contextId || null },
-        { signal: controller.signal },
-      );
-      apiData = data;
+      const result = await chatPromise;
+      if (result?.__error) apiError = result.__error;
+      else apiData = result;
     } catch (err) {
       if (err.name === "AbortError" || err.name === "CanceledError") {
         setLoading(false);
