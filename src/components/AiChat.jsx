@@ -43,52 +43,72 @@ function getFallbackSteps(text) {
   return FALLBACK_STEPS.default;
 }
 
-/* Calls Gemini 2.0 Flash to generate 3-5 reasoning steps for the user's message */
 async function generateReasoningSteps(userText) {
-  const SYSTEM = `You are the internal reasoning engine for KotaBot, a South African food-ordering chatbot for KOTABITES.
-Given a user message, return ONLY a JSON array of 3 to 5 short reasoning steps (strings) that KotaBot would think through before replying.
+  const PROMPT = `
+You are the internal reasoning engine for KotaBot, a South African food-ordering chatbot for KOTABITES.
+
+Given the user message below, return ONLY a JSON array of 3 to 5 short reasoning steps.
+
 Rules:
-- Each step must be max 9 words, ending with "…"
-- Steps must be specific to the user's actual message — no generic filler
-- Use active present-tense verbs (e.g. "Checking…", "Verifying…", "Scanning…")
-- If the message mentions an order ID, reference it in a step
-- Return ONLY valid JSON array, no markdown, no explanation
-Example output: ["Identifying the order ID in message…","Querying delivery status from records…","Checking estimated arrival window…","Formatting a clear status update…"]`;
+- Each step max 9 words, ending with "…"
+- Specific to the message (no generic steps)
+- Use active present tense (Checking…, Verifying…)
+- If order ID exists, include it
+- Return ONLY JSON array
+
+User message:
+"${userText}"
+`;
 
   try {
     const GEMINI_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+
     const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_KEY}`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
-          system_instruction: { parts: [{ text: SYSTEM }] },
-          contents: [{ parts: [{ text: userText }] }],
+          contents: [
+            {
+              parts: [{ text: PROMPT }],
+            },
+          ],
           generationConfig: {
-            maxOutputTokens: 180,
-            temperature: 0.3,
+            temperature: 0.2,
+            maxOutputTokens: 120,
             responseMimeType: "application/json",
           },
         }),
       }
     );
 
-    if (!res.ok) throw new Error(`Gemini ${res.status}`);
     const data = await res.json();
-    const raw  = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? "";
 
-    // Strip any accidental markdown fences
-    const clean = raw.replace(/```json|```/gi, "").trim();
-    const steps = JSON.parse(clean);
+    // 🔥 Safe extraction (VERY IMPORTANT)
+    const text =
+      data?.candidates?.[0]?.content?.parts?.[0]?.text || "[]";
 
-    if (Array.isArray(steps) && steps.length >= 2 && steps.length <= 6) {
-      return steps.map((s) => String(s));
+    let steps;
+
+    try {
+      steps = JSON.parse(text);
+    } catch {
+      // fallback if model slightly breaks format
+      steps = [];
     }
-    throw new Error("Bad shape");
-  } catch {
-    // Silent fallback — user never sees an error here
-    return getFallbackSteps(userText);
+
+    // 🧠 Enforce constraints manually (defensive programming)
+    if (!Array.isArray(steps)) return [];
+
+    return steps.slice(0, 5).map((s) =>
+      typeof s === "string" ? s.trim() : ""
+    );
+  } catch (err) {
+    console.error("Gemini error:", err);
+    return [];
   }
 }
 
