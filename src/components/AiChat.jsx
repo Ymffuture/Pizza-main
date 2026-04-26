@@ -43,62 +43,78 @@ function getFallbackSteps(text) {
   return FALLBACK_STEPS.default;
 }
 
+/* Calls Gemini 2.0 Flash to generate 3-5 reasoning steps for the user's message */
 async function generateReasoningSteps(userText) {
-  const PROMPT = `
-You are the internal reasoning engine for KotaBot, a South African food-ordering chatbot for KOTABITES.
+  // ── Guard: no key → skip API, use fallback immediately ──
+  const GEMINI_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+  if (!GEMINI_KEY) {
+    console.warn("[KotaBot] VITE_GEMINI_API_KEY not set — using fallback reasoning");
+    return getFallbackSteps(userText);
+  }
 
-Given the user message below, return ONLY a JSON array of 3 to 5 short reasoning steps.
+  // Full prompt in contents (system_instruction not needed for structured output)
+  const prompt = `You are the internal reasoning engine for KotaBot, a South African food-ordering chatbot for KOTABITES.
 
+Given this user message: "${userText.replace(/"/g, "'")}"
+
+Return ONLY a JSON array of 3 to 5 short reasoning steps.
 Rules:
 - Each step max 9 words, ending with "…"
-- Specific to the message (no generic steps)
-- Use active present tense (Checking…, Verifying…)
-- If order ID exists, include it
-- Return ONLY JSON array
+- Must be specific to THIS message — no generic filler
+- Active present-tense verbs: Checking…, Verifying…, Scanning…, Fetching…
+- If message has an order ID, reference it in one step
+- Return ONLY the raw JSON array — no markdown, no explanation
 
-User message:
-"${userText}"
-`;
+Example: ["Identifying order ID in message…","Querying delivery records…","Checking estimated arrival window…","Formatting status update…"]`;
 
   try {
-    const GEMINI_KEY = import.meta.env.VITE_GEMINI_API_KEY;
-
     const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,
       {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          contents: [
-            {
-              parts: [{ text: PROMPT }],
-            },
-          ],
+          contents: [{ parts: [{ text: prompt }] }],
           generationConfig: {
             temperature: 0.2,
-            maxOutputTokens: 120,
+            maxOutputTokens: 200,
+            // responseMimeType + responseSchema forces valid JSON array output
             responseMimeType: "application/json",
+            responseSchema: {
+              type: "ARRAY",
+              items: { type: "STRING" },
+            },
           },
         }),
       }
     );
 
-    if (!res.ok) throw new Error(`Gemini ${res.status}`);
-    const data = await res.json();
-    const raw  = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? "";
- 
-    // Strip any accidental markdown fences
+    if (!res.ok) {
+      const errText = await res.text();
+      console.warn(`[KotaBot] Gemini ${res.status}:`, errText);
+      return getFallbackSteps(userText);
+    }
+
+    const data  = await res.json();
+    const raw   = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? "";
     const clean = raw.replace(/```json|```/gi, "").trim();
+
+    if (!clean) {
+      console.warn("[KotaBot] Gemini returned empty text — using fallback");
+      return getFallbackSteps(userText);
+    }
+
     const steps = JSON.parse(clean);
- 
+
     if (Array.isArray(steps) && steps.length >= 2 && steps.length <= 6) {
       return steps.map((s) => String(s));
     }
-    throw new Error("Bad shape");
-  } catch {
-    // Silent fallback — user never sees an error here
+
+    console.warn("[KotaBot] Gemini bad shape:", steps);
+    return getFallbackSteps(userText);
+
+  } catch (err) {
+    console.warn("[KotaBot] generateReasoningSteps error:", err.message);
     return getFallbackSteps(userText);
   }
 }
