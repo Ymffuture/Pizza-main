@@ -18,7 +18,7 @@ import { Loader3 } from "./Loader";
 const AVATAR_URL = "https://api.dicebear.com/9.x/avataaars/svg?seed=ai";
 
 /* ─────────────────────────────────────────────────────────────────────────── */
-/*  REASONING — AI-GENERATED (Claude Haiku) + keyword fallback               */
+/*  REASONING — AI-GENERATED (Gemini 2.0 Flash) + keyword fallback           */
 /* ─────────────────────────────────────────────────────────────────────────── */
 
 /* Fallback buckets used when the API call fails / times out */
@@ -43,7 +43,7 @@ function getFallbackSteps(text) {
   return FALLBACK_STEPS.default;
 }
 
-/* Calls Claude Haiku to generate 3-5 reasoning steps for the user's message */
+/* Calls Gemini 2.0 Flash to generate 3-5 reasoning steps for the user's message */
 async function generateReasoningSteps(userText) {
   const SYSTEM = `You are the internal reasoning engine for KotaBot, a South African food-ordering chatbot for KOTABITES.
 Given a user message, return ONLY a JSON array of 3 to 5 short reasoning steps (strings) that KotaBot would think through before replying.
@@ -56,20 +56,27 @@ Rules:
 Example output: ["Identifying the order ID in message…","Querying delivery status from records…","Checking estimated arrival window…","Formatting a clear status update…"]`;
 
   try {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "claude-haiku-4-5-20251001",
-        max_tokens: 180,
-        system: SYSTEM,
-        messages: [{ role: "user", content: userText }],
-      }),
-    });
+    const GEMINI_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: SYSTEM }] },
+          contents: [{ parts: [{ text: userText }] }],
+          generationConfig: {
+            maxOutputTokens: 180,
+            temperature: 0.3,
+            responseMimeType: "application/json",
+          },
+        }),
+      }
+    );
 
-    if (!res.ok) throw new Error(`Haiku ${res.status}`);
+    if (!res.ok) throw new Error(`Gemini ${res.status}`);
     const data = await res.json();
-    const raw  = data?.content?.[0]?.text?.trim() ?? "";
+    const raw  = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? "";
 
     // Strip any accidental markdown fences
     const clean = raw.replace(/```json|```/gi, "").trim();
@@ -515,7 +522,7 @@ export default function AiChat() {
 
   /* ─────────────────────────────────────────────────────────
      SEND — reasoning gen + chat API fire in true parallel
-     Flow: [Haiku reasoning] ──┐
+     Flow: [Gemini reasoning] ─┐
                                ├─ steps resolved first → animate them in
            [/ai/chat]    ──────┘  await chat if still pending → close thinking
                                → preTyping dots → typewriter
@@ -549,7 +556,7 @@ export default function AiChat() {
     const controller = new AbortController();
     abortRef.current  = controller;
 
-    // Reasoning generation (Haiku — fast, small)
+    // Reasoning generation (Gemini 2.0 Flash — fast, free tier)
     const reasoningPromise = generateReasoningSteps(text);
 
     // Main chat call
