@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import {
   X, Send, BotMessageSquare, Forward, CornerRightUp,
-  Loader2, Loader, Minimize2, Maximize2, XCircle, CheckCircle, Clock,
+  Loader, Minimize2, Maximize2, XCircle, CheckCircle, Clock,
   CircleUser, Copy, Check, Link as LinkIcon, ChevronDown, ChevronRight,
   Brain
 } from "lucide-react";
@@ -18,7 +18,7 @@ import { Loader3 } from "./Loader";
 const AVATAR_URL = "https://api.dicebear.com/9.x/avataaars/svg?seed=ai";
 
 /* ─────────────────────────────────────────────────────────────────────────── */
-/*  REASONING — AI-GENERATED (Gemini 2.0 Flash) + keyword fallback           */
+/*  REASONING — AI-GENERATED (OpenRouter) + keyword fallback                  */
 /* ─────────────────────────────────────────────────────────────────────────── */
 
 /* Last-resort fallback — only used if /ai/reasoning AND network both fail */
@@ -43,8 +43,7 @@ function getFallbackSteps(text) {
   return FALLBACK_STEPS.default;
 }
 
-/* Calls Gemini 2.0 Flash to generate 3-5 reasoning steps for the user's message */
-/* Calls backend /ai/reasoning — Gemini runs server-side, key never exposed */
+/* Calls backend /ai/reasoning — OpenRouter, key never exposed */
 async function generateReasoningSteps(userText) {
   try {
     const { data } = await axiosClient.post("/ai/reasoning", { message: userText });
@@ -58,7 +57,16 @@ async function generateReasoningSteps(userText) {
 
   } catch (err) {
     const status = err?.response?.status;
-    console.warn(`[KotaBot] /ai/reasoning ${status ?? "network"} error — using fallback`);
+
+    if (status === 404) {
+      // Route not deployed yet — silent fallback, no noisy warning
+      console.info("[KotaBot] /ai/reasoning not deployed yet — using keyword fallback");
+    } else if (status === 401 || status === 403) {
+      console.info("[KotaBot] /ai/reasoning auth error — using keyword fallback");
+    } else {
+      console.warn(`[KotaBot] /ai/reasoning ${status ?? "network"} error — using fallback`);
+    }
+
     return getFallbackSteps(userText);
   }
 }
@@ -163,38 +171,21 @@ const markdownComponents = {
 
 function ThinkingBlock({ steps, elapsed, isThinking }) {
   const [expanded, setExpanded] = useState(true);
-  const [liveMs, setLiveMs] = useState(0);
 
-  /* Auto-collapse after done (slightly longer so people see the checks) */
   useEffect(() => {
     if (!isThinking) {
-      const t = setTimeout(() => setExpanded(false), 1200);
+      const t = setTimeout(() => setExpanded(false), 900);
       return () => clearTimeout(t);
     }
     setExpanded(true);
   }, [isThinking]);
 
-  /* Live timer while thinking so the header feels real-time */
-  useEffect(() => {
-    if (!isThinking) return;
-    const t0 = Date.now();
-    setLiveMs(0);
-    const id = setInterval(() => setLiveMs(Date.now() - t0), 100);
-    return () => clearInterval(id);
-  }, [isThinking]);
-
-  const activeIndex = isThinking ? steps.length - 1 : -1;
-
   const label = isThinking
-    ? `Thinking… ${steps.length > 0 ? `• step ${steps.length}` : ""} (${(liveMs / 1000).toFixed(0)}s)`
-    : `Thought for ${elapsed}s • ${steps.length} step${steps.length !== 1 ? "s" : ""}`;
+    ? `Thinking… (${steps.length} step${steps.length !== 1 ? "s" : ""})`
+    : `Done · ${elapsed}s`;
 
   return (
     <div className="kb-thinking-wrap">
-      {/* Real-time shimmer bar */}
-      {isThinking && <div className="kb-thinking-shimmer" />}
-
-      {/* ── Header pill ── */}
       <button
         className={`kb-thinking-header${isThinking ? " kb-thinking-active" : ""}`}
         onClick={() => setExpanded((e) => !e)}
@@ -202,55 +193,31 @@ function ThinkingBlock({ steps, elapsed, isThinking }) {
         <span className="kb-thinking-header-left">
           <Brain size={12} className={isThinking ? "kb-think-brain-spin" : ""} />
           <span className="kb-thinking-label">{label}</span>
-          {isThinking && (
-            <span className="kb-thinking-dots">
-              <span /><span /><span />
-            </span>
-          )}
+          {isThinking && <span className="kb-thinking-dots"><span /><span /><span /></span>}
         </span>
         {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
       </button>
 
-      {/* ── Reasoning lines ── */}
-      {expanded && (
+      {expanded && steps.length > 0 && (
         <div className="kb-thinking-body">
           {steps.map((step, i) => {
-            const isActive = i === activeIndex;
-            const isChecked = !isThinking || i < activeIndex;
-
+            const done = !isThinking || i < steps.length - 1;
             return (
-              <div
-                key={i}
-                className={`kb-thinking-line ${isActive ? "kb-thinking-line-active" : ""} ${
-                  isChecked ? "kb-thinking-line-checked" : ""
-                }`}
-                style={{ animationDelay: `${i * 0.04}s` }}
-              >
-                <span
-                  className={`kb-thinking-bullet ${
-                    isChecked ? "kb-thinking-bullet-checked" : ""
-                  }`}
-                >
-                  {isChecked ? <Check size={10} strokeWidth={3} /> : "›"}
+              <div key={i} className={`kb-thinking-line${!done ? " kb-thinking-line-active" : ""}`}
+                style={{ animationDelay: `${i * 0.04}s` }}>
+                <span className="kb-thinking-bullet" style={{ color: done ? "#4ade80" : "var(--kb-purple)" }}>
+                  {done ? "✓" : "›"}
                 </span>
-                <span className="kb-thinking-step-text">{step}</span>
-                {isActive && <span className="kb-thinking-cursor-off animate-spin "><Loader2 size={8} /></span>}
+                <span>{step}</span>
+                {!done && <span className="kb-thinking-cursor">▋</span>}
               </div>
             );
           })}
-
-          {isThinking && steps.length === 0 && (
-            <div className="kb-thinking-line kb-thinking-line-active">
-              <span className="kb-thinking-bullet">›</span>
-              <span className="kb-thinking-cursor-off animate-spin"><Loader2 size={8} /></span>
-            </div>
-          )}
         </div>
       )}
     </div>
   );
 }
-
 
 /* ─────────────────────────────────────────────────────────────────────────── */
 /*  MESSAGE BUBBLE                                                             */
@@ -525,7 +492,7 @@ export default function AiChat() {
 
   /* ─────────────────────────────────────────────────────────
      SEND — reasoning gen + chat API fire in true parallel
-     Flow: [Gemini reasoning] ─┐
+     Flow: [OpenRouter reasoning] ┐
                                ├─ steps resolved first → animate them in
            [/ai/chat]    ──────┘  await chat if still pending → close thinking
                                → preTyping dots → typewriter
