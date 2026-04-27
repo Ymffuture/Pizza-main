@@ -1,7 +1,7 @@
 // src/components/AiChat.jsx — with reasoning stream + typewriter + collapsible thinking
 import { useState, useRef, useEffect, useCallback } from "react";
 import {
-  X, Send, BotMessageSquare, Forward, CornerRightUp,
+  X,Sparkles,Send, BotMessageSquare, Forward, CornerRightUp,
   Loader, Minimize2, Maximize2, XCircle, CheckCircle, Clock,
   CircleUser, Copy, Check, Link as LinkIcon, ChevronDown, ChevronRight,
   Brain
