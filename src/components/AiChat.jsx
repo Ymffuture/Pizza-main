@@ -1015,8 +1015,8 @@ const styles = `
   .kb-ai-avatar { width:26px; height:26px; border-radius:8px; flex-shrink:0; display:flex; align-items:center; justify-content:center; margin-top:2px; }
   .kb-ai-avatar-bot  { background:rgba(0,229,255,0.15); color:var(--kb-cyan); }
   .kb-ai-avatar-user { background:rgba(124,77,255,0.2);  color:var(--kb-purple); }
-  .kb-ai-bubble { max-width:100%; padding:10px 14px; border-radius:14px; font-size:13px; font-weight:500; line-height:1.6; word-break:break-word; }
-  .kb-ai-bubble-b { background:rgba(200,200,220,0.06); border:1px solid rgba(0,229,255,0.1); color:var(--kb-text); border-bottom-left-radius:4px; }
+  .kb-ai-bubble { max-width:106%; padding:10px 14px; border-radius:14px; font-size:13px; font-weight:500; line-height:1.6; word-break:break-word; }
+  .kb-ai-bubble-b { background:transparent ; border:1px solid transparent ; color:var(--kb-text); border-bottom-left-radius:4px; }
   .kb-ai-bubble-u { background:linear-gradient(135deg,var(--kb-purple) 0%,var(--kb-purple2) 100%); color:white; border-bottom-right-radius:4px; box-shadow:0 2px 10px rgba(124,77,255,0.3); }
 
   /* ── Markdown ── */
