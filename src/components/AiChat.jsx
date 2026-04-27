@@ -234,7 +234,7 @@ function ThinkingBlock({ steps, elapsed, isThinking }) {
                   {isChecked ? <Check size={10} strokeWidth={3} /> : "›"}
                 </span>
                 <span className="kb-thinking-step-text">{step}</span>
-                {isActive && <span className="kb-thinking-cursor"><Loader2/></span>}
+                {isActive && <span className="kb-thinking-cursor-off animate-spin "><Loader2 size={8} /></span>}
               </div>
             );
           })}
@@ -242,7 +242,7 @@ function ThinkingBlock({ steps, elapsed, isThinking }) {
           {isThinking && steps.length === 0 && (
             <div className="kb-thinking-line kb-thinking-line-active">
               <span className="kb-thinking-bullet">›</span>
-              <span className="kb-thinking-cursor"><Loader2/></span>
+              <span className="kb-thinking-cursor-off animate-spin"><Loader2 size={8} /></span>
             </div>
           )}
         </div>
