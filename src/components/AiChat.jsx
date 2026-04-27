@@ -21,7 +21,7 @@ const AVATAR_URL = "https://api.dicebear.com/9.x/avataaars/svg?seed=ai";
 /*  REASONING — AI-GENERATED (Gemini 2.0 Flash) + keyword fallback           */
 /* ─────────────────────────────────────────────────────────────────────────── */
 
-/* Fallback buckets used when the API call fails / times out */
+/* Last-resort fallback — only used if /ai/reasoning AND network both fail */
 const FALLBACK_STEPS = {
   track:    ["Identifying order reference…", "Querying order records…", "Fetching delivery status…", "Formatting result for you…"],
   cancel:   ["Parsing cancellation intent…", "Verifying order ID…", "Checking eligibility window…", "Preparing confirmation prompt…"],
@@ -44,77 +44,35 @@ function getFallbackSteps(text) {
 }
 
 /* Calls Gemini 2.0 Flash to generate 3-5 reasoning steps for the user's message */
+/* Calls backend /ai/reasoning — Gemini runs server-side, key never exposed */
 async function generateReasoningSteps(userText) {
-  // ── Guard: no key → skip API, use fallback immediately ──
-  const GEMINI_KEY = import.meta.env.VITE_GEMINI_API_KEY;
-  if (!GEMINI_KEY) {
-    console.warn("[KotaBot] VITE_GEMINI_API_KEY not set — using fallback reasoning");
-    return getFallbackSteps(userText);
-  }
-
-  // Full prompt in contents (system_instruction not needed for structured output)
-  const prompt = `You are the internal reasoning engine for KotaBot, a South African food-ordering chatbot for KOTABITES.
-
-Given this user message: "${userText.replace(/"/g, "'")}"
-
-Return ONLY a JSON array of 3 to 5 short reasoning steps.
-Rules:
-- Each step max 9 words, ending with "…"
-- Must be specific to THIS message — no generic filler
-- Active present-tense verbs: Checking…, Verifying…, Scanning…, Fetching…
-- If message has an order ID, reference it in one step
-- Return ONLY the raw JSON array — no markdown, no explanation
-
-Example: ["Identifying order ID in message…","Querying delivery records…","Checking estimated arrival window…","Formatting status update…"]`;
-
   try {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            temperature: 0.2,
-            maxOutputTokens: 200,
-            // responseMimeType + responseSchema forces valid JSON array output
-            responseMimeType: "application/json",
-            responseSchema: {
-              type: "ARRAY",
-              items: { type: "STRING" },
-            },
-          },
-        }),
-      }
-    );
+    const token = sessionStorage.getItem("kb_token");
+    const res   = await fetch("/api/ai/reasoning", {
+      method:  "POST",
+      headers: {
+        "Content-Type":  "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({ message: userText }),
+    });
 
     if (!res.ok) {
-      const errText = await res.text();
-      console.warn(`[KotaBot] Gemini ${res.status}:`, errText);
+      console.warn(`[KotaBot] /ai/reasoning ${res.status} — using fallback`);
       return getFallbackSteps(userText);
     }
 
-    const data  = await res.json();
-    const raw   = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? "";
-    const clean = raw.replace(/```json|```/gi, "").trim();
+    const data = await res.json();
 
-    if (!clean) {
-      console.warn("[KotaBot] Gemini returned empty text — using fallback");
-      return getFallbackSteps(userText);
+    if (Array.isArray(data?.steps) && data.steps.length >= 2) {
+      return data.steps;
     }
 
-    const steps = JSON.parse(clean);
-
-    if (Array.isArray(steps) && steps.length >= 2 && steps.length <= 6) {
-      return steps.map((s) => String(s));
-    }
-
-    console.warn("[KotaBot] Gemini bad shape:", steps);
+    console.warn("[KotaBot] /ai/reasoning bad shape — using fallback", data);
     return getFallbackSteps(userText);
 
   } catch (err) {
-    console.warn("[KotaBot] generateReasoningSteps error:", err.message);
+    console.warn("[KotaBot] /ai/reasoning fetch error:", err.message);
     return getFallbackSteps(userText);
   }
 }
