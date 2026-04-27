@@ -47,22 +47,7 @@ function getFallbackSteps(text) {
 /* Calls backend /ai/reasoning — Gemini runs server-side, key never exposed */
 async function generateReasoningSteps(userText) {
   try {
-    const token = sessionStorage.getItem("kb_token");
-    const res   = await fetch("/api/ai/reasoning", {
-      method:  "POST",
-      headers: {
-        "Content-Type":  "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      body: JSON.stringify({ message: userText }),
-    });
-
-    if (!res.ok) {
-      console.warn(`[KotaBot] /ai/reasoning ${res.status} — using fallback`);
-      return getFallbackSteps(userText);
-    }
-
-    const data = await res.json();
+    const { data } = await axiosClient.post("/ai/reasoning", { message: userText });
 
     if (Array.isArray(data?.steps) && data.steps.length >= 2) {
       return data.steps;
@@ -72,7 +57,8 @@ async function generateReasoningSteps(userText) {
     return getFallbackSteps(userText);
 
   } catch (err) {
-    console.warn("[KotaBot] /ai/reasoning fetch error:", err.message);
+    const status = err?.response?.status;
+    console.warn(`[KotaBot] /ai/reasoning ${status ?? "network"} error — using fallback`);
     return getFallbackSteps(userText);
   }
 }
