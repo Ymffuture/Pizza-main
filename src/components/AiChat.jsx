@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import {
   X, Send, BotMessageSquare, Forward, CornerRightUp,
-  Loader, Minimize2, Maximize2, XCircle, CheckCircle, Clock,
+  Loader2, Loader, Minimize2, Maximize2, XCircle, CheckCircle, Clock,
   CircleUser, Copy, Check, Link as LinkIcon, ChevronDown, ChevronRight,
   Brain
 } from "lucide-react";
@@ -186,7 +186,7 @@ function ThinkingBlock({ steps, elapsed, isThinking }) {
   const activeIndex = isThinking ? steps.length - 1 : -1;
 
   const label = isThinking
-    ? `Thinking… ${steps.length > 0 ? `• step ${steps.length}` : ""} (${(liveMs / 1000).toFixed(1)}s)`
+    ? `Thinking… ${steps.length > 0 ? `• step ${steps.length}` : ""} (${(liveMs / 1000).toFixed(0)}s)`
     : `Thought for ${elapsed}s • ${steps.length} step${steps.length !== 1 ? "s" : ""}`;
 
   return (
@@ -234,7 +234,7 @@ function ThinkingBlock({ steps, elapsed, isThinking }) {
                   {isChecked ? <Check size={10} strokeWidth={3} /> : "›"}
                 </span>
                 <span className="kb-thinking-step-text">{step}</span>
-                {isActive && <span className="kb-thinking-cursor">▋</span>}
+                {isActive && <span className="kb-thinking-cursor"><Loader2/></span>}
               </div>
             );
           })}
@@ -242,7 +242,7 @@ function ThinkingBlock({ steps, elapsed, isThinking }) {
           {isThinking && steps.length === 0 && (
             <div className="kb-thinking-line kb-thinking-line-active">
               <span className="kb-thinking-bullet">›</span>
-              <span className="kb-thinking-cursor">▋</span>
+              <span className="kb-thinking-cursor"><Loader2/></span>
             </div>
           )}
         </div>
