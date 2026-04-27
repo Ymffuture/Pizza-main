@@ -185,31 +185,41 @@ function ThinkingBlock({ steps, elapsed, isThinking }) {
     : `Done · ${elapsed}s`;
 
   return (
-    <div className="kb-thinking-wrap">
+    <div className="claude-thinking-wrap">
       <button
-        className={`kb-thinking-header${isThinking ? " kb-thinking-active" : ""}`}
+        className={`claude-thinking-header${isThinking ? " claude-thinking-active" : ""}`}
         onClick={() => setExpanded((e) => !e)}
       >
-        <span className="kb-thinking-header-left">
-          <Brain size={12} className={isThinking ? "kb-think-brain-spin" : ""} />
-          <span className="kb-thinking-label">{label}</span>
-          {isThinking && <span className="kb-thinking-dots"><span /><span /><span /></span>}
+        <span className="claude-thinking-header-left">
+          <Sparkles size={14} className={isThinking ? "claude-think-spin" : ""} />
+          <span className="claude-thinking-label">{label}</span>
+          {isThinking && (
+            <span className="claude-thinking-dots">
+              <span /><span /><span />
+            </span>
+          )}
         </span>
-        {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+        {expanded ? <ChevronDown size={14} strokeWidth={2} /> : <ChevronRight size={14} strokeWidth={2} />}
       </button>
 
       {expanded && steps.length > 0 && (
-        <div className="kb-thinking-body">
+        <div className="claude-thinking-body">
           {steps.map((step, i) => {
             const done = !isThinking || i < steps.length - 1;
             return (
-              <div key={i} className={`kb-thinking-line${!done ? " kb-thinking-line-active" : ""}`}
-                style={{ animationDelay: `${i * 0.04}s` }}>
-                <span className="kb-thinking-bullet" style={{ color: done ? "#4ade80" : "var(--kb-purple)" }}>
+              <div
+                key={i}
+                className={`claude-thinking-line${!done ? " claude-thinking-line-active" : ""}`}
+                style={{ animationDelay: `${i * 0.04}s` }}
+              >
+                <span
+                  className="claude-thinking-bullet"
+                  style={{ color: done ? "#2d7d46" : "#d97757" }}
+                >
                   {done ? "✓" : "›"}
                 </span>
-                <span>{step}</span>
-                {!done && <span className="kb-thinking-cursor">▋</span>}
+                <span className="claude-thinking-text">{step}</span>
+                {!done && <span className="claude-thinking-cursor">▋</span>}
               </div>
             );
           })}
