@@ -162,24 +162,38 @@ const markdownComponents = {
 /* ─────────────────────────────────────────────────────────────────────────── */
 
 function ThinkingBlock({ steps, elapsed, isThinking }) {
-  const [expanded, setExpanded] = useState(true); // open while thinking, collapse after
+  const [expanded, setExpanded] = useState(true);
+  const [liveMs, setLiveMs] = useState(0);
 
-  // Auto-collapse when done
+  /* Auto-collapse after done (slightly longer so people see the checks) */
   useEffect(() => {
     if (!isThinking) {
-      const t = setTimeout(() => setExpanded(false), 800);
+      const t = setTimeout(() => setExpanded(false), 1200);
       return () => clearTimeout(t);
-    } else {
-      setExpanded(true);
     }
+    setExpanded(true);
   }, [isThinking]);
 
+  /* Live timer while thinking so the header feels real-time */
+  useEffect(() => {
+    if (!isThinking) return;
+    const t0 = Date.now();
+    setLiveMs(0);
+    const id = setInterval(() => setLiveMs(Date.now() - t0), 100);
+    return () => clearInterval(id);
+  }, [isThinking]);
+
+  const activeIndex = isThinking ? steps.length - 1 : -1;
+
   const label = isThinking
-    ? "Thinking…"
-    : `Thought for ${elapsed}s`;
+    ? `Thinking… ${steps.length > 0 ? `• step ${steps.length}` : ""} (${(liveMs / 1000).toFixed(1)}s)`
+    : `Thought for ${elapsed}s • ${steps.length} step${steps.length !== 1 ? "s" : ""}`;
 
   return (
     <div className="kb-thinking-wrap">
+      {/* Real-time shimmer bar */}
+      {isThinking && <div className="kb-thinking-shimmer" />}
+
       {/* ── Header pill ── */}
       <button
         className={`kb-thinking-header${isThinking ? " kb-thinking-active" : ""}`}
@@ -194,21 +208,38 @@ function ThinkingBlock({ steps, elapsed, isThinking }) {
             </span>
           )}
         </span>
-        {expanded
-          ? <ChevronDown size={12} />
-          : <ChevronRight size={12} />}
+        {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
       </button>
 
       {/* ── Reasoning lines ── */}
       {expanded && (
         <div className="kb-thinking-body">
-          {steps.map((step, i) => (
-            <div key={i} className="kb-thinking-line" style={{ animationDelay: `${i * 0.04}s` }}>
-              <span className="kb-thinking-bullet">›</span>
-              <span>{step}</span>
-            </div>
-          ))}
-          {isThinking && (
+          {steps.map((step, i) => {
+            const isActive = i === activeIndex;
+            const isChecked = !isThinking || i < activeIndex;
+
+            return (
+              <div
+                key={i}
+                className={`kb-thinking-line ${isActive ? "kb-thinking-line-active" : ""} ${
+                  isChecked ? "kb-thinking-line-checked" : ""
+                }`}
+                style={{ animationDelay: `${i * 0.04}s` }}
+              >
+                <span
+                  className={`kb-thinking-bullet ${
+                    isChecked ? "kb-thinking-bullet-checked" : ""
+                  }`}
+                >
+                  {isChecked ? <Check size={10} strokeWidth={3} /> : "›"}
+                </span>
+                <span className="kb-thinking-step-text">{step}</span>
+                {isActive && <span className="kb-thinking-cursor">▋</span>}
+              </div>
+            );
+          })}
+
+          {isThinking && steps.length === 0 && (
             <div className="kb-thinking-line kb-thinking-line-active">
               <span className="kb-thinking-bullet">›</span>
               <span className="kb-thinking-cursor">▋</span>
@@ -219,6 +250,7 @@ function ThinkingBlock({ steps, elapsed, isThinking }) {
     </div>
   );
 }
+
 
 /* ─────────────────────────────────────────────────────────────────────────── */
 /*  MESSAGE BUBBLE                                                             */
