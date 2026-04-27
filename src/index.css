@@ -259,7 +259,7 @@ body {
 }
 
 .claude-thinking-header:hover {
-  background-color: #f5f2ee;
+  background-color: transparent;
 }
 
 .claude-thinking-header-left {
