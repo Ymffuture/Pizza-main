@@ -3,7 +3,7 @@ import { useState, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../components/Toast";
-import { Flame, Eye, EyeOff, Loader, AlertCircle, ShieldCheck, Loader2} from "lucide-react";
+import { Flame, Eye, EyeOff, Loader, AlertCircle, ShieldCheck, Loader2 } from "lucide-react";
 import { FcGoogle }      from "react-icons/fc";
 import { FaGithub }      from "react-icons/fa";
 import { BsFingerprint } from "react-icons/bs";
@@ -16,18 +16,20 @@ export default function Login() {
   const { login } = useAuth();
   const toast     = useToast();
 
-  /* refs to trigger hidden OAuth/passkey components */
   const googleRef = useRef(null);
   const githubRef = useRef(null);
   const fpRef     = useRef(null);
 
   const [form, setForm]     = useState({ email: "", password: "" });
   const [errors, setErrors] = useState({});
-  const [loading, setLoading]                   = useState(false);
-  const [showPw,  setShowPw]                    = useState(false);
+  const [loading, setLoading]                     = useState(false);
+  const [oauthLoading, setOauthLoading]           = useState(null); // "google"|"github"|"fp"|null
+  const [showPw, setShowPw]                       = useState(false);
   const [needsVerification, setNeedsVerification] = useState(false);
 
   const redirect = new URLSearchParams(window.location.search).get("redirect") || "/menu";
+
+  const isAnyLoading = loading || !!oauthLoading;
 
   /* ── Validation ── */
   const validate = () => {
@@ -46,10 +48,16 @@ export default function Login() {
     navigate(redirect, { replace: true });
   };
 
-  const handleOAuthSuccess = (data) => handleSuccess(data.user ? data : { ...data, ...data.user });
-  const handleOAuthError   = (err)  => toast.show({ type: "error", title: "Sign-in failed", message: err?.message || "Try again" });
-  const handleFpSuccess    = (data) => handleSuccess(data);
-  const handleFpError      = (err)  => toast.show({ type: "error", title: "Fingerprint failed", message: err?.message || "Try your password" });
+  const handleOAuthSuccess = (data) => {
+    setOauthLoading(null);
+    handleSuccess(data.user ? data : { ...data, ...data.user });
+  };
+  const handleOAuthError = (err) => {
+    setOauthLoading(null);
+    toast.show({ type: "error", title: "Sign-in failed", message: err?.message || "Try again" });
+  };
+  const handleFpSuccess = (data) => { setOauthLoading(null); handleSuccess(data); };
+  const handleFpError   = (err)  => { setOauthLoading(null); toast.show({ type: "error", title: "Fingerprint failed", message: err?.message || "Try your password" }); };
 
   const handleChange = (field) => (ev) => {
     setForm((p) => ({ ...p, [field]: ev.target.value }));
@@ -80,9 +88,12 @@ export default function Login() {
     }
   };
 
-  /* trigger the hidden component's root button */
-  const triggerHidden = (ref) =>
-    ref.current?.querySelector("button")?.click();
+  const triggerOAuth = (ref, provider) => {
+    if (isAnyLoading) return;
+    setOauthLoading(provider);
+    // small delay so loader bar renders before popup opens
+    setTimeout(() => ref.current?.querySelector("button")?.click(), 80);
+  };
 
   /* ─────────────────────────────────────────────────────────── */
   return (
@@ -90,6 +101,25 @@ export default function Login() {
       <style>{styles}</style>
 
       <div className="ds-card">
+
+        {/* ── Google-style top loading bar ── */}
+        <div className="ds-topbar-track">
+          {isAnyLoading && (
+            <>
+              <div className={`ds-topbar-fill${loading ? " ds-topbar-fill-form" : " ds-topbar-fill-oauth"}`} />
+              <div className="ds-topbar-shimmer" />
+            </>
+          )}
+        </div>
+
+        {/* ── OAuth loading overlay label ── */}
+        {oauthLoading && (
+          <div className="ds-oauth-label">
+            {oauthLoading === "google"  && <><FcGoogle size={14} /> Connecting with Google…</>}
+            {oauthLoading === "github"  && <><FaGithub size={13} color="#fff" /> Connecting with GitHub…</>}
+            {oauthLoading === "fp"      && <><BsFingerprint size={13} color="#FFC72C" /> Scanning fingerprint…</>}
+          </div>
+        )}
 
         {/* Brand */}
         <div className="ds-brand">
@@ -112,18 +142,16 @@ export default function Login() {
         {/* Form */}
         <form onSubmit={handleSubmit} className="ds-form">
 
-          {/* Email */}
           <div className="ds-field">
             <input
               type="email" className={`ds-input${errors.email ? " ds-input--err" : ""}`}
               placeholder="Phone number / email address"
               value={form.email} onChange={handleChange("email")}
-              autoComplete="email" disabled={loading}
+              autoComplete="email" disabled={isAnyLoading}
             />
             {errors.email && <p className="ds-err">{errors.email}</p>}
           </div>
 
-          {/* Password */}
           <div className="ds-field">
             <div className={`ds-pw-wrap${errors.password ? " ds-pw-err" : ""}`}>
               <input
@@ -131,7 +159,7 @@ export default function Login() {
                 className="ds-input ds-input--pw"
                 placeholder="Password"
                 value={form.password} onChange={handleChange("password")}
-                autoComplete="current-password" disabled={loading}
+                autoComplete="current-password" disabled={isAnyLoading}
               />
               <button type="button" className="ds-eye"
                 onClick={() => setShowPw((s) => !s)} tabIndex={-1}
@@ -142,14 +170,12 @@ export default function Login() {
             {errors.password && <p className="ds-err">{errors.password}</p>}
           </div>
 
-          {/* Terms */}
           <p className="ds-terms">
             By signing in you agree to KOTABITES&rsquo;{" "}
             <Link to="/terms" className="ds-terms-link">Terms of Use</Link>{" "}
             and <Link to="/privacy" className="ds-terms-link">Privacy Policy</Link>.
           </p>
 
-          {/* Forgot / Sign up */}
           <div className="ds-row">
             <Link to="/forgot-password" className="ds-text-link">Forgot password?</Link>
             <Link to={`/register${redirect !== "/menu" ? `?redirect=${redirect}` : ""}`} className="ds-text-link">
@@ -157,72 +183,82 @@ export default function Login() {
             </Link>
           </div>
 
-          {/* CTA */}
-          <button type="submit" disabled={loading} className="ds-cta">
-            {loading ? <><Loader size={18} className="ds-spin" /> Signing in…</> : "Sign in"}
+          <button type="submit" disabled={isAnyLoading} className="ds-cta">
+            {loading
+              ? <><Loader size={18} className="ds-spin" /> Signing in…</>
+              : "Sign in"}
           </button>
         </form>
 
         {/* Divider */}
         <div className="ds-divider">
-          <div className="ds-line" /><div className="ds-line" />
+          <div className="ds-line" />
+          <span className="ds-divider-text">or</span>
+          <div className="ds-line" />
         </div>
 
         {/* Social circles */}
-<div className="ds-socials">
-  <button
-    type="button"
-    className="ds-social-btn"
-    onClick={() => !loading && triggerHidden(googleRef)}
-    disabled={loading}
-    aria-label="Continue with Google"
-  >
-    {loading ? (
-      <Loader2 size={22} className="ds-spin" color="var(--kb-muted)" />
-    ) : (
-      <FcGoogle size={22} />
-    )}
-  </button>
+        <div className="ds-socials">
+          {/* Google */}
+          <button
+            type="button"
+            className={`ds-social-btn${oauthLoading === "google" ? " ds-social-btn-active" : ""}`}
+            onClick={() => triggerOAuth(googleRef, "google")}
+            disabled={isAnyLoading}
+            aria-label="Continue with Google"
+            title="Continue with Google"
+          >
+            {oauthLoading === "google"
+              ? <Loader2 size={20} className="ds-spin" style={{ color: "#4285F4" }} />
+              : <FcGoogle size={22} />}
+          </button>
 
-  <button
-    type="button"
-    className="ds-social-btn"
-    onClick={() => !loading && triggerHidden(githubRef)}
-    disabled={loading}
-    aria-label="Continue with GitHub"
-  >
-    {loading ? (
-      <Loader2 size={22} className="ds-spin" color="var(--kb-muted)" />
-    ) : (
-      <FaGithub size={20} color="var(--kb-text)" />
-    )}
-  </button>
+          {/* GitHub */}
+          <button
+            type="button"
+            className={`ds-social-btn${oauthLoading === "github" ? " ds-social-btn-active" : ""}`}
+            onClick={() => triggerOAuth(githubRef, "github")}
+            disabled={isAnyLoading}
+            aria-label="Continue with GitHub"
+            title="Continue with GitHub"
+          >
+            {oauthLoading === "github"
+              ? <Loader2 size={20} className="ds-spin" style={{ color: "#e0e0e0" }} />
+              : <FaGithub size={20} color="var(--kb-text)" />}
+          </button>
 
-  <button
-    type="button"
-    className="ds-social-btn"
-    onClick={() => !loading && triggerHidden(fpRef)}
-    disabled={loading}
-    aria-label="Sign in with fingerprint"
-  >
-    {loading ? (
-      <Loader2 size={22} className="ds-spin" color="var(--kb-muted)" />
-    ) : (
-      <BsFingerprint size={22} color="var(--kb-gold)" />
-    )}
-  </button>
+          {/* Fingerprint */}
+          <button
+            type="button"
+            className={`ds-social-btn${oauthLoading === "fp" ? " ds-social-btn-active" : ""}`}
+            onClick={() => triggerOAuth(fpRef, "fp")}
+            disabled={isAnyLoading}
+            aria-label="Sign in with fingerprint"
+            title="Sign in with fingerprint"
+          >
+            {oauthLoading === "fp"
+              ? <Loader2 size={20} className="ds-spin" style={{ color: "#FFC72C" }} />
+              : <BsFingerprint size={22} color="var(--kb-gold)" />}
+          </button>
 
-  {/* Hidden auth components */}
-  <div ref={googleRef} style={{ display: "none" }}>
-    <GoogleButton onSuccess={handleOAuthSuccess} onError={handleOAuthError} />
-  </div>
-  <div ref={githubRef} style={{ display: "none" }}>
-    <GitHubButton onSuccess={handleOAuthSuccess} onError={handleOAuthError} />
-  </div>
-  <div ref={fpRef} style={{ display: "none" }}>
-    <FingerprintButton email={form.email} onSuccess={handleFpSuccess} onError={handleFpError} />
-  </div>
-</div>
+          {/* Hidden auth components */}
+          <div ref={googleRef} style={{ display: "none" }}>
+            <GoogleButton onSuccess={handleOAuthSuccess} onError={handleOAuthError} />
+          </div>
+          <div ref={githubRef} style={{ display: "none" }}>
+            <GitHubButton onSuccess={handleOAuthSuccess} onError={handleOAuthError} />
+          </div>
+          <div ref={fpRef} style={{ display: "none" }}>
+            <FingerprintButton email={form.email} onSuccess={handleFpSuccess} onError={handleFpError} />
+          </div>
+        </div>
+
+        {/* Social labels */}
+        <div className="ds-social-labels">
+          <span>Google</span>
+          <span>GitHub</span>
+          <span>Fingerprint</span>
+        </div>
 
         {/* Security badge */}
         <div className="ds-secure">
@@ -263,30 +299,104 @@ const styles = `
     font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
   }
 
-  /* no border on card */
+  /* ── Card ── */
   .ds-card {
     width: 100%; max-width: 400px;
-    padding: 48px 36px 36px;
     background: var(--kb-card);
     border-radius: 28px;
-    box-shadow: 0 32px 80px rgba(0,0,0,0.65), 0 0 0 1px rgba(255,199,44,0.04);
+    box-shadow: 0 32px 80px rgba(0,0,0,0.65), 0 0 0 1px rgba(255,199,44,0.06);
+    overflow: hidden;           /* clips the top loading bar */
+    position: relative;
+    padding: 0;                 /* padding applied inside */
   }
 
-  .ds-brand { display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:40px; }
+  /* ── TOP LOADING BAR (Google-style) ── */
+  .ds-topbar-track {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: rgba(255,199,44,0.08);
+    z-index: 10;
+    overflow: hidden;
+    border-radius: 28px 28px 0 0;
+  }
+
+  /* Indeterminate fill for OAuth (bounces back and forth) */
+  .ds-topbar-fill {
+    position: absolute;
+    top: 0; left: 0;
+    height: 100%;
+    border-radius: 2px;
+  }
+  .ds-topbar-fill-oauth {
+    width: 45%;
+    background: linear-gradient(90deg, #4285F4, #FFC72C, #DA291C);
+    animation: kbBarOAuth 1.6s cubic-bezier(0.4,0,0.6,1) infinite;
+  }
+  .ds-topbar-fill-form {
+    width: 100%;
+    background: linear-gradient(90deg, var(--kb-red), var(--kb-gold));
+    animation: kbBarForm 1.8s ease-out forwards;
+  }
+
+  /* shimmer overlay */
+  .ds-topbar-shimmer {
+    position: absolute;
+    top: 0; left: -60%;
+    width: 60%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
+    animation: kbBarShimmer 1.4s ease infinite;
+  }
+
+  @keyframes kbBarOAuth {
+    0%   { left: -50%; width: 45%; }
+    50%  { left: 55%;  width: 45%; }
+    100% { left: -50%; width: 45%; }
+  }
+  @keyframes kbBarForm {
+    0%   { width: 20%; opacity: 1; }
+    70%  { width: 85%; opacity: 1; }
+    100% { width: 100%; opacity: 0.6; }
+  }
+  @keyframes kbBarShimmer {
+    0%   { left: -60%; }
+    100% { left: 120%; }
+  }
+
+  /* ── OAuth status label ── */
+  .ds-oauth-label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--kb-muted);
+    letter-spacing: 0.03em;
+    padding: 10px 36px 0;
+    margin-top: 6px;
+    animation: kbSlide 0.2s ease;
+  }
+
+  /* ── Inner padding wrapper (replaces padding on .ds-card) ── */
+  .ds-brand {
+    display:flex; align-items:center; justify-content:center; gap:10px;
+    margin-bottom: 32px;
+    padding: 44px 36px 0;
+  }
   .ds-flame { width:38px; height:38px; background:var(--kb-gold); border-radius:10px; display:flex; align-items:center; justify-content:center; box-shadow:0 0 22px rgba(255,199,44,0.32); }
   .ds-wordmark { font-family:'Bebas Neue',sans-serif; font-size:26px; letter-spacing:4px; color:var(--kb-text); line-height:1; }
 
-  .ds-banner { display:flex; align-items:flex-start; gap:10px; background:rgba(218,41,28,0.08); border-radius:14px; padding:12px 14px; margin-bottom:20px; animation:kbSlide 0.28s ease; }
-  @keyframes kbSlide { from{opacity:0;transform:translateY(-8px)} to{opacity:1;transform:translateY(0)} }
+  .ds-banner { display:flex; align-items:flex-start; gap:10px; background:rgba(218,41,28,0.08); border-radius:14px; padding:12px 14px; margin:0 36px 20px; animation:kbSlide 0.28s ease; }
+  @keyframes kbSlide { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }
   .ds-banner-title { font-size:12px; font-weight:800; color:var(--kb-text); margin:0 0 2px; }
   .ds-banner-body  { font-size:11px; color:var(--kb-muted); margin:0; line-height:1.4; }
   .ds-banner-link  { color:var(--kb-gold); font-size:12px; font-weight:700; text-decoration:none; white-space:nowrap; margin-left:auto; }
   .ds-banner-link:hover { opacity:0.8; }
 
-  .ds-form  { display:flex; flex-direction:column; gap:14px; }
+  .ds-form  { display:flex; flex-direction:column; gap:14px; padding: 0 36px; }
   .ds-field { display:flex; flex-direction:column; gap:5px; }
 
-  /* pill input — no border */
   .ds-input {
     width:100%; box-sizing:border-box;
     background:var(--kb-input); border:none; border-radius:999px;
@@ -298,7 +408,6 @@ const styles = `
   .ds-input:focus { background:rgba(255,248,231,0.1); box-shadow:0 0 0 2.5px var(--kb-ring); }
   .ds-input--err { box-shadow:0 0 0 2px rgba(218,41,28,0.55) !important; background:rgba(218,41,28,0.05) !important; }
 
-  /* password pill */
   .ds-pw-wrap { display:flex; align-items:center; background:var(--kb-input); border:none; border-radius:999px; padding:0 16px 0 20px; transition:background 0.2s, box-shadow 0.2s; }
   .ds-pw-wrap:focus-within { background:rgba(255,248,231,0.1); box-shadow:0 0 0 2.5px var(--kb-ring); }
   .ds-pw-err { box-shadow:0 0 0 2px rgba(218,41,28,0.55) !important; background:rgba(218,41,28,0.05) !important; }
@@ -321,20 +430,64 @@ const styles = `
   .ds-cta:active:not(:disabled) { transform:scale(0.99); }
   .ds-cta:disabled { opacity:0.5; cursor:not-allowed; }
 
-  .ds-divider { display:flex; align-items:center; margin:28px 0 20px; }
+  /* ── Divider with "or" ── */
+  .ds-divider { display:flex; align-items:center; gap:12px; margin:24px 36px 20px; }
   .ds-line { flex:1; height:1px; background:rgba(255,199,44,0.1); }
+  .ds-divider-text { font-size:11px; font-weight:700; color:rgba(255,248,231,0.2); letter-spacing:0.08em; text-transform:uppercase; white-space:nowrap; }
 
-  .ds-socials { display:flex; justify-content:center; gap:14px; }
-  .ds-social-btn { width:52px; height:52px; border-radius:50%; background:var(--kb-input); border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 2px 12px rgba(0,0,0,0.28); transition:background 0.2s, transform 0.15s, box-shadow 0.2s; }
-  .ds-social-btn:hover { background:rgba(255,248,231,0.11); transform:translateY(-2px); box-shadow:0 6px 18px rgba(0,0,0,0.35); }
-  .ds-social-btn:active { transform:scale(0.95); }
+  /* ── Social buttons ── */
+  .ds-socials { display:flex; justify-content:center; gap:16px; padding: 0 36px; }
+  .ds-social-btn {
+    width:52px; height:52px; border-radius:50%;
+    background:var(--kb-input); border:1.5px solid rgba(255,248,231,0.06);
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer;
+    box-shadow:0 2px 12px rgba(0,0,0,0.28);
+    transition:background 0.2s, transform 0.15s, box-shadow 0.2s, border-color 0.2s;
+    position: relative;
+  }
+  .ds-social-btn:hover:not(:disabled) {
+    background:rgba(255,248,231,0.11);
+    transform:translateY(-3px);
+    box-shadow:0 8px 20px rgba(0,0,0,0.4);
+    border-color: rgba(255,199,44,0.2);
+  }
+  .ds-social-btn:active:not(:disabled) { transform:scale(0.95) translateY(0); }
+  .ds-social-btn:disabled { opacity:0.55; cursor:not-allowed; }
+  .ds-social-btn-active {
+    border-color: rgba(255,199,44,0.35) !important;
+    background: rgba(255,199,44,0.07) !important;
+    box-shadow: 0 0 0 3px rgba(255,199,44,0.12), 0 4px 16px rgba(0,0,0,0.3) !important;
+  }
 
-  .ds-loading { display:flex; align-items:center; gap:8px; font-size:13px; color:var(--kb-muted); justify-content:center; }
+  /* ── Social labels ── */
+  .ds-social-labels {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    padding: 8px 36px 0;
+  }
+  .ds-social-labels span {
+    width: 52px;
+    text-align: center;
+    font-size: 10px;
+    font-weight: 600;
+    color: rgba(255,248,231,0.22);
+    letter-spacing: 0.02em;
+  }
 
-  .ds-secure { display:flex; align-items:center; justify-content:center; gap:5px; margin-top:22px; font-size:11px; color:rgba(255,248,231,0.25); letter-spacing:0.03em; }
+  .ds-secure { display:flex; align-items:center; justify-content:center; gap:5px; margin-top:20px; padding-bottom:32px; font-size:11px; color:rgba(255,248,231,0.2); letter-spacing:0.03em; }
 
   @keyframes kbSpin { to { transform:rotate(360deg); } }
   .ds-spin { animation:kbSpin 0.8s linear infinite; }
 
-  @media(max-width:480px) { .ds-card { padding:36px 22px 30px; } .ds-wordmark { font-size:22px; } }
+  @media(max-width:480px) {
+    .ds-brand   { padding: 36px 22px 0; margin-bottom: 24px; }
+    .ds-form    { padding: 0 22px; }
+    .ds-divider { margin: 24px 22px 20px; }
+    .ds-socials { padding: 0 22px; }
+    .ds-social-labels { padding: 8px 22px 0; }
+    .ds-wordmark { font-size:22px; }
+    .ds-secure  { padding-bottom: 24px; }
+  }
 `;
