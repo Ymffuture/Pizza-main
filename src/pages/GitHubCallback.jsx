@@ -108,7 +108,7 @@ export default function GitHubCallback() {
               <Github className="w-8 h-8 text-[#f0f6fc]" />
             </motion.div>
             <h1 className="text-xl font-semibold text-[#f0f6fc]">
-              Nemo Online Exam
+              Kotabites
             </h1>
             <p className="text-sm text-[#8b949e] mt-1">
               Secure authentication
