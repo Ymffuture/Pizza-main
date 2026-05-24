@@ -1,15 +1,6 @@
 // src/components/SettingsPanel.jsx
-/**
- * Slide-in settings panel with theme selector.
- * Drop inside any layout — triggered by a button.
- *
- * Usage:
- *   import SettingsPanel from "../components/SettingsPanel";
- *   <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} />
- */
-
 import { useEffect, useRef } from "react";
-import { X, Palette, Moon, Fingerprint, ChevronRight, Bell, Shield } from "lucide-react";
+import { X, Palette, Moon, Fingerprint, ChevronRight, Shield, Settings } from "lucide-react";
 import { THEMES, useTheme } from "../hooks/useTheme";
 import { Link } from "react-router-dom";
 
@@ -17,336 +8,272 @@ export default function SettingsPanel({ open, onClose }) {
   const { themeId, changeTheme } = useTheme();
   const panelRef = useRef(null);
 
-  // Close on Escape
   useEffect(() => {
     const handler = (e) => { if (e.key === "Escape") onClose(); };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [onClose]);
 
+  useEffect(() => {
+    if (open) document.body.style.overflow = "hidden";
+    else document.body.style.overflow = "";
+    return () => { document.body.style.overflow = ""; };
+  }, [open]);
+
+  if (!open) return null;
+
   return (
     <>
-      {/* Backdrop */}
-      {open && (
-        <div
-          onClick={onClose}
-          style={{
-            position: "fixed", inset: 0, zIndex: 200,
-            background: "rgba(0,0,0,0.55)",
-            backdropFilter: "blur(4px)",
-            animation: "spFadeIn 0.2s ease",
-          }}
-        />
-      )}
+      <style>{css}</style>
+      <div className="sp-backdrop" onClick={onClose} />
+      <div className="sp-modal" ref={panelRef} role="dialog" aria-modal="true">
 
-      {/* Drawer */}
-      <div
-        ref={panelRef}
-        style={{
-          position:   "fixed",
-          top:        0,
-          right:      0,
-          bottom:     0,
-          zIndex:     201,
-          width:      "min(320px, 100vw)",
-          background: "var(--card, #1a0e00)",
-          borderLeft: "1px solid var(--border, rgba(255,199,44,0.12))",
-          display:    "flex",
-          flexDirection: "column",
-          fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif",
-          transform:  open ? "translateX(0)" : "translateX(100%)",
-          transition: "transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-          boxShadow:  open ? "-24px 0 64px rgba(0,0,0,0.5)" : "none",
-          overflowY:  "auto",
-        }}
-      >
         {/* Header */}
-        <div style={headerStyle}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={iconWrapStyle}>
-              <Palette style={{ width: 16, height: 16, color: "var(--gold, #FFC72C)" }} />
+        <div className="sp-header">
+          <div className="sp-header-left">
+            <div className="sp-header-icon">
+              <Settings style={{ width: 16, height: 16, color: "var(--gold, #FFC72C)" }} />
             </div>
             <div>
-              <h2 style={titleStyle}>Settings</h2>
-              <p style={subtitleStyle}>Personalise your experience</p>
+              <h2 className="sp-title">Settings</h2>
+              <p className="sp-subtitle">Personalise your experience</p>
             </div>
           </div>
-          <button onClick={onClose} style={closeBtnStyle}>
+          <button className="sp-close" onClick={onClose} aria-label="Close settings">
             <X style={{ width: 16, height: 16 }} />
           </button>
         </div>
 
-        <div style={{ flex: 1, padding: "20px 16px", display: "flex", flexDirection: "column", gap: 24 }}>
+        <div className="sp-body">
 
-          {/* ── Theme Section ── */}
-          <section>
+          {/* Theme Section */}
+          <section className="sp-section">
             <SectionLabel icon={<Palette style={{ width: 12, height: 12 }} />} label="App Theme" />
-            <div style={themeGridStyle}>
+            <div className="sp-theme-grid">
               {THEMES.map(theme => {
                 const active = themeId === theme.id;
                 return (
                   <button
                     key={theme.id}
                     onClick={() => changeTheme(theme.id)}
-                    style={themeCardStyle(active, theme)}
+                    className={`sp-theme-card${active ? " sp-theme-active" : ""}`}
                     title={theme.name}
                   >
-                    {/* Color swatch */}
-                    <div style={swatchContainerStyle}>
+                    <div className="sp-swatch">
                       {theme.preview.map((c, i) => (
-                        <div
-                          key={i}
-                          style={{
-                            flex:        1,
-                            height:      "100%",
-                            background:  c,
-                            borderRadius: i === 0 ? "6px 0 0 6px" : i === 2 ? "0 6px 6px 0" : 0,
-                          }}
-                        />
+                        <div key={i} style={{ flex: 1, height: "100%", background: c, borderRadius: i === 0 ? "6px 0 0 6px" : i === 2 ? "0 6px 6px 0" : 0 }} />
                       ))}
                     </div>
-
-                    {/* Label */}
-                    <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 8 }}>
-                      <span style={{ fontSize: 14 }}>{theme.emoji}</span>
-                      <span style={{
-                        fontSize:   11,
-                        fontWeight: active ? 800 : 600,
-                        color:      active ? "var(--gold, #FFC72C)" : "var(--muted, rgba(255,248,231,0.42))",
-                      }}>
-                        {theme.name}
-                      </span>
+                    <div className="sp-theme-label-row">
+                      <span className="sp-theme-emoji">{theme.emoji}</span>
+                      <span className={`sp-theme-name${active ? " sp-theme-name-active" : ""}`}>{theme.name}</span>
                     </div>
-
-                    {/* Active ring */}
-                    {active && (
-                      <div style={{
-                        position:     "absolute",
-                        inset:        -2,
-                        borderRadius: 12,
-                        border:       "2px solid var(--gold, #FFC72C)",
-                        pointerEvents:"none",
-                      }} />
-                    )}
+                    {active && <div className="sp-active-ring" />}
+                    {active && <div className="sp-active-check">✓</div>}
                   </button>
                 );
               })}
             </div>
           </section>
 
-          {/* ── Security Section ── */}
-          <section>
+          {/* Security Section */}
+          <section className="sp-section">
             <SectionLabel icon={<Shield style={{ width: 12, height: 12 }} />} label="Security" />
-            <div style={listStyle}>
-              <Link
-                to="/pkm"
-                onClick={onClose}
-                style={listItemStyle}
-              >
-                <div style={{ ...listIconStyle, background: "rgba(74,222,128,0.12)" }}>
+            <div className="sp-list">
+              <Link to="/pkm" onClick={onClose} className="sp-list-item">
+                <div className="sp-list-icon sp-list-icon-green">
                   <Fingerprint style={{ width: 15, height: 15, color: "#4ade80" }} />
                 </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={listItemTitleStyle}>Passkeys & Fingerprints</p>
-                  <p style={listItemSubStyle}>Manage biometric login</p>
+                <div className="sp-list-text">
+                  <p className="sp-list-title">Passkeys & Fingerprints</p>
+                  <p className="sp-list-sub">Manage biometric login</p>
                 </div>
                 <ChevronRight style={{ width: 14, height: 14, color: "var(--muted, rgba(255,248,231,0.42))", flexShrink: 0 }} />
               </Link>
             </div>
           </section>
 
-          {/* ── Display Section ── */}
-          <section>
+          {/* Display Section */}
+          <section className="sp-section">
             <SectionLabel icon={<Moon style={{ width: 12, height: 12 }} />} label="Display" />
-            <div style={listStyle}>
-              <div style={{ ...listItemStyle, cursor: "default" }}>
-                <div style={{ ...listIconStyle, background: "rgba(96,165,250,0.12)" }}>
+            <div className="sp-list">
+              <div className="sp-list-item" style={{ cursor: "default" }}>
+                <div className="sp-list-icon sp-list-icon-blue">
                   <Moon style={{ width: 15, height: 15, color: "#60a5fa" }} />
                 </div>
-                <div style={{ flex: 1 }}>
-                  <p style={listItemTitleStyle}>Dark Mode</p>
-                  <p style={listItemSubStyle}>Always on — KotaBites is dark by design</p>
+                <div className="sp-list-text">
+                  <p className="sp-list-title">Dark Mode</p>
+                  <p className="sp-list-sub">Always on — KotaBites is dark by design</p>
                 </div>
-                <div style={toggleOnStyle} />
+                <div className="sp-toggle-on" />
               </div>
             </div>
           </section>
 
-          {/* ── App Info ── */}
-          <div style={appInfoStyle}>
-            <p style={{ fontSize: 11, color: "var(--muted)", margin: 0 }}>KotaBites v2.1.0</p>
-            <p style={{ fontSize: 11, color: "var(--muted)", margin: "2px 0 0" }}>
-              Built by SwiftMeta · Johannesburg, SA
-            </p>
+          {/* Footer */}
+          <div className="sp-footer">
+            <div className="sp-footer-dot" />
+            <p>KotaBites v2.1.0</p>
+            <span className="sp-footer-sep">·</span>
+            <p>Built by SwiftMeta · JHB</p>
           </div>
         </div>
       </div>
-
-      <style>{`
-        @keyframes spFadeIn { from { opacity: 0; } to { opacity: 1; } }
-      `}</style>
     </>
   );
 }
 
-// ── Sub-components ──────────────────────────────────────────────────────────
-
 function SectionLabel({ icon, label }) {
   return (
-    <div style={{
-      display:       "flex",
-      alignItems:    "center",
-      gap:           6,
-      marginBottom:  10,
-      fontSize:      10,
-      fontWeight:    800,
-      letterSpacing: "0.1em",
-      textTransform: "uppercase",
-      color:         "var(--gold, #FFC72C)",
-    }}>
+    <div className="sp-section-label">
       {icon}
       {label}
     </div>
   );
 }
 
-// ── Styles ──────────────────────────────────────────────────────────────────
+const css = `
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Plus+Jakarta+Sans:wght@400;600;700;800;900&display=swap');
 
-const headerStyle = {
-  display:        "flex",
-  alignItems:     "center",
-  justifyContent: "space-between",
-  padding:        "20px 16px 16px",
-  borderBottom:   "1px solid var(--border, rgba(255,199,44,0.12))",
-  flexShrink:     0,
-};
+  .sp-backdrop {
+    position: fixed; inset: 0; z-index: 500;
+    background: rgba(0,0,0,0.72);
+    backdrop-filter: blur(8px);
+    animation: spBdIn 0.2s ease;
+  }
+  @keyframes spBdIn { from{opacity:0} to{opacity:1} }
 
-const iconWrapStyle = {
-  width:          34,
-  height:         34,
-  borderRadius:   10,
-  background:     "rgba(255,199,44,0.1)",
-  border:         "1px solid rgba(255,199,44,0.2)",
-  display:        "flex",
-  alignItems:     "center",
-  justifyContent: "center",
-  flexShrink:     0,
-};
+  .sp-modal {
+    position: fixed;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 501;
+    width: min(520px, calc(100vw - 32px));
+    max-height: min(88vh, 700px);
+    background: var(--card, #1a0e00);
+    border: 1px solid rgba(255,199,44,0.2);
+    border-radius: 24px;
+    box-shadow:
+      0 40px 100px rgba(0,0,0,0.8),
+      0 0 0 1px rgba(255,199,44,0.07),
+      inset 0 1px 0 rgba(255,248,231,0.05);
+    display: flex; flex-direction: column;
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    overflow: hidden;
+    animation: spModalIn 0.3s cubic-bezier(0.34,1.2,0.64,1);
+  }
+  @keyframes spModalIn {
+    from { opacity:0; transform:translate(-50%,-50%) scale(0.9) translateY(10px); }
+    to   { opacity:1; transform:translate(-50%,-50%) scale(1) translateY(0); }
+  }
 
-const titleStyle = {
-  fontFamily: "'Bebas Neue', sans-serif",
-  fontSize:   18,
-  letterSpacing: "2px",
-  color:      "var(--text, #fff8e7)",
-  margin:     0,
-  lineHeight: 1,
-};
+  .sp-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 20px 22px 16px;
+    border-bottom: 1px solid rgba(255,199,44,0.1);
+    flex-shrink: 0;
+    background: linear-gradient(135deg, rgba(255,199,44,0.07) 0%, transparent 60%);
+  }
+  .sp-header-left  { display:flex; align-items:center; gap:12px; }
+  .sp-header-icon  {
+    width:36px; height:36px; border-radius:10px;
+    background:rgba(255,199,44,0.12); border:1px solid rgba(255,199,44,0.25);
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+    box-shadow: 0 0 12px rgba(255,199,44,0.15);
+  }
+  .sp-title    { font-family:'Bebas Neue',sans-serif; font-size:20px; letter-spacing:2.5px; color:var(--text,#fff8e7); margin:0; line-height:1; }
+  .sp-subtitle { font-size:11px; color:var(--muted,rgba(255,248,231,0.42)); margin:3px 0 0; }
+  .sp-close {
+    width:32px; height:32px; border-radius:9px;
+    background:rgba(255,248,231,0.05); border:1px solid rgba(255,248,231,0.1);
+    display:flex; align-items:center; justify-content:center;
+    color:rgba(255,248,231,0.45); cursor:pointer; transition:all 0.18s;
+  }
+  .sp-close:hover { color:var(--text,#fff8e7); background:rgba(218,41,28,0.2); border-color:rgba(218,41,28,0.35); }
 
-const subtitleStyle = {
-  fontSize:   11,
-  color:      "var(--muted, rgba(255,248,231,0.42))",
-  margin:     "2px 0 0",
-};
+  .sp-body {
+    flex:1; overflow-y:auto; padding:20px 22px;
+    display:flex; flex-direction:column; gap:24px;
+    scrollbar-width:thin; scrollbar-color:rgba(255,199,44,0.15) transparent;
+  }
+  .sp-body::-webkit-scrollbar { width:4px; }
+  .sp-body::-webkit-scrollbar-thumb { background:rgba(255,199,44,0.15); border-radius:4px; }
 
-const closeBtnStyle = {
-  width:          30,
-  height:         30,
-  borderRadius:   8,
-  background:     "rgba(255,248,231,0.06)",
-  border:         "1px solid rgba(255,248,231,0.1)",
-  display:        "flex",
-  alignItems:     "center",
-  justifyContent: "center",
-  color:          "var(--muted, rgba(255,248,231,0.42))",
-  cursor:         "pointer",
-  flexShrink:     0,
-  transition:     "all 0.2s",
-};
+  .sp-section { display:flex; flex-direction:column; gap:10px; }
+  .sp-section-label {
+    display:flex; align-items:center; gap:6px;
+    font-size:10px; font-weight:800; letter-spacing:0.12em;
+    text-transform:uppercase; color:var(--gold,#FFC72C);
+  }
 
-const themeGridStyle = {
-  display:               "grid",
-  gridTemplateColumns:   "repeat(3, 1fr)",
-  gap:                   10,
-};
+  /* Theme grid */
+  .sp-theme-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+  .sp-theme-card {
+    position:relative; background:rgba(255,248,231,0.03);
+    border:1.5px solid rgba(255,248,231,0.08); border-radius:12px;
+    padding:10px 8px; cursor:pointer;
+    display:flex; flex-direction:column; gap:0;
+    transition:all 0.2s;
+  }
+  .sp-theme-card:hover { background:rgba(255,199,44,0.06); border-color:rgba(255,199,44,0.22); transform:translateY(-1px); }
+  .sp-theme-active { background:rgba(255,199,44,0.07)!important; border-color:transparent!important; }
+  .sp-swatch { width:100%; height:28px; border-radius:7px; overflow:hidden; display:flex; border:1px solid rgba(255,255,255,0.08); }
+  .sp-theme-label-row { display:flex; align-items:center; gap:5px; margin-top:8px; }
+  .sp-theme-emoji { font-size:13px; }
+  .sp-theme-name { font-size:11px; font-weight:600; color:var(--muted,rgba(255,248,231,0.42)); }
+  .sp-theme-name-active { font-weight:800; color:var(--gold,#FFC72C); }
+  .sp-active-ring {
+    position:absolute; inset:-2px; border-radius:13px;
+    border:2px solid var(--gold,#FFC72C); pointer-events:none;
+    animation:spRingIn 0.2s ease;
+  }
+  @keyframes spRingIn { from{opacity:0;transform:scale(0.95)} to{opacity:1;transform:scale(1)} }
+  .sp-active-check {
+    position:absolute; top:6px; right:7px;
+    width:16px; height:16px; border-radius:50%;
+    background:var(--gold,#FFC72C); color:#0e0700;
+    font-size:9px; font-weight:900;
+    display:flex; align-items:center; justify-content:center;
+  }
 
-const themeCardStyle = (active, theme) => ({
-  position:     "relative",
-  background:   active ? "rgba(255,199,44,0.06)" : "rgba(255,248,231,0.03)",
-  border:       `1px solid ${active ? "transparent" : "rgba(255,248,231,0.08)"}`,
-  borderRadius: 10,
-  padding:      "10px 8px",
-  cursor:       "pointer",
-  display:      "flex",
-  flexDirection:"column",
-  alignItems:   "flex-start",
-  gap:          0,
-  transition:   "all 0.2s",
-});
+  /* List */
+  .sp-list { display:flex; flex-direction:column; gap:6px; }
+  .sp-list-item {
+    display:flex; align-items:center; gap:12px;
+    padding:12px 14px;
+    background:rgba(255,248,231,0.03); border:1px solid rgba(255,248,231,0.06);
+    border-radius:13px; cursor:pointer; text-decoration:none; transition:all 0.2s;
+  }
+  .sp-list-item:hover { background:rgba(255,248,231,0.07); border-color:rgba(255,199,44,0.18); }
+  .sp-list-icon { width:34px; height:34px; border-radius:9px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .sp-list-icon-green { background:rgba(74,222,128,0.12); }
+  .sp-list-icon-blue  { background:rgba(96,165,250,0.12); }
+  .sp-list-text { flex:1; min-width:0; }
+  .sp-list-title { font-size:13px; font-weight:700; color:var(--text,#fff8e7); margin:0; }
+  .sp-list-sub   { font-size:11px; color:var(--muted,rgba(255,248,231,0.42)); margin:2px 0 0; }
 
-const swatchContainerStyle = {
-  width:        "100%",
-  height:       28,
-  borderRadius: 6,
-  overflow:     "hidden",
-  display:      "flex",
-  border:       "1px solid rgba(255,255,255,0.08)",
-};
+  .sp-toggle-on {
+    width:38px; height:22px; border-radius:11px;
+    background:linear-gradient(135deg,var(--red,#DA291C),var(--gold,#FFC72C));
+    flex-shrink:0; position:relative;
+  }
 
-const listStyle = {
-  display:       "flex",
-  flexDirection: "column",
-  gap:           6,
-};
+  /* Footer */
+  .sp-footer {
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    padding-top:16px; border-top:1px solid rgba(255,248,231,0.06);
+    font-size:11px; color:var(--muted,rgba(255,248,231,0.42));
+  }
+  .sp-footer-dot {
+    width:5px; height:5px; border-radius:50%;
+    background:var(--gold,#FFC72C); box-shadow:0 0 6px rgba(255,199,44,0.6);
+    animation:spDotPulse 2s ease infinite;
+  }
+  @keyframes spDotPulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(1.5)} }
+  .sp-footer-sep { opacity:0.3; }
 
-const listItemStyle = {
-  display:       "flex",
-  alignItems:    "center",
-  gap:           12,
-  padding:       "11px 12px",
-  background:    "rgba(255,248,231,0.03)",
-  border:        "1px solid rgba(255,248,231,0.06)",
-  borderRadius:  12,
-  cursor:        "pointer",
-  textDecoration:"none",
-  transition:    "all 0.2s",
-};
-
-const listIconStyle = {
-  width:          32,
-  height:         32,
-  borderRadius:   9,
-  display:        "flex",
-  alignItems:     "center",
-  justifyContent: "center",
-  flexShrink:     0,
-};
-
-const listItemTitleStyle = {
-  fontSize:   13,
-  fontWeight: 700,
-  color:      "var(--text, #fff8e7)",
-  margin:     0,
-};
-
-const listItemSubStyle = {
-  fontSize:   11,
-  color:      "var(--muted, rgba(255,248,231,0.42))",
-  margin:     "2px 0 0",
-};
-
-const toggleOnStyle = {
-  width:        38,
-  height:       22,
-  borderRadius: 11,
-  background:   "linear-gradient(135deg, var(--red, #DA291C), var(--gold, #FFC72C))",
-  border:       "none",
-  position:     "relative",
-  flexShrink:   0,
-};
-
-const appInfoStyle = {
-  marginTop:     "auto",
-  paddingTop:    16,
-  borderTop:     "1px solid rgba(255,248,231,0.06)",
-  textAlign:     "center",
-};
+  @media(max-width:520px) {
+    .sp-modal { max-height:92vh; }
+    .sp-theme-grid { grid-template-columns:repeat(2,1fr); }
+  }
+`;
