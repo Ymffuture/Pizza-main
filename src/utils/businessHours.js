@@ -8,7 +8,7 @@ const SCHEDULE = {
   2: { open: "03:00", close: "18:00" },   // Wednesday
   3: { open: "09:00", close: "17:00" },   // Thursday
   4: { open: "09:00", close: "17:00" },   // Friday
-  5: { open: "09:00", close: "14:00" },   // Saturday
+  5: { open: "09:00", close: "20:00" },   // Saturday
   6: { open: "09:00", close: "17:00" } ,                                  // Sunday — closed
 };
 
