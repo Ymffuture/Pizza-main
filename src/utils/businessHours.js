@@ -1,113 +1,157 @@
 // src/utils/businessHours.js
-// Mirrors the Python logic in utils/business_hours.py
-// All times are SAST (UTC+2)
 
-const SCHEDULE = {
-  0: { open: "09:00", close: "18:00" },   // Monday
-  1: { open: "09:00", close: "18:00" },   // Tuesday
-  2: { open: "03:00", close: "18:00" },   // Wednesday
-  3: { open: "09:00", close: "17:00" },   // Thursday
-  4: { open: "09:00", close: "17:00" },   // Friday
-  5: { open: "09:00", close: "20:00" },   // Saturday
-  6: { open: "09:00", close: "17:00" } ,                                  // Sunday — closed
-};
+const TIMEZONE = "Africa/Johannesburg";
 
-const DAY_NAMES = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+export const SCHEDULE = Object.freeze({
+  0: { open: "09:00", close: "18:00" }, // Monday
+  1: { open: "09:00", close: "18:00" }, // Tuesday
+  2: { open: "09:00", close: "18:00" }, // Wednesday
+  3: { open: "09:00", close: "17:00" }, // Thursday
+  4: { open: "09:00", close: "17:00" }, // Friday
+  5: { open: "09:00", close: "20:00" }, // Saturday
+  6: null,                              // Sunday Closed
+});
 
-function sastNow() {
-  // Get current time in SAST (UTC+2) without relying on browser timezone
+export const DAY_NAMES = Object.freeze([
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+  "Sunday",
+]);
+
+function getSastDate() {
   const now = new Date();
-  // UTC offset for SAST is always +120 minutes (no DST)
-  const sastOffset = 120;
-  const utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
-  return new Date(utcMs + sastOffset * 60000);
+
+  const formatter = new Intl.DateTimeFormat("en-ZA", {
+    timeZone: TIMEZONE,
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    hour: "numeric",
+    minute: "numeric",
+    second: "numeric",
+    hour12: false,
+  });
+
+  const parts = Object.fromEntries(
+    formatter
+      .formatToParts(now)
+      .filter((p) => p.type !== "literal")
+      .map((p) => [p.type, Number(p.value)])
+  );
+
+  return new Date(
+    parts.year,
+    parts.month - 1,
+    parts.day,
+    parts.hour,
+    parts.minute,
+    parts.second
+  );
 }
 
-/**
- * Returns { isOpen, day, openTime, closeTime, message, minutesUntilClose, schedule }
- */
+function createScheduleDisplay() {
+  return DAY_NAMES.reduce((acc, day, index) => {
+    const item = SCHEDULE[index];
+
+    acc[day] = item
+      ? `${item.open} – ${item.close}`
+      : "Closed";
+
+    return acc;
+  }, {});
+}
+
 export function getBusinessHoursStatus() {
-  const now = sastNow();
-  const weekday = now.getDay();         // 0=Sun, 1=Mon ... 6=Sat
-  // JS getDay is 0=Sun, Python weekday is 0=Mon — convert
-  const pythonWeekday = (weekday + 6) % 7;   // 0=Mon ... 6=Sun
+  const now = getSastDate();
 
-  const todaySchedule = SCHEDULE[pythonWeekday];
+  const weekday = (now.getDay() + 6) % 7;
+  const today = SCHEDULE[weekday];
 
-  const schedule = {
-    "Monday":    "09:00 – 17:00",
-    "Tuesday":   "09:00 – 17:00",
-    "Wednesday": "09:00 – 17:00",
-    "Thursday":  "09:00 – 17:00",
-    "Friday":    "09:00 – 17:00",
-    "Saturday":  "09:00 – 14:00",
-    "Sunday":    "Closed",
-  };
+  const schedule = createScheduleDisplay();
 
-  if (!todaySchedule) {
+  if (!today) {
     return {
       isOpen: false,
-      day: DAY_NAMES[pythonWeekday],
+      day: DAY_NAMES[weekday],
       openTime: null,
       closeTime: null,
-      message: "Closed today (Sunday). We reopen Monday at 09:00.",
+      message: "Closed today.",
       minutesUntilClose: null,
+      minutesUntilOpen: null,
       closingSoon: false,
       schedule,
     };
   }
 
-  const [oh, om] = todaySchedule.open.split(":").map(Number);
-  const [ch, cm] = todaySchedule.close.split(":").map(Number);
+  const [openHour, openMinute] = today.open.split(":").map(Number);
+  const [closeHour, closeMinute] = today.close.split(":").map(Number);
 
-  const openMs  = new Date(now).setHours(oh, om, 0, 0);
-  const closeMs = new Date(now).setHours(ch, cm, 0, 0);
-  const nowMs   = now.getTime();
+  const openDate = new Date(now);
+  openDate.setHours(openHour, openMinute, 0, 0);
 
-  const isOpen = nowMs >= openMs && nowMs < closeMs;
-  const minutesUntilClose = isOpen ? Math.floor((closeMs - nowMs) / 60000) : null;
-  const closingSoon = minutesUntilClose !== null && minutesUntilClose <= 30;
+  const closeDate = new Date(now);
+  closeDate.setHours(closeHour, closeMinute, 0, 0);
+
+  const isOpen = now >= openDate && now < closeDate;
+
+  const minutesUntilClose = isOpen
+    ? Math.ceil((closeDate - now) / 60000)
+    : null;
+
+  const minutesUntilOpen = !isOpen && now < openDate
+    ? Math.ceil((openDate - now) / 60000)
+    : null;
+
+  const closingSoon =
+    minutesUntilClose !== null &&
+    minutesUntilClose <= 30;
 
   let message;
-  if (nowMs < openMs) {
-    message = `Opens at ${todaySchedule.open} today.`;
+
+  if (now < openDate) {
+    message = `Opens today at ${today.open}`;
   } else if (isOpen) {
     message = closingSoon
-      ? `Closing in ${minutesUntilClose} min! Order now.`
-      : `Open until ${todaySchedule.close} today.`;
+      ? `Closing in ${minutesUntilClose} minutes`
+      : `Open until ${today.close}`;
   } else {
-    // Find next open day
-    let nextMsg = "Reopening tomorrow at 09:00.";
-    for (let d = 1; d <= 7; d++) {
-      const nextWd = (pythonWeekday + d) % 7;
-      if (SCHEDULE[nextWd]) {
-        const nextDayName = DAY_NAMES[nextWd];
-        const nextOpen    = SCHEDULE[nextWd].open;
-        nextMsg = d === 1
-          ? `Closed for today. Opens tomorrow (${nextDayName}) at ${nextOpen}.`
-          : `Closed for today. Opens ${nextDayName} at ${nextOpen}.`;
+    let nextDayName = null;
+    let nextOpenTime = null;
+
+    for (let i = 1; i <= 7; i++) {
+      const nextDay = (weekday + i) % 7;
+
+      if (SCHEDULE[nextDay]) {
+        nextDayName = DAY_NAMES[nextDay];
+        nextOpenTime = SCHEDULE[nextDay].open;
         break;
       }
     }
-    message = nextMsg;
+
+    message = `Closed. Opens ${nextDayName} at ${nextOpenTime}`;
   }
 
   return {
     isOpen,
-    day: DAY_NAMES[pythonWeekday],
-    openTime:  todaySchedule.open,
-    closeTime: todaySchedule.close,
+    day: DAY_NAMES[weekday],
+    openTime: today.open,
+    closeTime: today.close,
     message,
     minutesUntilClose,
+    minutesUntilOpen,
     closingSoon,
+    timezone: TIMEZONE,
     schedule,
+    currentTime: now.toLocaleTimeString("en-ZA", {
+      hour: "2-digit",
+      minute: "2-digit",
+    }),
   };
 }
 
-/**
- * Returns true if delivery is currently available.
- * Use this to gate checkout.
- */
-export function isDeliveryOpen() {
-  return getBusinessHoursStatus().isOpen;
-}
+export const isDeliveryOpen = () =>
+  getBusinessHoursStatus().isOpen;
