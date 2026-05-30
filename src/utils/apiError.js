@@ -1,29 +1,55 @@
 /**
- * Parses a FastAPI error into a readable string.
- * FastAPI detail can be:
- *   - a plain string:       { detail: "Not found" }
- *   - a validation array:   { detail: [{loc:[...], msg:"...", type:"..."}] }
+ * Parse FastAPI / Axios errors into a user-friendly message.
+ *
+ * Supports:
+ * - FastAPI string detail
+ * - FastAPI validation errors
+ * - Network errors
+ * - Timeouts
+ * - Unexpected server responses
+ *
+ * @param {any} error
+ * @returns {string}
  */
-export function parseApiError(err) {
-  const status = err?.response?.status;
-  const detail = err?.response?.data?.detail;
+export const parseApiError = (error) => {
+  const status = error?.response?.status;
+  const detail = error?.response?.data?.detail;
 
-  let msg;
+  const statusHints = {
+    400: "Bad request",
+    401: "Not authenticated",
+    403: "Not authorized",
+    404: "Endpoint not found",
+    409: "Conflict",
+    422: "Validation error",
+    429: "Too many requests",
+    500: "Internal server error",
+    502: "Bad gateway",
+    503: "Service unavailable",
+  };
+
+  let message = "Something went wrong";
+
   if (Array.isArray(detail)) {
-    msg = detail.map(d => d.msg || JSON.stringify(d)).join(" · ");
+    message = detail
+      .map((item) => {
+        const field = item?.loc?.slice(1)?.join(".");
+        return field
+          ? `${field}: ${item.msg}`
+          : item.msg;
+      })
+      .join(" • ");
   } else if (typeof detail === "string") {
-    msg = detail;
+    message = detail;
+  } else if (error?.code === "ECONNABORTED") {
+    message = "Request timed out";
+  } else if (!error?.response) {
+    message = "Unable to connect to the server";
   } else {
-    msg = err?.message || "Unknown error";
+    message = error?.message || message;
   }
 
-  const hint =
-    status === 401 ? " (not authenticated)"
-    : status === 403 ? " (not authorized — check admin role)"
-    : status === 404 ? " (endpoint not found)"
-    : status === 422 ? " (validation error)"
-    : status ? ` (HTTP ${status})`
-    : "";
-
-  return msg + hint;
-}
+  return status
+    ? `${message} (${statusHints[status] || `HTTP ${status}`})`
+    : message;
+};
