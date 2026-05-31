@@ -1,5 +1,5 @@
-// src/pages/Wallet.jsx — Driver Earnings Wallet
-import { useState, useEffect, useRef } from "react";
+// src/pages/Wallet.jsx — Driver Earnings Wallet (Simplified)
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import {
@@ -13,8 +13,12 @@ import {
   DollarSign, Download, Clock, CheckCircle2, AlertCircle,
   ArrowDownRight, Gift, Zap, ShoppingBag,
   Loader, X, Info, ChevronRight, RefreshCw, WifiOff,
+  LogOut, Timer,
 } from "lucide-react";
-import {Loader3} from "../components/Loader" ;
+import { Loader3 } from "../components/Loader";
+
+const INACTIVITY_LIMIT = 5 * 60 * 1000; // 5 minutes
+const WARNING_AT = 30 * 1000;           // warn at 30s left
 
 function classifyError(err) {
   if (!err?.response || err?.code === "ERR_NETWORK" || err?.code === "ECONNABORTED") {
@@ -22,9 +26,9 @@ function classifyError(err) {
   }
   const status = err.response.status;
   const detail = err.response.data?.detail || err.response.data?.message || err.message;
-  if (status === 401) return { type: "auth",       msg: "Session expired. Please sign in again." };
+  if (status === 401) return { type: "auth", msg: "Session expired. Please sign in again." };
   if (status === 404) return { type: "no_profile", msg: detail || "Driver profile not found." };
-  if (status === 403) return { type: "forbidden",  msg: detail || "Access denied." };
+  if (status === 403) return { type: "forbidden", msg: detail || "Access denied." };
   return { type: "error", msg: detail || "Failed to load wallet data." };
 }
 
@@ -35,16 +39,16 @@ const TX_ICON = {
   penalty:          <AlertCircle className="w-4 h-4" />,
 };
 const TX_COLOR = {
-  delivery_payment: { bg: "rgba(74,222,128,0.1)",   c: "#4ade80" },
-  bonus:            { bg: "rgba(96,165,250,0.1)",   c: "#60a5fa" },
-  withdrawal:       { bg: "rgba(248,113,113,0.1)",  c: "#f87171" },
-  penalty:          { bg: "rgba(251,191,36,0.1)",   c: "#fbbf24" },
+  delivery_payment: { bg: "rgba(74,222,128,0.1)",  c: "#4ade80" },
+  bonus:            { bg: "rgba(96,165,250,0.1)",  c: "#60a5fa" },
+  withdrawal:       { bg: "rgba(248,113,113,0.1)", c: "#f87171" },
+  penalty:          { bg: "rgba(251,191,36,0.1)",  c: "#fbbf24" },
 };
 const DEFAULT_TX = { bg: "rgba(255,248,231,0.05)", c: "var(--muted)" };
 
 export default function WalletPage() {
   const navigate = useNavigate();
-  const { isAuth, token } = useAuth();
+  const { isAuth, token, logout } = useAuth();
 
   const [loading,      setLoading]      = useState(true);
   const [balance,      setBalance]      = useState(null);
@@ -60,6 +64,52 @@ export default function WalletPage() {
   const [withdrawError,   setWithdrawError]   = useState(null);
   const [withdrawSuccess, setWithdrawSuccess] = useState(false);
 
+  /* ── Inactivity Auto-Logout ── */
+  const [timeLeft, setTimeLeft] = useState(INACTIVITY_LIMIT);
+  const [warnUser, setWarnUser] = useState(false);
+  const inactivityTimerRef = useRef(null);
+  const lastActivityRef = useRef(Date.now());
+
+  const resetInactivity = useCallback(() => {
+    lastActivityRef.current = Date.now();
+    setTimeLeft(INACTIVITY_LIMIT);
+    setWarnUser(false);
+  }, []);
+
+  const doLogout = useCallback(() => {
+    logout();
+    navigate("/login?redirect=/wallet");
+  }, [logout, navigate]);
+
+  useEffect(() => {
+    if (!isAuth) return;
+    const events = ["mousedown", "keydown", "touchstart", "scroll"];
+    const onActivity = () => resetInactivity();
+    events.forEach(e => window.addEventListener(e, onActivity));
+    inactivityTimerRef.current = setInterval(() => {
+      const elapsed = Date.now() - lastActivityRef.current;
+      const remaining = Math.max(0, INACTIVITY_LIMIT - elapsed);
+      setTimeLeft(remaining);
+      setWarnUser(remaining <= WARNING_AT && remaining > 0);
+      if (remaining <= 0) {
+        clearInterval(inactivityTimerRef.current);
+        doLogout();
+      }
+    }, 1000);
+    return () => {
+      events.forEach(e => window.removeEventListener(e, onActivity));
+      clearInterval(inactivityTimerRef.current);
+    };
+  }, [isAuth, resetInactivity, doLogout]);
+
+  const fmtTime = (ms) => {
+    const s = Math.ceil(ms / 1000);
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${m}:${sec.toString().padStart(2, "0")}`;
+  };
+
+  /* ── Data Fetching ── */
   const clearRetry = () => {
     if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
     setRetryIn(null);
@@ -93,7 +143,7 @@ export default function WalletPage() {
       }
       setProfile(profRes.value.data);
       if (balRes.status === "fulfilled") setBalance(balRes.value.data);
-      if (txRes.status === "fulfilled")  setTransactions(Array.isArray(txRes.value.data) ? txRes.value.data : []);
+      if (txRes.status === "fulfilled") setTransactions(Array.isArray(txRes.value.data) ? txRes.value.data : []);
     } catch (err) {
       const info = classifyError(err);
       setErrorInfo(info);
@@ -111,8 +161,8 @@ export default function WalletPage() {
   const handleWithdraw = async (e) => {
     e.preventDefault();
     const amount = parseFloat(withdrawAmount);
-    if (isNaN(amount) || amount < 50)           { setWithdrawError("Minimum withdrawal is R50"); return; }
-    if (amount > (balance?.balance ?? 0))        { setWithdrawError("Insufficient balance"); return; }
+    if (isNaN(amount) || amount < 50) { setWithdrawError("Minimum withdrawal is R50"); return; }
+    if (amount > (balance?.balance ?? 0)) { setWithdrawError("Insufficient balance"); return; }
     if (!profile?.bank_name || !profile?.account_number || !profile?.account_holder) {
       setWithdrawError("Banking details incomplete. Update your driver profile first."); return;
     }
@@ -121,9 +171,9 @@ export default function WalletPage() {
     try {
       await withdrawFunds({
         amount,
-        bank_name:       profile.bank_name,
-        account_number:  profile.account_number,
-        account_holder:  profile.account_holder,
+        bank_name:      profile.bank_name,
+        account_number: profile.account_number,
+        account_holder: profile.account_holder,
       });
       setWithdrawSuccess(true);
       setTimeout(() => {
@@ -174,57 +224,57 @@ export default function WalletPage() {
   /* ── Error states ── */
   if (errorInfo) return (
     <div className="wl-root"><style>{styles}</style>
-    <header className="wl-header">
-      <div className="wl-header-inner">
-        <button className="wl-back-btn" onClick={() => navigate(-1)}><ArrowLeft className="w-5 h-5" /></button>
-        <div className="wl-hbrand"><div className="wl-logo"><Flame className="w-4 h-4" style={{ color: "#0e0700" }} /></div><span className="wl-brand">KOTABITES</span></div>
-        <div style={{ width: 36 }} />
-      </div>
-    </header>
-    <div className="wl-center" style={{ minHeight: "calc(100vh - 64px)" }}>
-      {errorInfo.type === "network" ? (
-        <>
-          <div className="wl-err-icon wl-err-gold"><WifiOff className="w-10 h-10" style={{ color: "#FFC72C" }} /></div>
-          <h3 className="wl-big-title">Server Waking Up</h3>
-          <p className="wl-sub" style={{ maxWidth: 300 }}>{errorInfo.msg}</p>
-          <div className="wl-cold-card">
-            <Zap className="w-4 h-4" style={{ color: "#FFC72C", flexShrink: 0 }} />
-            <p>The free server sleeps when idle. It takes <strong>30–60s</strong> to restart.</p>
-          </div>
-          {retryIn !== null ? (
-            <div className="wl-countdown">
-              <div className="wl-ring"><span className="wl-ring-num">{retryIn}</span></div>
-              <p className="wl-sub" style={{ fontSize: 12 }}>Auto-retrying in {retryIn}s…</p>
-              <button className="wl-ghost-link" onClick={() => { clearRetry(); fetchData(); }}>Retry now instead</button>
+      <header className="wl-header">
+        <div className="wl-header-inner">
+          <button className="wl-back-btn" onClick={() => navigate(-1)}><ArrowLeft className="w-5 h-5" /></button>
+          <div className="wl-hbrand"><div className="wl-logo"><Flame className="w-4 h-4" style={{ color: "#0e0700" }} /></div><span className="wl-brand">KOTABITES</span></div>
+          <div style={{ width: 36 }} />
+        </div>
+      </header>
+      <div className="wl-center" style={{ minHeight: "calc(100vh - 64px)" }}>
+        {errorInfo.type === "network" ? (
+          <>
+            <div className="wl-err-icon wl-err-gold"><WifiOff className="w-10 h-10" style={{ color: "#FFC72C" }} /></div>
+            <h3 className="wl-big-title">Server Waking Up</h3>
+            <p className="wl-sub" style={{ maxWidth: 300 }}>{errorInfo.msg}</p>
+            <div className="wl-cold-card">
+              <Zap className="w-4 h-4" style={{ color: "#FFC72C", flexShrink: 0 }} />
+              <p>The free server sleeps when idle. It takes <strong>30–60s</strong> to restart.</p>
             </div>
-          ) : (
-            <button className="wl-red-btn" onClick={() => fetchData()}><RefreshCw className="w-4 h-4" /> Retry Now</button>
-          )}
-        </>
-      ) : errorInfo.type === "no_profile" ? (
-        <>
-          <div className="wl-err-icon wl-err-gold"><WalletIcon className="w-10 h-10" style={{ color: "#FFC72C" }} /></div>
-          <h3 className="wl-big-title">No Driver Profile</h3>
-          <p className="wl-sub">Complete driver signup to access your wallet.</p>
-          <Link to="/deliver" className="wl-red-btn">Apply to Drive</Link>
-          <button className="wl-ghost-link" onClick={() => fetchData()}>Retry</button>
-        </>
-      ) : errorInfo.type === "auth" ? (
-        <>
-          <div className="wl-err-icon wl-err-red"><AlertCircle className="w-10 h-10" style={{ color: "#f87171" }} /></div>
-          <h3 className="wl-big-title">Session Expired</h3>
-          <p className="wl-sub">{errorInfo.msg}</p>
-          <Link to="/login?redirect=/wallet" className="wl-red-btn">Sign In Again</Link>
-        </>
-      ) : (
-        <>
-          <div className="wl-err-icon wl-err-red"><AlertCircle className="w-10 h-10" style={{ color: "#f87171" }} /></div>
-          <h3 className="wl-big-title">Something Went Wrong</h3>
-          <p className="wl-sub">{errorInfo.msg}</p>
-          <button className="wl-red-btn" onClick={() => fetchData()}><RefreshCw className="w-4 h-4" /> Retry</button>
-        </>
-      )}
-    </div>
+            {retryIn !== null ? (
+              <div className="wl-countdown">
+                <div className="wl-ring"><span className="wl-ring-num">{retryIn}</span></div>
+                <p className="wl-sub" style={{ fontSize: 12 }}>Auto-retrying in {retryIn}s…</p>
+                <button className="wl-ghost-link" onClick={() => { clearRetry(); fetchData(); }}>Retry now instead</button>
+              </div>
+            ) : (
+              <button className="wl-red-btn" onClick={() => fetchData()}><RefreshCw className="w-4 h-4" /> Retry Now</button>
+            )}
+          </>
+        ) : errorInfo.type === "no_profile" ? (
+          <>
+            <div className="wl-err-icon wl-err-gold"><WalletIcon className="w-10 h-10" style={{ color: "#FFC72C" }} /></div>
+            <h3 className="wl-big-title">No Driver Profile</h3>
+            <p className="wl-sub">Complete driver signup to access your wallet.</p>
+            <Link to="/deliver" className="wl-red-btn">Apply to Drive</Link>
+            <button className="wl-ghost-link" onClick={() => fetchData()}>Retry</button>
+          </>
+        ) : errorInfo.type === "auth" ? (
+          <>
+            <div className="wl-err-icon wl-err-red"><AlertCircle className="w-10 h-10" style={{ color: "#f87171" }} /></div>
+            <h3 className="wl-big-title">Session Expired</h3>
+            <p className="wl-sub">{errorInfo.msg}</p>
+            <Link to="/login?redirect=/wallet" className="wl-red-btn">Sign In Again</Link>
+          </>
+        ) : (
+          <>
+            <div className="wl-err-icon wl-err-red"><AlertCircle className="w-10 h-10" style={{ color: "#f87171" }} /></div>
+            <h3 className="wl-big-title">Something Went Wrong</h3>
+            <p className="wl-sub">{errorInfo.msg}</p>
+            <button className="wl-red-btn" onClick={() => fetchData()}><RefreshCw className="w-4 h-4" /> Retry</button>
+          </>
+        )}
+      </div>
     </div>
   );
 
@@ -233,6 +283,14 @@ export default function WalletPage() {
     <div className="wl-root">
       <style>{styles}</style>
 
+      {/* Inactivity Warning Bar */}
+      {warnUser && (
+        <div className="wl-warn-bar" onClick={resetInactivity}>
+          <Timer className="w-4 h-4" />
+          <span>Auto sign-out in <strong>{fmtTime(timeLeft)}</strong> — tap anywhere to stay signed in</span>
+        </div>
+      )}
+
       <header className="wl-header">
         <div className="wl-header-inner">
           <button className="wl-back-btn" onClick={() => navigate(-1)}><ArrowLeft className="w-5 h-5" /></button>
@@ -240,13 +298,25 @@ export default function WalletPage() {
             <div className="wl-logo"><Flame className="w-4 h-4" style={{ color: "#0e0700" }} /></div>
             <span className="wl-brand">DRIVER WALLET</span>
           </div>
-          <span className="wl-user-pill">
-            {APPROVED.has(profile?.status) ? "✅" : "⏳"} {profile?.status || "Driver"}
-          </span>
+          <button className="wl-signout-btn" onClick={doLogout} title="Sign Out">
+            <LogOut className="w-4 h-4" />
+          </button>
         </div>
       </header>
 
       <div className="wl-body">
+
+        {/* Info Card */}
+        <div className="wl-info-card">
+          <Info className="w-4 h-4" style={{ color: "#FFC72C", flexShrink: 0 }} />
+          <div>
+            <p className="wl-info-title">Your Wallet</p>
+            <p className="wl-info-text">
+              Earnings are credited after each delivery. Minimum withdrawal is <strong>R50</strong>. 
+              Payouts process within <strong>24–48 hours</strong> to your linked bank account.
+            </p>
+          </div>
+        </div>
 
         {/* Balance Card */}
         <div className="wl-balance-card">
@@ -297,29 +367,57 @@ export default function WalletPage() {
           </div>
         </div>
 
-        {/* Driver Stats */}
+        {/* Driver Info */}
         {profile && (
           <div className="wl-driver-row">
-            <div className="wl-dstat"><span className="wl-dstat-lbl">Deliveries</span><span className="wl-dstat-val">{profile.total_deliveries || 0}</span></div>
+            <div className="wl-dstat">
+              <span className="wl-dstat-lbl">Deliveries</span>
+              <span className="wl-dstat-val">{profile.total_deliveries || 0}</span>
+            </div>
             <div className="wl-divider" />
-            <div className="wl-dstat"><span className="wl-dstat-lbl">Rating</span><span className="wl-dstat-val">⭐ {profile.rating?.toFixed(1) || "5.0"}</span></div>
+            <div className="wl-dstat">
+              <span className="wl-dstat-lbl">Rating</span>
+              <span className="wl-dstat-val">⭐ {profile.rating?.toFixed(1) || "5.0"}</span>
+            </div>
             <div className="wl-divider" />
-            <div className="wl-dstat"><span className="wl-dstat-lbl">Status</span><span className="wl-dstat-val" style={{ color: profile.is_available ? "#4ade80" : "var(--muted)" }}>{profile.is_available ? "Online" : "Offline"}</span></div>
+            <div className="wl-dstat">
+              <span className="wl-dstat-lbl">Status</span>
+              <span className="wl-dstat-val" style={{ color: profile.is_available ? "#4ade80" : "var(--muted)" }}>
+                {profile.is_available ? "Online" : "Offline"}
+              </span>
+            </div>
+            <div className="wl-divider" />
+            <div className="wl-dstat">
+              <span className="wl-dstat-lbl">Account</span>
+              <span className="wl-dstat-val" style={{ color: APPROVED.has(profile?.status) ? "#4ade80" : "#fbbf24" }}>
+                {APPROVED.has(profile?.status) ? "Approved" : "Pending"}
+              </span>
+            </div>
           </div>
         )}
 
         {/* Quick Links */}
         <div className="wl-links">
-          {[
-            { to: "/driver-dashboard",            label: "Driver Dashboard", sub: "Orders & deliveries", bg: "rgba(74,222,128,0.1)",  c: "#4ade80", icon: <ShoppingBag className="w-5 h-5" /> },
-            { to: "/driver-dashboard?tab=orders",  label: "Available Orders", sub: "Accept new orders",   bg: "rgba(96,165,250,0.1)",  c: "#60a5fa", icon: <Clock className="w-5 h-5" /> },
-          ].map(({ to, label, sub, bg, c, icon }) => (
-            <Link key={to} to={to} className="wl-link-card">
-              <div className="wl-link-icon" style={{ background: bg }}><span style={{ color: c }}>{icon}</span></div>
-              <div><span className="wl-link-title">{label}</span><span className="wl-link-sub">{sub}</span></div>
-              <ChevronRight className="w-5 h-5" style={{ color: "var(--muted)", marginLeft: "auto" }} />
-            </Link>
-          ))}
+          <Link to="/driver-dashboard" className="wl-link-card">
+            <div className="wl-link-icon" style={{ background: "rgba(74,222,128,0.1)" }}>
+              <span style={{ color: "#4ade80" }}><ShoppingBag className="w-5 h-5" /></span>
+            </div>
+            <div>
+              <span className="wl-link-title">Driver Dashboard</span>
+              <span className="wl-link-sub">Orders & deliveries</span>
+            </div>
+            <ChevronRight className="w-5 h-5" style={{ color: "var(--muted)", marginLeft: "auto" }} />
+          </Link>
+          <Link to="/driver-dashboard?tab=orders" className="wl-link-card">
+            <div className="wl-link-icon" style={{ background: "rgba(96,165,250,0.1)" }}>
+              <span style={{ color: "#60a5fa" }}><Clock className="w-5 h-5" /></span>
+            </div>
+            <div>
+              <span className="wl-link-title">Available Orders</span>
+              <span className="wl-link-sub">Accept new orders</span>
+            </div>
+            <ChevronRight className="w-5 h-5" style={{ color: "var(--muted)", marginLeft: "auto" }} />
+          </Link>
         </div>
 
         {/* Transactions */}
@@ -364,11 +462,6 @@ export default function WalletPage() {
             })}
           </div>
         )}
-
-        <div className="wl-footer-note">
-          <Info className="w-4 h-4" style={{ color: "var(--muted)", flexShrink: 0 }} />
-          <p>Earnings credited after delivery. Min withdrawal <strong>R50</strong>. Payout within 24–48 hrs.</p>
-        </div>
       </div>
 
       {/* Withdrawal Modal */}
@@ -435,6 +528,13 @@ const styles = `
   @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
   :root{--red:#DA291C;--red2:#b91c1c;--gold:#FFC72C;--dark:#0e0700;--card:#1a0e00;--border:rgba(255,199,44,0.1);--text:#fff8e7;--muted:rgba(255,248,231,0.42);}
   .wl-root{min-height:100vh;background:radial-gradient(ellipse 80% 35% at 50% 0%,rgba(218,41,28,0.12) 0%,transparent 65%),var(--dark);font-family:'Plus Jakarta Sans',system-ui,sans-serif;color:var(--text);overflow-x:hidden;padding-bottom:60px;}
+  
+  /* Inactivity Warning */
+  .wl-warn-bar{position:fixed;top:0;left:0;right:0;z-index:200;background:rgba(218,41,28,0.95);backdrop-filter:blur(10px);color:white;display:flex;align-items:center;justify-content:center;gap:8px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer;animation:wlSlideDown 0.3s ease;}
+  .wl-warn-bar strong{font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:1px;}
+  @keyframes wlSlideDown{from{transform:translateY(-100%)}to{transform:translateY(0)}}
+  
+  /* Header */
   .wl-header{position:sticky;top:0;z-index:100;background:rgba(14,7,0,0.95);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);}
   .wl-header-inner{max-width:680px;margin:0 auto;padding:13px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;}
   .wl-back-btn{width:36px;height:36px;border-radius:10px;flex-shrink:0;background:rgba(255,248,231,0.05);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--muted);cursor:pointer;transition:all 0.2s;}
@@ -442,7 +542,10 @@ const styles = `
   .wl-hbrand{display:flex;align-items:center;gap:8px;}
   .wl-logo{width:32px;height:32px;background:var(--gold);border-radius:9px;display:flex;align-items:center;justify-content:center;box-shadow:0 0 14px rgba(255,199,44,0.25);}
   .wl-brand{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:3px;color:var(--text);}
-  .wl-user-pill{padding:5px 12px;border-radius:50px;background:rgba(255,199,44,0.08);border:1px solid rgba(255,199,44,0.2);font-size:11px;font-weight:800;color:var(--gold);text-transform:capitalize;}
+  .wl-signout-btn{width:36px;height:36px;border-radius:10px;flex-shrink:0;background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.25);display:flex;align-items:center;justify-content:center;color:#f87171;cursor:pointer;transition:all 0.2s;}
+  .wl-signout-btn:hover{background:rgba(248,113,113,0.2);color:#fca5a5;}
+  
+  /* Center / Gate */
   .wl-center{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;text-align:center;padding:40px 24px;}
   .wl-gate-icon,.wl-err-icon{width:80px;height:80px;border-radius:22px;display:flex;align-items:center;justify-content:center;}
   .wl-err-gold{background:rgba(255,199,44,0.1);border:1px solid rgba(255,199,44,0.2);}
@@ -458,7 +561,17 @@ const styles = `
   .wl-ring{width:64px;height:64px;border-radius:50%;border:3px solid rgba(255,199,44,0.25);border-top-color:var(--gold);display:flex;align-items:center;justify-content:center;animation:wlSpin 1s linear infinite;}
   .wl-ring-num{font-family:'Bebas Neue',sans-serif;font-size:24px;color:var(--gold);animation:wlCounterSpin 1s linear infinite;}
   @keyframes wlCounterSpin{to{transform:rotate(-360deg);}}
+  
+  /* Body */
   .wl-body{max-width:680px;margin:0 auto;padding:24px 16px;display:flex;flex-direction:column;gap:20px;}
+  
+  /* Info Card */
+  .wl-info-card{display:flex;align-items:flex-start;gap:12px;background:rgba(255,199,44,0.06);border:1px solid rgba(255,199,44,0.15);border-radius:16px;padding:16px 18px;}
+  .wl-info-title{font-size:13px;font-weight:800;color:var(--gold);margin-bottom:4px;}
+  .wl-info-text{font-size:12px;color:var(--muted);line-height:1.6;}
+  .wl-info-text strong{color:var(--text);}
+  
+  /* Balance Card */
   .wl-balance-card{background:linear-gradient(135deg,var(--card) 0%,rgba(26,14,0,0.95) 100%);border:1px solid var(--border);border-radius:24px;padding:28px 24px;}
   .wl-bal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
   .wl-bal-label{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);}
@@ -475,17 +588,23 @@ const styles = `
   .wl-stat-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;}
   .wl-stat-lbl{font-size:10px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);text-align:center;}
   .wl-stat-val{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:0.5px;color:var(--text);}
+  
+  /* Driver Row */
   .wl-driver-row{display:flex;align-items:center;gap:16px;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px 20px;}
   .wl-dstat{flex:1;text-align:center;display:flex;flex-direction:column;gap:4px;}
   .wl-dstat-lbl{font-size:10px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);}
   .wl-dstat-val{font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--text);}
   .wl-divider{width:1px;height:32px;background:rgba(255,199,44,0.1);}
+  
+  /* Links */
   .wl-links{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;}
   .wl-link-card{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;text-decoration:none;transition:all 0.25s;}
   .wl-link-card:hover{border-color:rgba(255,199,44,0.25);transform:translateY(-2px);}
   .wl-link-icon{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
   .wl-link-title{display:block;font-size:13px;font-weight:800;color:var(--text);}
   .wl-link-sub{display:block;font-size:11px;color:var(--muted);}
+  
+  /* Transactions */
   .wl-tx-header{display:flex;align-items:center;justify-content:space-between;margin-top:12px;}
   .wl-tx-title{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:1.5px;color:var(--text);}
   .wl-tx-count{font-size:11px;font-weight:800;color:var(--muted);background:rgba(255,248,231,0.06);padding:3px 10px;border-radius:50px;}
@@ -504,9 +623,8 @@ const styles = `
   .wl-tx-amt{font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:0.5px;}
   .wl-pos{color:#4ade80;}.wl-neg{color:#f87171;}
   .wl-tx-bal{font-size:10px;color:var(--muted);font-weight:700;}
-  .wl-footer-note{display:flex;align-items:flex-start;gap:10px;padding:14px 16px;border-radius:12px;background:rgba(255,248,231,0.02);border:1px solid var(--border);}
-  .wl-footer-note p{font-size:11px;color:var(--muted);line-height:1.55;}
-  .wl-footer-note strong{color:var(--text);}
+  
+  /* Modal */
   .wl-overlay{position:fixed;inset:0;z-index:1000;background:rgba(14,7,0,0.9);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:20px;}
   .wl-modal{background:var(--card);border:1px solid var(--border);border-radius:24px;width:100%;max-width:440px;box-shadow:0 24px 64px rgba(0,0,0,0.6);animation:wlScale 0.3s cubic-bezier(0.34,1.56,0.64,1);}
   .wl-modal-head{display:flex;align-items:center;justify-content:space-between;padding:24px 24px 0;}
@@ -531,7 +649,19 @@ const styles = `
   .wl-submit-btn:disabled{opacity:0.55;cursor:not-allowed;}
   .wl-modal-success{padding:40px 24px;display:flex;flex-direction:column;align-items:center;gap:16px;text-align:center;}
   .wl-succ-icon{width:72px;height:72px;border-radius:20px;background:rgba(74,222,128,0.1);border:1px solid rgba(74,222,128,0.25);display:flex;align-items:center;justify-content:center;}
+  
+  /* Animations */
   @keyframes wlSpin{to{transform:rotate(360deg);}}.wl-spin{animation:wlSpin 0.8s linear infinite;}
   @keyframes wlScale{from{opacity:0;transform:scale(0.9)}to{opacity:1;transform:scale(1)}}
-  @media(max-width:640px){.wl-body{padding:16px 12px;}.wl-amt{font-size:48px;}.wl-stats-row{grid-template-columns:1fr;}.wl-links{grid-template-columns:1fr;}.wl-driver-row{flex-direction:column;gap:12px;}.wl-divider{width:100%;height:1px;}}
+  
+  /* Mobile */
+  @media(max-width:640px){
+    .wl-body{padding:16px 12px;}
+    .wl-amt{font-size:48px;}
+    .wl-stats-row{grid-template-columns:1fr;}
+    .wl-links{grid-template-columns:1fr;}
+    .wl-driver-row{flex-direction:column;gap:12px;}
+    .wl-divider{width:100%;height:1px;}
+    .wl-warn-bar{font-size:12px;padding:8px 12px;}
+  }
 `;
