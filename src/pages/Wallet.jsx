@@ -16,6 +16,7 @@ import {
   Banknote, Wallet,
 } from "lucide-react";
 import { Loader3 } from "../components/Loader";
+import SecurityTimeoutAlert from "../components/SecurityTimeoutAlert_BankStyle";
 
 /* ─────────────────────────────────────────────
    Constants
@@ -244,13 +245,11 @@ export default function WalletPage() {
 
       {/* ── Auto sign-out warning banner ── */}
       {showWarning && (
-        <div className="wl-timeout-banner">
-          <Timer size={14} style={{ flexShrink: 0 }} />
-          <span>Security sign-out in <strong>{secs}s</strong> due to inactivity</span>
-          <button className="wl-timeout-dismiss" onClick={() => { /* reset happens on any interaction */ }}>
-            Stay signed in
-          </button>
-        </div>
+        <SecurityTimeoutAlert 
+  secs={45} 
+  onStaySignedIn={() => resetTimer()} 
+  onDismiss={() => setShowWarning(false)} 
+/>
       )}
 
       {/* ── Nav ── */}
@@ -430,7 +429,7 @@ export default function WalletPage() {
           </div>
           <div className="wl-info-row">
             <Shield size={13} style={{ color: "#4ade80", flexShrink: 0 }} />
-            <span style={{ color: "rgba(74,222,128,0.6)" }}>Auto sign-out after 5 min of inactivity for your security</span>
+            <span style={{ color: "rgba(74,222,128,0.6)" }}>Auto sign-out after 2 min of inactivity for your security</span>
           </div>
         </div>
 
