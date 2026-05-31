@@ -1,11 +1,13 @@
 import React from "react";
 import { Timer, Shield, X, AlertCircle } from "lucide-react";
 
-// ── Bank-Style Security Timeout Alert ──
-// Authoritative, trustworthy, minimal. No gradients, no shadows, no gimmicks.
+// ── Smart Security Timeout Alert ──
+// Refined, authoritative, minimal. 30-second countdown with subtle motion.
 
 const SecurityTimeoutAlert = ({ secs, onStaySignedIn, onDismiss }) => {
   const isUrgent = secs <= 10;
+  const totalTime = 30;
+  const progressPct = (secs / totalTime) * 100;
 
   return (
     <div className={`ba-root ${isUrgent ? "ba-urgent" : ""}`}>
@@ -22,13 +24,13 @@ const SecurityTimeoutAlert = ({ secs, onStaySignedIn, onDismiss }) => {
 
         <div className="ba-content">
           <p className="ba-title">
-            {isUrgent ? "Session expiring soon" : "Session timeout warning"}
+            {isUrgent ? "Session expiring now" : "Session timeout warning"}
           </p>
           <p className="ba-body">
             For your security, you will be signed out in{" "}
-            <strong className={`ba-countdown ${isUrgent ? "ba-countdown-urgent" : ""}`}>
+            <span className={`ba-countdown ${isUrgent ? "ba-countdown-urgent" : ""}`}>
               {secs}s
-            </strong>{" "}
+            </span>{" "}
             due to inactivity.
           </p>
         </div>
@@ -48,7 +50,7 @@ const SecurityTimeoutAlert = ({ secs, onStaySignedIn, onDismiss }) => {
       <div className="ba-progress-track">
         <div
           className={`ba-progress-fill ${isUrgent ? "ba-progress-urgent" : ""}`}
-          style={{ width: `${(secs / 300) * 100}%` }}
+          style={{ width: `${progressPct}%` }}
         />
       </div>
     </div>
@@ -65,12 +67,27 @@ const styles = `
     right: 0;
     z-index: 9999;
     background: #ffffff;
-    border-bottom: 1px solid #d1d5db;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+    border-bottom: 1px solid #e5e7eb;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    animation: ba-slideDown 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes ba-slideDown {
+    from { transform: translateY(-100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
   }
 
   .ba-urgent {
     border-bottom-color: #dc2626;
+  }
+
+  .ba-urgent .ba-icon-wrap {
+    animation: ba-pulse 1.5s ease-in-out infinite;
+  }
+
+  @keyframes ba-pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
   }
 
   /* Bar */
@@ -78,7 +95,7 @@ const styles = `
     display: flex;
     align-items: center;
     gap: 16px;
-    padding: 14px 24px;
+    padding: 16px 24px;
     max-width: 1200px;
     margin: 0 auto;
   }
@@ -86,7 +103,7 @@ const styles = `
   @media (max-width: 640px) {
     .ba-bar {
       flex-wrap: wrap;
-      padding: 12px 16px;
+      padding: 14px 16px;
       gap: 12px;
     }
   }
@@ -94,13 +111,14 @@ const styles = `
   /* Icon */
   .ba-icon-wrap {
     flex-shrink: 0;
-    width: 36px;
-    height: 36px;
-    border-radius: 8px;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
     background: #f3f4f6;
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: background 0.2s ease;
   }
 
   .ba-urgent .ba-icon-wrap {
@@ -108,10 +126,10 @@ const styles = `
   }
 
   .ba-icon {
-    width: 18px;
-    height: 18px;
+    width: 20px;
+    height: 20px;
     color: #6b7280;
-    stroke-width: 2.5;
+    stroke-width: 2;
   }
 
   .ba-icon-alert {
@@ -125,15 +143,15 @@ const styles = `
   }
 
   .ba-title {
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 600;
     color: #111827;
-    margin: 0 0 2px;
-    letter-spacing: -0.1px;
+    margin: 0 0 3px;
+    letter-spacing: -0.2px;
   }
 
   .ba-body {
-    font-size: 13px;
+    font-size: 13.5px;
     font-weight: 400;
     color: #4b5563;
     margin: 0;
@@ -141,13 +159,15 @@ const styles = `
   }
 
   .ba-countdown {
-    font-family: 'SF Mono', 'Roboto Mono', monospace;
+    font-family: 'SF Mono', SFMono-Regular, 'Roboto Mono', monospace;
     font-weight: 700;
     color: #111827;
     background: #f3f4f6;
-    padding: 1px 6px;
-    border-radius: 4px;
-    font-size: 12px;
+    padding: 2px 7px;
+    border-radius: 5px;
+    font-size: 12.5px;
+    letter-spacing: 0.3px;
+    transition: all 0.2s ease;
   }
 
   .ba-countdown-urgent {
@@ -180,36 +200,39 @@ const styles = `
     cursor: pointer;
     border: none;
     outline: none;
-    transition: all 0.12s ease;
+    transition: all 0.15s ease;
     white-space: nowrap;
   }
 
   .ba-btn-icon {
-    width: 14px;
-    height: 14px;
-    stroke-width: 2.5;
+    width: 15px;
+    height: 15px;
+    stroke-width: 2;
   }
 
   .ba-btn-primary {
     background: #111827;
     color: #ffffff;
-    padding: 8px 16px;
-    border-radius: 6px;
+    padding: 9px 18px;
+    border-radius: 8px;
+    letter-spacing: -0.1px;
   }
 
   .ba-btn-primary:hover {
     background: #374151;
+    transform: translateY(-1px);
   }
 
   .ba-btn-primary:active {
     background: #1f2937;
+    transform: translateY(0);
   }
 
   .ba-btn-ghost {
     background: transparent;
-    color: #6b7280;
-    padding: 8px;
-    border-radius: 6px;
+    color: #9ca3af;
+    padding: 9px;
+    border-radius: 8px;
   }
 
   .ba-btn-ghost:hover {
@@ -220,8 +243,9 @@ const styles = `
   /* Progress bar */
   .ba-progress-track {
     height: 3px;
-    background: #e5e7eb;
+    background: #f3f4f6;
     width: 100%;
+    overflow: hidden;
   }
 
   .ba-progress-fill {
