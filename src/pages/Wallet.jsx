@@ -20,7 +20,7 @@ import { Loader3 } from "../components/Loader";
 /* ─────────────────────────────────────────────
    Constants
 ───────────────────────────────────────────── */
-const AUTO_SIGNOUT_MS  = 5 * 60 * 1000;   // 5 min
+const AUTO_SIGNOUT_MS  = 2 * 60 * 1000;   // 2 min
 const WARN_AT_MS       = 60 * 1000;        // show warning when 60s remain
 const APPROVED         = new Set(["approved", "active", "offline"]);
 
