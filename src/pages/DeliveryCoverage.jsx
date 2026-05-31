@@ -1,39 +1,38 @@
 // src/pages/DeliveryCoverage.jsx
-// Requires: npm install react-leaflet leaflet
-// In your index.html or main CSS: import 'leaflet/dist/leaflet.css'
+// Simplified & Enhanced UX — clear instructions, cleaner layout, better feedback
 
 import { useEffect, useRef, useState } from "react";
-import { MapPin, Clock, CheckCircle, XCircle, Bike, ChevronDown } from "lucide-react";
+import { MapPin, Clock, CheckCircle, XCircle, Bike, ArrowLeft, Info, Search, Navigation } from "lucide-react";
 import { Flame } from "lucide-react";
 import { Link } from "react-router-dom";
 
-// ── CONFIG — update these to your actual store location & radius ──
+// ── CONFIG ──
 const STORE = {
-  lat:-26.430171,
+  lat: -26.430171,
   lng: 27.872867,
   name: "KotaBites HQ",
   address: "Tjovitjo phase 2, Johannesburg",
 };
 
 const DELIVERY_ZONES = [
-  { label: "Express Zone",  radius: 1000,  color: "#4ade80", opacity: 0.18, borderOpacity: 0.7, time: "20–30 min", fee: "R15" },
-  { label: "Standard Zone", radius: 1100,  color: "#FFC72C", opacity: 0.12, borderOpacity: 0.6, time: "30–45 min", fee: "R25" },
-  { label: "Extended Zone", radius: 1300, color: "#f87171", opacity: 0.08, borderOpacity: 0.4, time: "45–60 min", fee: "R40" },
+  { label: "Express Zone",  radius: 1000,  color: "#4ade80", time: "20–30 min", fee: "R15" },
+  { label: "Standard Zone", radius: 1100,  color: "#FFC72C", time: "30–45 min", fee: "R25" },
+  { label: "Extended Zone", radius: 1300, color: "#f87171", time: "45–60 min", fee: "R40" },
 ];
 
 export default function DeliveryCoverage() {
-  const mapRef      = useRef(null);
+  const mapRef = useRef(null);
   const mapInstance = useRef(null);
-  const [address, setAddress]     = useState("");
-  const [checking, setChecking]   = useState(false);
-  const [result, setResult]       = useState(null); // { covered: bool, zone, distance }
+  const [address, setAddress] = useState("");
+  const [checking, setChecking] = useState(false);
+  const [result, setResult] = useState(null);
   const [markerRef, setMarkerRef] = useState(null);
+  const [showInstructions, setShowInstructions] = useState(true);
 
   // ── Init Leaflet map ──
   useEffect(() => {
     if (mapInstance.current) return;
 
-    // Dynamic import so SSR-safe
     import("leaflet").then((L) => {
       const map = L.map(mapRef.current, {
         center: [STORE.lat, STORE.lng],
@@ -42,35 +41,32 @@ export default function DeliveryCoverage() {
         attributionControl: false,
       });
 
-      // Dark tile layer (CartoDB Dark Matter)
       L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
         attribution: "© OpenStreetMap © CARTO",
         subdomains: "abcd",
         maxZoom: 19,
       }).addTo(map);
 
-      // Attribution (small, bottom-right)
       L.control.attribution({ position: "bottomright", prefix: false })
         .addAttribution('© <a href="https://carto.com">CARTO</a>')
         .addTo(map);
 
-      // Zoom control (styled position)
       L.control.zoom({ position: "bottomright" }).addTo(map);
 
-      // Draw delivery circles
+      // Draw zones
       DELIVERY_ZONES.forEach((zone) => {
         L.circle([STORE.lat, STORE.lng], {
           radius: zone.radius,
           color: zone.color,
           fillColor: zone.color,
-          fillOpacity: zone.opacity,
-          weight: 1.5,
-          opacity: zone.borderOpacity,
+          fillOpacity: 0.12,
+          weight: 2,
+          opacity: 0.7,
           dashArray: zone.label === "Extended Zone" ? "6 4" : null,
         }).addTo(map);
       });
 
-      // Store marker (custom)
+      // Store marker
       const storeIcon = L.divIcon({
         className: "",
         html: `<div class="kb-map-marker-store">
@@ -97,7 +93,6 @@ export default function DeliveryCoverage() {
     };
   }, []);
 
-  // ── Haversine distance (metres) ──
   function haversine(lat1, lng1, lat2, lng2) {
     const R = 6371000;
     const dLat = ((lat2 - lat1) * Math.PI) / 180;
@@ -110,20 +105,20 @@ export default function DeliveryCoverage() {
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   }
 
-  // ── Check coverage via Nominatim geocoding ──
   const handleCheck = async () => {
     if (!address.trim()) return;
     setChecking(true);
     setResult(null);
+    setShowInstructions(false);
 
     try {
-      const res  = await fetch(
+      const res = await fetch(
         `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=json&limit=1`
       );
       const data = await res.json();
 
       if (!data.length) {
-        setResult({ error: "Address not found. Try a more specific address." });
+        setResult({ error: "Address not found. Try a more specific address with street name and area." });
         setChecking(false);
         return;
       }
@@ -131,22 +126,18 @@ export default function DeliveryCoverage() {
       const { lat, lon, display_name } = data[0];
       const userLat = parseFloat(lat);
       const userLng = parseFloat(lon);
-      const dist    = haversine(STORE.lat, STORE.lng, userLat, userLng);
-
-      // Find which zone
+      const dist = haversine(STORE.lat, STORE.lng, userLat, userLng);
       const zone = DELIVERY_ZONES.find((z) => dist <= z.radius);
 
       setResult({
-        covered:      !!zone,
-        zone:         zone || null,
-        distance:     Math.round(dist / 100) / 10, // km
-        displayName:  display_name,
+        covered: !!zone,
+        zone: zone || null,
+        distance: Math.round(dist / 100) / 10,
+        displayName: display_name,
       });
 
-      // Place / move marker on map
       import("leaflet").then((L) => {
         if (!mapInstance.current) return;
-
         if (markerRef) {
           markerRef.setLatLng([userLat, userLng]);
         } else {
@@ -159,13 +150,25 @@ export default function DeliveryCoverage() {
           const m = L.marker([userLat, userLng], { icon: userIcon }).addTo(mapInstance.current);
           setMarkerRef(m);
         }
-
-        mapInstance.current.flyTo([userLat, userLng], 13, { duration: 1.2 });
+        mapInstance.current.flyTo([userLat, userLng], 14, { duration: 1.2 });
       });
     } catch {
-      setResult({ error: "Could not check coverage. Please try again." });
+      setResult({ error: "Could not check coverage. Please check your internet and try again." });
     } finally {
       setChecking(false);
+    }
+  };
+
+  const clearSearch = () => {
+    setAddress("");
+    setResult(null);
+    setShowInstructions(true);
+    if (markerRef && mapInstance.current) {
+      mapInstance.current.removeLayer(markerRef);
+      setMarkerRef(null);
+    }
+    if (mapInstance.current) {
+      mapInstance.current.flyTo([STORE.lat, STORE.lng], 13, { duration: 0.8 });
     }
   };
 
@@ -173,65 +176,127 @@ export default function DeliveryCoverage() {
     <div className="cov-root">
       <style>{styles}</style>
 
-      {/* ── Header ── */}
+      {/* Header */}
       <header className="cov-header">
-        <Link to="/" className="cov-logo-wrap">
+        <Link to="/" className="cov-back">
+          <ArrowLeft className="w-4 h-4" />
+          <span>Back</span>
+        </Link>
+        <div className="cov-header-center">
           <div className="cov-logo">
             <Flame className="w-5 h-5" style={{ color: "#0e0700" }} />
           </div>
-          <span className="cov-brand">KOTABITES</span>
-        </Link>
-        <h1 className="cov-title">Delivery Coverage</h1>
-        <p className="cov-sub">Check if we deliver to your area</p>
+          <div>
+            <h1 className="cov-title">Delivery Coverage</h1>
+            <p className="cov-sub">Check if we deliver to your area</p>
+          </div>
+        </div>
+        <div className="cov-header-spacer" />
       </header>
 
-      {/* ── Main layout ── */}
+      {/* Main */}
       <div className="cov-body">
 
-        {/* ── Sidebar ── */}
+        {/* Sidebar */}
         <aside className="cov-sidebar">
 
-          {/* Address checker */}
-          <div className="cov-card">
-            <p className="cov-card-label">
-              <MapPin className="w-3.5 h-3.5" /> Check your address
-            </p>
+          {/* Address Checker Card */}
+          <div className="cov-card cov-card-main">
+            <div className="cov-card-header">
+              <Search className="w-4 h-4" />
+              <span>Check Your Address</span>
+            </div>
+
             <div className="cov-input-wrap">
               <input
                 className="cov-input"
-                placeholder="e.g. 14 Vilakazi St, Soweto"
+                placeholder="Enter your street address..."
                 value={address}
-                onChange={(e) => { setAddress(e.target.value); setResult(null); }}
+                onChange={(e) => { setAddress(e.target.value); if (!e.target.value) clearSearch(); }}
                 onKeyDown={(e) => e.key === "Enter" && handleCheck()}
               />
-              <button
-                className="cov-check-btn"
-                onClick={handleCheck}
-                disabled={checking || !address.trim()}
-              >
-                {checking ? <span className="cov-spin" /> : "Check"}
-              </button>
+              {address && (
+                <button className="cov-clear" onClick={clearSearch}>
+                  <XCircle className="w-4 h-4" />
+                </button>
+              )}
             </div>
+
+            <button
+              className="cov-check-btn"
+              onClick={handleCheck}
+              disabled={checking || !address.trim()}
+            >
+              {checking ? (
+                <>
+                  <span className="cov-spin" />
+                  Checking...
+                </>
+              ) : (
+                <>
+                  <Navigation className="w-4 h-4" />
+                  Check Coverage
+                </>
+              )}
+            </button>
+
+            {/* Instructions */}
+            {showInstructions && !result && (
+              <div className="cov-instructions">
+                <div className="cov-instr-header">
+                  <Info className="w-4 h-4" />
+                  <span>How to check</span>
+                </div>
+                <ol className="cov-instr-list">
+                  <li>Type your full street address in the box above</li>
+                  <li>Include your area name (e.g., "Soweto", "Roodepoort")</li>
+                  <li>Click <strong>Check Coverage</strong> or press Enter</li>
+                  <li>We'll show your zone, delivery time, and fee</li>
+                </ol>
+                <div className="cov-instr-example">
+                  <MapPin className="w-3 h-3" />
+                  <span>Example: "14 Vilakazi St, Soweto"</span>
+                </div>
+              </div>
+            )}
 
             {/* Result */}
             {result && !result.error && (
               <div className={`cov-result ${result.covered ? "cov-result-yes" : "cov-result-no"}`}>
                 {result.covered ? (
-                  <CheckCircle className="w-4 h-4" style={{ flexShrink: 0 }} />
+                  <CheckCircle className="w-5 h-5" />
                 ) : (
-                  <XCircle className="w-4 h-4" style={{ flexShrink: 0 }} />
+                  <XCircle className="w-5 h-5" />
                 )}
-                <div>
+                <div className="cov-result-body">
                   <p className="cov-result-title">
-                    {result.covered ? `We deliver here! 🎉` : "Outside delivery area"}
+                    {result.covered ? "✓ We deliver to your area!" : "✗ Outside delivery area"}
                   </p>
                   {result.covered ? (
-                    <p className="cov-result-sub">
-                      {result.zone.label} · {result.zone.time} · {result.zone.fee}
-                    </p>
+                    <div className="cov-result-details">
+                      <div className="cov-detail-row">
+                        <span className="cov-detail-label">Zone</span>
+                        <span className="cov-detail-value" style={{ color: result.zone.color }}>
+                          {result.zone.label}
+                        </span>
+                      </div>
+                      <div className="cov-detail-row">
+                        <span className="cov-detail-label">Delivery Time</span>
+                        <span className="cov-detail-value">{result.zone.time}</span>
+                      </div>
+                      <div className="cov-detail-row">
+                        <span className="cov-detail-label">Delivery Fee</span>
+                        <span className="cov-detail-value">{result.zone.fee}</span>
+                      </div>
+                      <div className="cov-detail-row">
+                        <span className="cov-detail-label">Distance</span>
+                        <span className="cov-detail-value">{result.distance} km</span>
+                      </div>
+                    </div>
                   ) : (
                     <p className="cov-result-sub">
-                      {result.distance} km away — outside our {DELIVERY_ZONES[DELIVERY_ZONES.length - 1].radius / 1000} km range.
+                      Your location is <strong>{result.distance} km</strong> away.<br />
+                      Our max range is <strong>{DELIVERY_ZONES[DELIVERY_ZONES.length - 1].radius / 1000} km</strong>.
                     </p>
                   )}
                 </div>
@@ -240,43 +305,48 @@ export default function DeliveryCoverage() {
 
             {result?.error && (
               <div className="cov-result cov-result-no">
-                <XCircle className="w-4 h-4" style={{ flexShrink: 0 }} />
-                <p className="cov-result-sub">{result.error}</p>
+                <XCircle className="w-5 h-5" />
+                <div>
+                  <p className="cov-result-title">Could not find address</p>
+                  <p className="cov-result-sub">{result.error}</p>
+                </div>
               </div>
             )}
           </div>
 
-          {/* Zone legend */}
+          {/* Zone Legend */}
           <div className="cov-card">
-            <p className="cov-card-label">
-              <Bike className="w-3.5 h-3.5" /> Delivery zones
-            </p>
+            <div className="cov-card-header">
+              <Bike className="w-4 h-4" />
+              <span>Delivery Zones</span>
+            </div>
             <div className="cov-zones">
               {DELIVERY_ZONES.map((z) => (
                 <div key={z.label} className="cov-zone-row">
-                  <span className="cov-zone-dot" style={{ background: z.color, boxShadow: `0 0 8px ${z.color}` }} />
+                  <span className="cov-zone-dot" style={{ background: z.color }} />
                   <div className="cov-zone-info">
                     <p className="cov-zone-name">{z.label}</p>
-                    <p className="cov-zone-meta">{z.radius / 1000} km radius · {z.time} · {z.fee}</p>
+                    <p className="cov-zone-meta">Up to {z.radius / 1000} km · {z.time} · {z.fee}</p>
                   </div>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Store info */}
+          {/* Store Info */}
           <div className="cov-card">
-            <p className="cov-card-label">
-              <Clock className="w-3.5 h-3.5" /> Store & hours
-            </p>
+            <div className="cov-card-header">
+              <Clock className="w-4 h-4" />
+              <span>Store & Hours</span>
+            </div>
             <div className="cov-store-info">
               <p className="cov-store-name">{STORE.name}</p>
               <p className="cov-store-addr">{STORE.address}</p>
               <div className="cov-hours">
                 {[
                   ["Mon – Fri", "09:00 – 17:00"],
-                  ["Saturday",  "09:00 – 14:00"],
-                  ["Sunday",    "Closed"],
+                  ["Saturday", "09:00 – 14:00"],
+                  ["Sunday", "Closed"],
                 ].map(([day, hrs]) => (
                   <div key={day} className="cov-hours-row">
                     <span>{day}</span><span>{hrs}</span>
@@ -287,16 +357,22 @@ export default function DeliveryCoverage() {
           </div>
 
           <Link to="/menu" className="cov-order-btn">
+            <Flame className="w-4 h-4" />
             Order Now
           </Link>
         </aside>
 
-        {/* ── Map ── */}
+        {/* Map */}
         <div className="cov-map-wrap">
           <div ref={mapRef} className="cov-map" />
           <div className="cov-map-badge">
             <MapPin className="w-3 h-3" />
             <span>{STORE.name}</span>
+          </div>
+          <div className="cov-map-legend">
+            <span className="cov-legend-dot" style={{ background: "#4ade80" }} /> Express
+            <span className="cov-legend-dot" style={{ background: "#FFC72C" }} /> Standard
+            <span className="cov-legend-dot" style={{ background: "#f87171" }} /> Extended
           </div>
         </div>
       </div>
@@ -316,61 +392,63 @@ const styles = `
     --border: rgba(255,199,44,0.12);
     --text:  #fff8e7;
     --muted: rgba(255,248,231,0.42);
+    --green: #4ade80;
   }
 
   .cov-root {
     min-height: 100vh;
-    background:
-      radial-gradient(ellipse 80% 40% at 50% 0%, rgba(218,41,28,0.15) 0%, transparent 60%),
-      var(--dark);
+    background: var(--dark);
     font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
     color: var(--text);
     display: flex; flex-direction: column;
   }
 
-  /* ── Header ── */
+  /* Header */
   .cov-header {
-    padding: 24px 32px 20px;
+    padding: 16px 24px;
     border-bottom: 1px solid var(--border);
-    background: rgba(26,14,0,0.8);
+    background: rgba(26,14,0,0.9);
     backdrop-filter: blur(10px);
-    display: flex; align-items: center; gap: 16px;
-    flex-wrap: wrap;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 100;
   }
-  .cov-logo-wrap {
-    display: flex; align-items: center; gap: 8px; text-decoration: none;
+  .cov-back {
+    display: flex; align-items: center; gap: 6px;
+    color: var(--muted); text-decoration: none;
+    font-size: 13px; font-weight: 600;
+    transition: color 0.2s;
+  }
+  .cov-back:hover { color: var(--gold); }
+  .cov-header-center {
+    display: flex; align-items: center; gap: 12px;
+    position: absolute; left: 50%; transform: translateX(-50%);
   }
   .cov-logo {
-    width: 34px; height: 34px; background: var(--gold); border-radius: 9px;
+    width: 36px; height: 36px; background: var(--gold); border-radius: 10px;
     display: flex; align-items: center; justify-content: center;
     box-shadow: 0 0 16px rgba(255,199,44,0.3);
-    flex-shrink: 0;
-  }
-  .cov-brand {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 20px; letter-spacing: 3px; color: var(--text); line-height: 1;
   }
   .cov-title {
     font-family: 'Bebas Neue', sans-serif;
-    font-size: 26px; letter-spacing: 2px; color: var(--text);
-    border-left: 1px solid var(--border); padding-left: 16px;
+    font-size: 22px; letter-spacing: 2px; color: var(--text);
     line-height: 1;
   }
   .cov-sub {
-    font-size: 12px; color: var(--muted); font-weight: 600;
-    margin-left: auto;
+    font-size: 11px; color: var(--muted); font-weight: 500;
+    margin-top: 2px;
   }
+  .cov-header-spacer { width: 60px; }
 
-  /* ── Body layout ── */
+  /* Body */
   .cov-body {
     flex: 1; display: flex; gap: 0;
     overflow: hidden; min-height: 0;
   }
 
-  /* ── Sidebar ── */
+  /* Sidebar */
   .cov-sidebar {
-    width: 320px; flex-shrink: 0;
-    overflow-y: auto; padding: 20px 16px;
+    width: 340px; flex-shrink: 0;
+    overflow-y: auto; padding: 16px;
     display: flex; flex-direction: column; gap: 12px;
     border-right: 1px solid var(--border);
     scrollbar-width: thin; scrollbar-color: rgba(255,199,44,0.15) transparent;
@@ -378,46 +456,57 @@ const styles = `
   .cov-sidebar::-webkit-scrollbar { width: 4px; }
   .cov-sidebar::-webkit-scrollbar-thumb { background: rgba(255,199,44,0.15); border-radius: 4px; }
 
-  /* ── Cards ── */
+  /* Cards */
   .cov-card {
     background: rgba(255,248,231,0.03);
     border: 1px solid var(--border);
-    border-radius: 16px; padding: 14px 16px;
+    border-radius: 14px; padding: 16px;
   }
-  .cov-card-label {
-    display: flex; align-items: center; gap: 6px;
-    font-size: 10px; font-weight: 800; letter-spacing: 0.1em;
+  .cov-card-main { border-color: rgba(255,199,44,0.2); }
+  .cov-card-header {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 11px; font-weight: 800; letter-spacing: 0.08em;
     text-transform: uppercase; color: var(--muted);
-    margin-bottom: 12px;
+    margin-bottom: 14px;
   }
 
-  /* ── Address input ── */
+  /* Input */
   .cov-input-wrap {
-    display: flex; gap: 8px;
+    display: flex; align-items: center; gap: 8px;
+    position: relative;
   }
   .cov-input {
     flex: 1; background: rgba(255,248,231,0.05);
-    border: 1.5px solid var(--border); border-radius: 10px;
-    padding: 9px 12px; color: var(--text);
-    font-size: 13px; font-weight: 500;
+    border: 1.5px solid var(--border); border-radius: 12px;
+    padding: 12px 40px 12px 14px; color: var(--text);
+    font-size: 14px; font-weight: 500;
     font-family: 'Plus Jakarta Sans', sans-serif;
-    outline: none; transition: border-color 0.2s;
+    outline: none; transition: all 0.2s;
   }
-  .cov-input:focus { border-color: rgba(255,199,44,0.4); }
+  .cov-input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(255,199,44,0.1); }
   .cov-input::placeholder { color: var(--muted); }
-  .cov-check-btn {
-    padding: 9px 16px; background: var(--red); color: white;
-    border: none; border-radius: 10px; cursor: pointer;
-    font-family: 'Plus Jakarta Sans', sans-serif;
-    font-weight: 800; font-size: 12px;
-    transition: all 0.18s; flex-shrink: 0;
+  .cov-clear {
+    position: absolute; right: 14px;
+    background: none; border: none; color: var(--muted);
+    cursor: pointer; padding: 2px;
     display: flex; align-items: center; justify-content: center;
-    min-width: 60px;
   }
-  .cov-check-btn:hover:not(:disabled) { background: var(--red2); }
+  .cov-clear:hover { color: var(--text); }
+
+  /* Check Button */
+  .cov-check-btn {
+    width: 100%; margin-top: 10px;
+    padding: 12px; background: var(--red); color: white;
+    border: none; border-radius: 12px; cursor: pointer;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 800; font-size: 13px;
+    transition: all 0.2s;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .cov-check-btn:hover:not(:disabled) { background: var(--red2); transform: translateY(-1px); }
   .cov-check-btn:disabled { opacity: 0.45; cursor: not-allowed; }
   .cov-spin {
-    width: 14px; height: 14px; border-radius: 50%;
+    width: 16px; height: 16px; border-radius: 50%;
     border: 2px solid rgba(255,255,255,0.3);
     border-top-color: white;
     animation: covSpin 0.7s linear infinite;
@@ -425,46 +514,85 @@ const styles = `
   }
   @keyframes covSpin { to { transform: rotate(360deg); } }
 
-  /* ── Result ── */
+  /* Instructions */
+  .cov-instructions {
+    margin-top: 14px; padding: 14px;
+    background: rgba(255,199,44,0.05);
+    border: 1px dashed rgba(255,199,44,0.2);
+    border-radius: 12px;
+  }
+  .cov-instr-header {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 12px; font-weight: 700; color: var(--gold);
+    margin-bottom: 10px;
+  }
+  .cov-instr-list {
+    margin: 0; padding-left: 18px;
+    font-size: 12px; color: var(--muted); line-height: 1.8;
+  }
+  .cov-instr-list li { margin-bottom: 4px; }
+  .cov-instr-example {
+    margin-top: 10px; padding: 8px 10px;
+    background: rgba(255,199,44,0.08);
+    border-radius: 8px;
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11px; color: var(--gold); font-weight: 600;
+  }
+
+  /* Result */
   .cov-result {
-    display: flex; align-items: flex-start; gap: 10px;
-    margin-top: 10px; padding: 10px 12px; border-radius: 10px;
-    border: 1px solid; animation: covFadeIn 0.25s ease;
+    display: flex; align-items: flex-start; gap: 12px;
+    margin-top: 14px; padding: 14px; border-radius: 12px;
+    border: 1px solid; animation: covFadeIn 0.3s ease;
   }
   .cov-result-yes {
     background: rgba(74,222,128,0.08); border-color: rgba(74,222,128,0.25);
-    color: #4ade80;
+    color: var(--green);
   }
   .cov-result-no {
     background: rgba(248,113,113,0.08); border-color: rgba(248,113,113,0.25);
     color: #f87171;
   }
-  .cov-result-title { font-size: 12px; font-weight: 800; color: var(--text); }
-  .cov-result-sub   { font-size: 11px; color: var(--muted); margin-top: 2px; }
-  @keyframes covFadeIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+  .cov-result-body { flex: 1; }
+  .cov-result-title { font-size: 14px; font-weight: 800; color: var(--text); margin-bottom: 8px; }
+  .cov-result-sub { font-size: 12px; color: var(--muted); line-height: 1.6; }
+  .cov-result-details { display: flex; flex-direction: column; gap: 6px; }
+  .cov-detail-row {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 12px; padding: 6px 0;
+    border-bottom: 1px solid rgba(255,248,231,0.05);
+  }
+  .cov-detail-row:last-child { border-bottom: none; }
+  .cov-detail-label { color: var(--muted); font-weight: 500; }
+  .cov-detail-value { color: var(--text); font-weight: 700; }
+  @keyframes covFadeIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
 
-  /* ── Zones ── */
+  /* Zones */
   .cov-zones { display: flex; flex-direction: column; gap: 10px; }
   .cov-zone-row { display: flex; align-items: center; gap: 10px; }
   .cov-zone-dot {
-    width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+    width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0;
+    box-shadow: 0 0 8px currentColor;
   }
-  .cov-zone-name { font-size: 12px; font-weight: 800; color: var(--text); }
-  .cov-zone-meta { font-size: 11px; color: var(--muted); margin-top: 1px; }
+  .cov-zone-name { font-size: 13px; font-weight: 700; color: var(--text); }
+  .cov-zone-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
 
-  /* ── Store info ── */
-  .cov-store-name { font-size: 13px; font-weight: 800; color: var(--text); margin-bottom: 3px; }
-  .cov-store-addr { font-size: 11px; color: var(--muted); margin-bottom: 10px; }
-  .cov-hours { display: flex; flex-direction: column; gap: 5px; }
+  /* Store Info */
+  .cov-store-name { font-size: 14px; font-weight: 800; color: var(--text); margin-bottom: 3px; }
+  .cov-store-addr { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
+  .cov-hours { display: flex; flex-direction: column; gap: 6px; }
   .cov-hours-row {
     display: flex; justify-content: space-between;
-    font-size: 11px; color: var(--muted);
+    font-size: 12px; color: var(--muted);
+    padding: 4px 0;
+    border-bottom: 1px solid rgba(255,248,231,0.05);
   }
+  .cov-hours-row:last-child { border-bottom: none; }
   .cov-hours-row span:last-child { color: var(--text); font-weight: 700; }
 
-  /* ── Order button ── */
+  /* Order Button */
   .cov-order-btn {
-    display: flex; align-items: center; justify-content: center;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
     background: var(--red); color: white; text-decoration: none;
     font-family: 'Plus Jakarta Sans', sans-serif;
     font-weight: 900; font-size: 14px;
@@ -474,28 +602,38 @@ const styles = `
   }
   .cov-order-btn:hover { background: var(--red2); transform: scale(1.02); }
 
-  /* ── Map ── */
+  /* Map */
   .cov-map-wrap {
     flex: 1; position: relative; min-height: 0;
   }
   .cov-map {
     width: 100%; height: 100%;
-    min-height: calc(100vh - 80px);
+    min-height: calc(100vh - 70px);
   }
-
-  /* Override Leaflet tiles for dark look */
   .cov-map .leaflet-tile-pane { filter: brightness(0.85) contrast(1.05); }
 
   .cov-map-badge {
     position: absolute; top: 14px; left: 14px; z-index: 800;
     display: flex; align-items: center; gap: 6px;
-    background: rgba(26,14,0,0.85); backdrop-filter: blur(8px);
+    background: rgba(26,14,0,0.9); backdrop-filter: blur(8px);
     border: 1px solid var(--border); border-radius: 10px;
-    padding: 7px 12px; font-size: 11px; font-weight: 700; color: var(--gold);
+    padding: 8px 14px; font-size: 12px; font-weight: 700; color: var(--gold);
     pointer-events: none;
   }
 
-  /* ── Custom map markers ── */
+  .cov-map-legend {
+    position: absolute; bottom: 14px; right: 14px; z-index: 800;
+    display: flex; align-items: center; gap: 10px;
+    background: rgba(26,14,0,0.9); backdrop-filter: blur(8px);
+    border: 1px solid var(--border); border-radius: 10px;
+    padding: 8px 14px; font-size: 11px; font-weight: 600; color: var(--muted);
+    pointer-events: none;
+  }
+  .cov-legend-dot {
+    width: 10px; height: 10px; border-radius: 50%; margin-right: 4px;
+  }
+
+  /* Markers */
   .kb-map-marker-store {
     width: 40px; height: 40px; border-radius: 50%;
     background: var(--gold);
@@ -507,15 +645,14 @@ const styles = `
     0%, 100% { box-shadow: 0 0 0 4px rgba(255,199,44,0.25), 0 4px 16px rgba(255,199,44,0.4); }
     50%       { box-shadow: 0 0 0 8px rgba(255,199,44,0.1),  0 4px 20px rgba(255,199,44,0.6); }
   }
-
   .kb-map-marker-user {
     width: 16px; height: 16px; border-radius: 50%;
-    background: #DA291C;
+    background: var(--red);
     border: 3px solid white;
     box-shadow: 0 2px 8px rgba(218,41,28,0.6);
   }
 
-  /* ── Leaflet popup override ── */
+  /* Popup */
   .kb-map-popup .leaflet-popup-content-wrapper {
     background: var(--card) !important;
     border: 1px solid var(--border) !important;
@@ -527,7 +664,7 @@ const styles = `
   }
   .kb-map-popup .leaflet-popup-tip { background: var(--card) !important; }
 
-  /* ── Leaflet zoom buttons override ── */
+  /* Zoom */
   .leaflet-control-zoom a {
     background: rgba(26,14,0,0.9) !important;
     border-color: var(--border) !important;
@@ -539,7 +676,7 @@ const styles = `
     color: var(--gold) !important;
   }
 
-  /* ── Attribution override ── */
+  /* Attribution */
   .leaflet-control-attribution {
     background: rgba(14,7,0,0.7) !important;
     color: rgba(255,248,231,0.3) !important;
@@ -547,13 +684,18 @@ const styles = `
   }
   .leaflet-control-attribution a { color: rgba(255,199,44,0.4) !important; }
 
-  /* ── Responsive ── */
+  /* Responsive */
   @media (max-width: 768px) {
     .cov-body { flex-direction: column; overflow: visible; }
-    .cov-sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--border); }
-    .cov-map-wrap { min-height: 400px; }
-    .cov-map { min-height: 400px; }
-    .cov-header { padding: 16px; gap: 10px; }
+    .cov-sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--border); max-height: none; }
+    .cov-map-wrap { min-height: 350px; }
+    .cov-map { min-height: 350px; }
+    .cov-header { padding: 12px 16px; }
+    .cov-header-center { position: static; transform: none; }
+    .cov-header-spacer { display: none; }
+    .cov-back span { display: none; }
+    .cov-title { font-size: 18px; }
     .cov-sub { display: none; }
+    .cov-map-legend { display: none; }
   }
 `;
