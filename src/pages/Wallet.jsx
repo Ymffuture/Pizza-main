@@ -1,4 +1,4 @@
-// src/pages/Wallet.jsx — Driver Earnings Wallet (Simplified)
+// src/pages/Wallet.jsx — Driver Earnings Wallet · simplified · auto sign-out
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
@@ -9,45 +9,87 @@ import {
   withdrawFunds,
 } from "../api/delivery.api";
 import {
-  Flame, Wallet as WalletIcon, ArrowLeft, TrendingUp,
-  DollarSign, Download, Clock, CheckCircle2, AlertCircle,
-  ArrowDownRight, Gift, Zap, ShoppingBag,
-  Loader, X, Info, ChevronRight, RefreshCw, WifiOff,
-  LogOut, Timer,
+  Flame, ArrowLeft, TrendingUp, Download, Clock,
+  CheckCircle2, AlertCircle, ArrowDownRight, Gift,
+  Zap, ShoppingBag, Loader, X, Info, ChevronRight,
+  RefreshCw, WifiOff, Shield, LogOut, Timer,
+  Banknote, Wallet,
 } from "lucide-react";
 import { Loader3 } from "../components/Loader";
 
-const INACTIVITY_LIMIT = 5 * 60 * 1000; // 5 minutes
-const WARNING_AT = 30 * 1000;           // warn at 30s left
+/* ─────────────────────────────────────────────
+   Constants
+───────────────────────────────────────────── */
+const AUTO_SIGNOUT_MS  = 5 * 60 * 1000;   // 5 min
+const WARN_AT_MS       = 60 * 1000;        // show warning when 60s remain
+const APPROVED         = new Set(["approved", "active", "offline"]);
+
+const TX_CFG = {
+  delivery_payment: { Icon: Banknote,      color: "#4ade80", bg: "rgba(74,222,128,0.12)",  label: "Delivery"   },
+  withdrawal:       { Icon: ArrowDownRight, color: "#f87171", bg: "rgba(248,113,113,0.12)", label: "Withdrawal" },
+  bonus:            { Icon: Gift,           color: "#60a5fa", bg: "rgba(96,165,250,0.12)",  label: "Bonus"      },
+  penalty:          { Icon: AlertCircle,    color: "#fbbf24", bg: "rgba(251,191,36,0.12)",  label: "Penalty"    },
+};
+const TX_DEFAULT = { Icon: Zap, color: "var(--muted)", bg: "rgba(255,248,231,0.06)", label: "Other" };
 
 function classifyError(err) {
-  if (!err?.response || err?.code === "ERR_NETWORK" || err?.code === "ECONNABORTED") {
-    return { type: "network", msg: "Server is waking up — this can take 30–60 seconds on first load." };
-  }
-  const status = err.response.status;
-  const detail = err.response.data?.detail || err.response.data?.message || err.message;
-  if (status === 401) return { type: "auth", msg: "Session expired. Please sign in again." };
-  if (status === 404) return { type: "no_profile", msg: detail || "Driver profile not found." };
-  if (status === 403) return { type: "forbidden", msg: detail || "Access denied." };
-  return { type: "error", msg: detail || "Failed to load wallet data." };
+  if (!err?.response || err?.code === "ERR_NETWORK" || err?.code === "ECONNABORTED")
+    return { type: "network",     msg: "Server is waking up — please wait 30–60 seconds." };
+  const s = err.response.status;
+  const d = err.response.data?.detail || err.response.data?.message || err.message;
+  if (s === 401) return { type: "auth",       msg: "Session expired. Please sign in again." };
+  if (s === 404) return { type: "no_profile", msg: d || "Driver profile not found." };
+  if (s === 403) return { type: "forbidden",  msg: d || "Access denied." };
+  return        { type: "error",      msg: d || "Failed to load wallet." };
 }
 
-const TX_ICON = {
-  delivery_payment: <ShoppingBag className="w-4 h-4" />,
-  withdrawal:       <ArrowDownRight className="w-4 h-4" />,
-  bonus:            <Gift className="w-4 h-4" />,
-  penalty:          <AlertCircle className="w-4 h-4" />,
-};
-const TX_COLOR = {
-  delivery_payment: { bg: "rgba(74,222,128,0.1)",  c: "#4ade80" },
-  bonus:            { bg: "rgba(96,165,250,0.1)",  c: "#60a5fa" },
-  withdrawal:       { bg: "rgba(248,113,113,0.1)", c: "#f87171" },
-  penalty:          { bg: "rgba(251,191,36,0.1)",  c: "#fbbf24" },
-};
-const DEFAULT_TX = { bg: "rgba(255,248,231,0.05)", c: "var(--muted)" };
+/* ─────────────────────────────────────────────
+   Auto sign-out hook
+───────────────────────────────────────────── */
+function useAutoSignOut(onSignOut, enabled = true) {
+  const [remaining, setRemaining] = useState(AUTO_SIGNOUT_MS);
+  const timerRef   = useRef(null);
+  const intervalRef = useRef(null);
 
+  const reset = useCallback(() => {
+    setRemaining(AUTO_SIGNOUT_MS);
+    if (timerRef.current)   clearTimeout(timerRef.current);
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    if (!enabled) return;
+
+    timerRef.current = setTimeout(() => { onSignOut(); }, AUTO_SIGNOUT_MS);
+
+    // tick every second for the countdown
+    intervalRef.current = setInterval(() => {
+      setRemaining(r => {
+        const next = r - 1000;
+        return next < 0 ? 0 : next;
+      });
+    }, 1000);
+  }, [enabled, onSignOut]);
+
+  useEffect(() => {
+    if (!enabled) return;
+    reset();
+    const events = ["mousedown", "mousemove", "keydown", "touchstart", "scroll"];
+    events.forEach(e => window.addEventListener(e, reset, { passive: true }));
+    return () => {
+      clearTimeout(timerRef.current);
+      clearInterval(intervalRef.current);
+      events.forEach(e => window.removeEventListener(e, reset));
+    };
+  }, [enabled, reset]);
+
+  const showWarning = remaining <= WARN_AT_MS && remaining > 0;
+  const secs        = Math.ceil(remaining / 1000);
+  return { remaining, secs, showWarning };
+}
+
+/* ─────────────────────────────────────────────
+   Main component
+───────────────────────────────────────────── */
 export default function WalletPage() {
-  const navigate = useNavigate();
+  const navigate         = useNavigate();
   const { isAuth, token, logout } = useAuth();
 
   const [loading,      setLoading]      = useState(true);
@@ -56,465 +98,411 @@ export default function WalletPage() {
   const [profile,      setProfile]      = useState(null);
   const [errorInfo,    setErrorInfo]    = useState(null);
   const [retryIn,      setRetryIn]      = useState(null);
-  const timerRef = useRef(null);
+  const retryRef = useRef(null);
 
-  const [showWithdraw,    setShowWithdraw]    = useState(false);
-  const [withdrawAmount,  setWithdrawAmount]  = useState("");
-  const [withdrawing,     setWithdrawing]     = useState(false);
-  const [withdrawError,   setWithdrawError]   = useState(null);
-  const [withdrawSuccess, setWithdrawSuccess] = useState(false);
+  // Withdrawal modal
+  const [showModal,    setShowModal]    = useState(false);
+  const [amount,       setAmount]       = useState("");
+  const [withdrawing,  setWithdrawing]  = useState(false);
+  const [withdrawErr,  setWithdrawErr]  = useState(null);
+  const [withdrawOk,   setWithdrawOk]   = useState(false);
 
-  /* ── Inactivity Auto-Logout ── */
-  const [timeLeft, setTimeLeft] = useState(INACTIVITY_LIMIT);
-  const [warnUser, setWarnUser] = useState(false);
-  const inactivityTimerRef = useRef(null);
-  const lastActivityRef = useRef(Date.now());
-
-  const resetInactivity = useCallback(() => {
-    lastActivityRef.current = Date.now();
-    setTimeLeft(INACTIVITY_LIMIT);
-    setWarnUser(false);
-  }, []);
-
-  const doLogout = useCallback(() => {
+  /* ── Auto sign-out ── */
+  const handleAutoSignOut = useCallback(() => {
     logout();
     navigate("/login?redirect=/wallet");
   }, [logout, navigate]);
+  const { secs, showWarning } = useAutoSignOut(handleAutoSignOut, isAuth);
 
-  useEffect(() => {
-    if (!isAuth) return;
-    const events = ["mousedown", "keydown", "touchstart", "scroll"];
-    const onActivity = () => resetInactivity();
-    events.forEach(e => window.addEventListener(e, onActivity));
-    inactivityTimerRef.current = setInterval(() => {
-      const elapsed = Date.now() - lastActivityRef.current;
-      const remaining = Math.max(0, INACTIVITY_LIMIT - elapsed);
-      setTimeLeft(remaining);
-      setWarnUser(remaining <= WARNING_AT && remaining > 0);
-      if (remaining <= 0) {
-        clearInterval(inactivityTimerRef.current);
-        doLogout();
-      }
-    }, 1000);
-    return () => {
-      events.forEach(e => window.removeEventListener(e, onActivity));
-      clearInterval(inactivityTimerRef.current);
-    };
-  }, [isAuth, resetInactivity, doLogout]);
-
-  const fmtTime = (ms) => {
-    const s = Math.ceil(ms / 1000);
-    const m = Math.floor(s / 60);
-    const sec = s % 60;
-    return `${m}:${sec.toString().padStart(2, "0")}`;
-  };
-
-  /* ── Data Fetching ── */
-  const clearRetry = () => {
-    if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
-    setRetryIn(null);
-  };
-
-  const startRetry = (seconds) => {
-    setRetryIn(seconds);
-    timerRef.current = setInterval(() => {
-      setRetryIn(prev => {
-        if (prev <= 1) { clearRetry(); fetchData(true); return null; }
-        return prev - 1;
-      });
-    }, 1000);
-  };
-
-  const fetchData = async (silent = false) => {
+  /* ── Fetch ── */
+  const fetchData = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     setErrorInfo(null);
-    clearRetry();
+    if (retryRef.current) { clearInterval(retryRef.current); retryRef.current = null; setRetryIn(null); }
     try {
-      const [profRes, balRes, txRes] = await Promise.allSettled([
-        getDriverProfile(),
-        getWalletBalance(),
-        getWalletTransactions(50),
+      const [pR, bR, tR] = await Promise.allSettled([
+        getDriverProfile(), getWalletBalance(), getWalletTransactions(50),
       ]);
-      if (profRes.status === "rejected") {
-        const info = classifyError(profRes.reason);
+      if (pR.status === "rejected") {
+        const info = classifyError(pR.reason);
         setErrorInfo(info);
-        if (info.type === "network") startRetry(40);
+        if (info.type === "network") {
+          setRetryIn(40);
+          retryRef.current = setInterval(() => {
+            setRetryIn(p => {
+              if (p <= 1) { clearInterval(retryRef.current); retryRef.current = null; fetchData(true); return null; }
+              return p - 1;
+            });
+          }, 1000);
+        }
         return;
       }
-      setProfile(profRes.value.data);
-      if (balRes.status === "fulfilled") setBalance(balRes.value.data);
-      if (txRes.status === "fulfilled") setTransactions(Array.isArray(txRes.value.data) ? txRes.value.data : []);
+      setProfile(pR.value.data);
+      if (bR.status === "fulfilled") setBalance(bR.value.data);
+      if (tR.status === "fulfilled") setTransactions(Array.isArray(tR.value.data) ? tR.value.data : []);
     } catch (err) {
-      const info = classifyError(err);
-      setErrorInfo(info);
-      if (info.type === "network") startRetry(40);
+      setErrorInfo(classifyError(err));
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (isAuth && token) fetchData();
-    return () => clearRetry();
-  }, [isAuth, token]); // eslint-disable-line
+    return () => { if (retryRef.current) clearInterval(retryRef.current); };
+  }, [isAuth, token, fetchData]);
 
+  /* ── Withdraw ── */
   const handleWithdraw = async (e) => {
     e.preventDefault();
-    const amount = parseFloat(withdrawAmount);
-    if (isNaN(amount) || amount < 50) { setWithdrawError("Minimum withdrawal is R50"); return; }
-    if (amount > (balance?.balance ?? 0)) { setWithdrawError("Insufficient balance"); return; }
-    if (!profile?.bank_name || !profile?.account_number || !profile?.account_holder) {
-      setWithdrawError("Banking details incomplete. Update your driver profile first."); return;
+    const val = parseFloat(amount);
+    if (isNaN(val) || val < 50)            { setWithdrawErr("Minimum withdrawal is R50"); return; }
+    if (val > (balance?.balance ?? 0))     { setWithdrawErr("Insufficient balance"); return; }
+    if (!profile?.bank_name || !profile?.account_number) {
+      setWithdrawErr("Banking details missing — update your driver profile first."); return;
     }
-    setWithdrawing(true);
-    setWithdrawError(null);
+    setWithdrawing(true); setWithdrawErr(null);
     try {
-      await withdrawFunds({
-        amount,
-        bank_name:      profile.bank_name,
-        account_number: profile.account_number,
-        account_holder: profile.account_holder,
-      });
-      setWithdrawSuccess(true);
-      setTimeout(() => {
-        setShowWithdraw(false);
-        setWithdrawSuccess(false);
-        setWithdrawAmount("");
-        fetchData(true);
-      }, 2200);
+      await withdrawFunds({ amount: val, bank_name: profile.bank_name, account_number: profile.account_number, account_holder: profile.account_holder });
+      setWithdrawOk(true);
+      setTimeout(() => { setShowModal(false); setWithdrawOk(false); setAmount(""); fetchData(true); }, 2500);
     } catch (err) {
-      setWithdrawError(err?.response?.data?.detail || err.message || "Withdrawal failed");
+      setWithdrawErr(err?.response?.data?.detail || err.message || "Withdrawal failed");
     } finally {
       setWithdrawing(false);
     }
   };
 
-  const maskedAccount = (() => {
+  const masked = (() => {
     const n = profile?.account_number;
-    return n && n.length >= 4 ? `••••${n.slice(-4)}` : (n || "—");
+    return n?.length >= 4 ? `••••${n.slice(-4)}` : (n || "—");
   })();
 
-  const APPROVED = new Set(["approved", "active", "offline"]);
-  const canWithdraw = APPROVED.has(profile?.status) && (balance?.balance ?? 0) >= 50
-    && profile?.bank_name && profile?.account_number;
+  const canWithdraw = APPROVED.has(profile?.status) && (balance?.balance ?? 0) >= 50 && profile?.bank_name;
 
-  /* ── Unauthenticated ── */
+  /* ─── Unauthenticated ─── */
   if (!isAuth) return (
-    <div className="wl-root"><style>{styles}</style>
-      <div className="wl-center">
-        <div className="wl-gate-icon"><WalletIcon className="w-10 h-10" style={{ color: "#FFC72C" }} /></div>
-        <h2 className="wl-big-title">Driver Wallet</h2>
-        <p className="wl-sub">Sign in to view your earnings and withdraw funds.</p>
-        <Link to="/login?redirect=/wallet" className="wl-red-btn">Sign In</Link>
-        <Link to="/deliver" className="wl-ghost-link">Not a driver yet? Apply now →</Link>
+    <div className="wl-root"><style>{css}</style>
+      <div className="wl-gate">
+        <div className="wl-gate-icon"><Wallet style={{ width: 32, height: 32, color: "#FFC72C" }} /></div>
+        <h2 className="wl-gate-title">Driver Wallet</h2>
+        <p className="wl-gate-sub">Sign in to view your earnings and make withdrawals.</p>
+        <Link to="/login?redirect=/wallet" className="wl-btn-red">Sign In</Link>
+        <Link to="/deliver" className="wl-ghost">Not a driver yet? Apply →</Link>
       </div>
     </div>
   );
 
-  /* ── Loading ── */
+  /* ─── Loading ─── */
   if (loading) return (
-    <div className="wl-root"><style>{styles}</style>
-      <div className="wl-center">
-        <Loader3 />
-        <p className="wl-sub">Loading wallet…</p>
-      </div>
+    <div className="wl-root"><style>{css}</style>
+      <div className="wl-gate"><Loader3 /><p className="wl-gate-sub">Loading wallet…</p></div>
     </div>
   );
 
-  /* ── Error states ── */
+  /* ─── Error ─── */
   if (errorInfo) return (
-    <div className="wl-root"><style>{styles}</style>
-      <header className="wl-header">
-        <div className="wl-header-inner">
-          <button className="wl-back-btn" onClick={() => navigate(-1)}><ArrowLeft className="w-5 h-5" /></button>
-          <div className="wl-hbrand"><div className="wl-logo"><Flame className="w-4 h-4" style={{ color: "#0e0700" }} /></div><span className="wl-brand">KOTABITES</span></div>
-          <div style={{ width: 36 }} />
+    <div className="wl-root"><style>{css}</style>
+      <div className="wl-nav">
+        <div className="wl-nav-inner">
+          <button className="wl-icon-btn" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
+          <span className="wl-nav-title">Wallet</span>
+          <div />
         </div>
-      </header>
-      <div className="wl-center" style={{ minHeight: "calc(100vh - 64px)" }}>
-        {errorInfo.type === "network" ? (
-          <>
-            <div className="wl-err-icon wl-err-gold"><WifiOff className="w-10 h-10" style={{ color: "#FFC72C" }} /></div>
-            <h3 className="wl-big-title">Server Waking Up</h3>
-            <p className="wl-sub" style={{ maxWidth: 300 }}>{errorInfo.msg}</p>
-            <div className="wl-cold-card">
-              <Zap className="w-4 h-4" style={{ color: "#FFC72C", flexShrink: 0 }} />
-              <p>The free server sleeps when idle. It takes <strong>30–60s</strong> to restart.</p>
-            </div>
-            {retryIn !== null ? (
-              <div className="wl-countdown">
-                <div className="wl-ring"><span className="wl-ring-num">{retryIn}</span></div>
-                <p className="wl-sub" style={{ fontSize: 12 }}>Auto-retrying in {retryIn}s…</p>
-                <button className="wl-ghost-link" onClick={() => { clearRetry(); fetchData(); }}>Retry now instead</button>
-              </div>
-            ) : (
-              <button className="wl-red-btn" onClick={() => fetchData()}><RefreshCw className="w-4 h-4" /> Retry Now</button>
-            )}
-          </>
-        ) : errorInfo.type === "no_profile" ? (
-          <>
-            <div className="wl-err-icon wl-err-gold"><WalletIcon className="w-10 h-10" style={{ color: "#FFC72C" }} /></div>
-            <h3 className="wl-big-title">No Driver Profile</h3>
-            <p className="wl-sub">Complete driver signup to access your wallet.</p>
-            <Link to="/deliver" className="wl-red-btn">Apply to Drive</Link>
-            <button className="wl-ghost-link" onClick={() => fetchData()}>Retry</button>
-          </>
-        ) : errorInfo.type === "auth" ? (
-          <>
-            <div className="wl-err-icon wl-err-red"><AlertCircle className="w-10 h-10" style={{ color: "#f87171" }} /></div>
-            <h3 className="wl-big-title">Session Expired</h3>
-            <p className="wl-sub">{errorInfo.msg}</p>
-            <Link to="/login?redirect=/wallet" className="wl-red-btn">Sign In Again</Link>
-          </>
-        ) : (
-          <>
-            <div className="wl-err-icon wl-err-red"><AlertCircle className="w-10 h-10" style={{ color: "#f87171" }} /></div>
-            <h3 className="wl-big-title">Something Went Wrong</h3>
-            <p className="wl-sub">{errorInfo.msg}</p>
-            <button className="wl-red-btn" onClick={() => fetchData()}><RefreshCw className="w-4 h-4" /> Retry</button>
-          </>
-        )}
+      </div>
+      <div className="wl-gate" style={{ minHeight: "calc(100vh - 60px)" }}>
+        {errorInfo.type === "network" && <>
+          <div className="wl-err-icon wl-err-gold"><WifiOff style={{ width: 28, height: 28, color: "#FFC72C" }} /></div>
+          <h3 className="wl-gate-title">Server Waking Up</h3>
+          <p className="wl-gate-sub">{errorInfo.msg}</p>
+          {retryIn !== null
+            ? <div className="wl-countdown"><div className="wl-ring"><span>{retryIn}</span></div><p style={{ fontSize: 12, color: "var(--muted)" }}>Auto-retry in {retryIn}s</p></div>
+            : <button className="wl-btn-red" onClick={() => fetchData()}><RefreshCw size={14} /> Retry</button>}
+        </>}
+        {errorInfo.type === "no_profile" && <>
+          <div className="wl-err-icon wl-err-gold"><Wallet style={{ width: 28, height: 28, color: "#FFC72C" }} /></div>
+          <h3 className="wl-gate-title">No Driver Profile</h3>
+          <p className="wl-gate-sub">Complete driver signup to access your wallet.</p>
+          <Link to="/deliver" className="wl-btn-red">Apply to Drive</Link>
+        </>}
+        {(errorInfo.type === "auth" || errorInfo.type === "error" || errorInfo.type === "forbidden") && <>
+          <div className="wl-err-icon wl-err-red"><AlertCircle style={{ width: 28, height: 28, color: "#f87171" }} /></div>
+          <h3 className="wl-gate-title">{errorInfo.type === "auth" ? "Session Expired" : "Something Went Wrong"}</h3>
+          <p className="wl-gate-sub">{errorInfo.msg}</p>
+          {errorInfo.type === "auth"
+            ? <Link to="/login?redirect=/wallet" className="wl-btn-red">Sign In Again</Link>
+            : <button className="wl-btn-red" onClick={() => fetchData()}><RefreshCw size={14} /> Retry</button>}
+        </>}
       </div>
     </div>
   );
 
-  /* ── Main view ── */
+  /* ─── Main ─── */
   return (
     <div className="wl-root">
-      <style>{styles}</style>
+      <style>{css}</style>
 
-      {/* Inactivity Warning Bar */}
-      {warnUser && (
-        <div className="wl-warn-bar" onClick={resetInactivity}>
-          <Timer className="w-4 h-4" />
-          <span>Auto sign-out in <strong>{fmtTime(timeLeft)}</strong> — tap anywhere to stay signed in</span>
+      {/* ── Auto sign-out warning banner ── */}
+      {showWarning && (
+        <div className="wl-timeout-banner">
+          <Timer size={14} style={{ flexShrink: 0 }} />
+          <span>Security sign-out in <strong>{secs}s</strong> due to inactivity</span>
+          <button className="wl-timeout-dismiss" onClick={() => { /* reset happens on any interaction */ }}>
+            Stay signed in
+          </button>
         </div>
       )}
 
-      <header className="wl-header">
-        <div className="wl-header-inner">
-          <button className="wl-back-btn" onClick={() => navigate(-1)}><ArrowLeft className="w-5 h-5" /></button>
-          <div className="wl-hbrand">
-            <div className="wl-logo"><Flame className="w-4 h-4" style={{ color: "#0e0700" }} /></div>
-            <span className="wl-brand">DRIVER WALLET</span>
-          </div>
-          <button className="wl-signout-btn" onClick={doLogout} title="Sign Out">
-            <LogOut className="w-4 h-4" />
+      {/* ── Nav ── */}
+      <header className="wl-nav">
+        <div className="wl-nav-inner">
+          <button className="wl-icon-btn" onClick={() => navigate(-1)} title="Back">
+            <ArrowLeft size={18} />
           </button>
+          <div className="wl-nav-brand">
+            <div className="wl-flame"><Flame size={14} color="#0e0700" /></div>
+            <span className="wl-nav-title">Driver Wallet</span>
+          </div>
+          <div className="wl-nav-right">
+            {/* Session timer */}
+            <div className={`wl-session-chip${showWarning ? " wl-session-warn" : ""}`} title={`Auto sign-out in ${Math.floor(secs / 60)}m ${secs % 60}s`}>
+              <Shield size={11} />
+              <span>{Math.floor(secs / 60)}:{String(secs % 60).padStart(2, "0")}</span>
+            </div>
+            <button className="wl-icon-btn wl-icon-btn-red" onClick={handleAutoSignOut} title="Sign out now">
+              <LogOut size={16} />
+            </button>
+          </div>
         </div>
       </header>
 
       <div className="wl-body">
 
-        {/* Info Card */}
-        <div className="wl-info-card">
-          <Info className="w-4 h-4" style={{ color: "#FFC72C", flexShrink: 0 }} />
-          <div>
-            <p className="wl-info-title">Your Wallet</p>
-            <p className="wl-info-text">
-              Earnings are credited after each delivery. Minimum withdrawal is <strong>R50</strong>. 
-              Payouts process within <strong>24–48 hours</strong> to your linked bank account.
-            </p>
-          </div>
-        </div>
-
-        {/* Balance Card */}
+        {/* ── Balance hero ── */}
         <div className="wl-balance-card">
-          <div className="wl-bal-header">
-            <div className="wl-bal-label"><WalletIcon className="w-4 h-4" /><span>Available Balance</span></div>
-            {canWithdraw && (
-              <button onClick={() => setShowWithdraw(true)} className="wl-withdraw-btn">
-                <Download className="w-4 h-4" /> Withdraw
-              </button>
-            )}
-          </div>
-          <div className="wl-bal-amount">
-            <span className="wl-cur">R</span>
-            <span className="wl-amt">{(balance?.balance ?? 0).toFixed(2)}</span>
+          {/* Status badge */}
+          <div className="wl-status-row">
+            <span className={`wl-status-badge${APPROVED.has(profile?.status) ? " wl-status-active" : ""}`}>
+              <span className="wl-status-dot" />
+              {APPROVED.has(profile?.status) ? "Active Driver" : profile?.status || "Pending"}
+            </span>
+            <button className="wl-refresh-btn" onClick={() => fetchData(true)} title="Refresh">
+              <RefreshCw size={13} />
+            </button>
           </div>
 
-          {!APPROVED.has(profile?.status) && (
-            <div className="wl-notice wl-notice-blue">
-              <Info className="w-4 h-4" style={{ flexShrink: 0 }} />
-              <span>Account pending approval. Withdrawals unlock once approved.</span>
-            </div>
-          )}
-          {APPROVED.has(profile?.status) && (!profile?.bank_name || !profile?.account_number) && (
-            <div className="wl-notice wl-notice-red">
-              <AlertCircle className="w-4 h-4" style={{ flexShrink: 0 }} />
-              <span>
-                Banking details missing —{" "}
-                <Link to="/driver-dashboard" style={{ color: "inherit", fontWeight: 800, textDecoration: "underline" }}>
-                  update your profile
-                </Link>{" "}
-                to enable withdrawals.
-              </span>
-            </div>
-          )}
+          {/* Big balance */}
+          <div className="wl-bal-wrap">
+            <span className="wl-bal-currency">R</span>
+            <span className="wl-bal-amount">{(balance?.balance ?? 0).toFixed(2)}</span>
+          </div>
+          <p className="wl-bal-label">Available balance</p>
 
-          <div className="wl-stats-row">
+          {/* 3 stats */}
+          <div className="wl-stats">
             {[
-              { label: "Total Earned",    val: `R${(balance?.total_earned    ?? 0).toFixed(2)}`, icon: <TrendingUp    className="w-4 h-4" />, c: "#4ade80" },
-              { label: "Total Withdrawn", val: `R${(balance?.total_withdrawn ?? 0).toFixed(2)}`, icon: <ArrowDownRight className="w-4 h-4" />, c: "#f87171" },
-              { label: "Pending",         val: `R${(balance?.pending_amount  ?? 0).toFixed(2)}`, icon: <Clock         className="w-4 h-4" />, c: "#FFC72C" },
-            ].map(({ label, val, icon, c }) => (
+              { label: "Total earned",    val: `R${(balance?.total_earned    ?? 0).toFixed(2)}`, color: "#4ade80" },
+              { label: "Withdrawn",       val: `R${(balance?.total_withdrawn ?? 0).toFixed(2)}`, color: "#f87171" },
+              { label: "Pending",         val: `R${(balance?.pending_amount  ?? 0).toFixed(2)}`, color: "#fbbf24" },
+            ].map(({ label, val, color }) => (
               <div key={label} className="wl-stat">
-                <div className="wl-stat-icon" style={{ background: `${c}18` }}><span style={{ color: c }}>{icon}</span></div>
+                <span className="wl-stat-val" style={{ color }}>{val}</span>
                 <span className="wl-stat-lbl">{label}</span>
-                <span className="wl-stat-val">{val}</span>
               </div>
             ))}
           </div>
+
+          {/* Withdraw CTA */}
+          {canWithdraw && (
+            <button className="wl-withdraw-cta" onClick={() => setShowModal(true)}>
+              <Download size={16} />
+              Withdraw funds
+            </button>
+          )}
+
+          {/* Notices */}
+          {!APPROVED.has(profile?.status) && (
+            <div className="wl-notice wl-notice-blue">
+              <Info size={14} style={{ flexShrink: 0 }} />
+              Withdrawals unlock once your account is approved.
+            </div>
+          )}
+          {APPROVED.has(profile?.status) && !profile?.bank_name && (
+            <div className="wl-notice wl-notice-red">
+              <AlertCircle size={14} style={{ flexShrink: 0 }} />
+              <span>Banking details missing — <Link to="/driver-dashboard" style={{ color: "inherit", fontWeight: 800 }}>add them in your profile</Link>.</span>
+            </div>
+          )}
         </div>
 
-        {/* Driver Info */}
+        {/* ── Driver summary ── */}
         {profile && (
-          <div className="wl-driver-row">
-            <div className="wl-dstat">
-              <span className="wl-dstat-lbl">Deliveries</span>
-              <span className="wl-dstat-val">{profile.total_deliveries || 0}</span>
-            </div>
-            <div className="wl-divider" />
-            <div className="wl-dstat">
-              <span className="wl-dstat-lbl">Rating</span>
-              <span className="wl-dstat-val">⭐ {profile.rating?.toFixed(1) || "5.0"}</span>
-            </div>
-            <div className="wl-divider" />
-            <div className="wl-dstat">
-              <span className="wl-dstat-lbl">Status</span>
-              <span className="wl-dstat-val" style={{ color: profile.is_available ? "#4ade80" : "var(--muted)" }}>
-                {profile.is_available ? "Online" : "Offline"}
-              </span>
-            </div>
-            <div className="wl-divider" />
-            <div className="wl-dstat">
-              <span className="wl-dstat-lbl">Account</span>
-              <span className="wl-dstat-val" style={{ color: APPROVED.has(profile?.status) ? "#4ade80" : "#fbbf24" }}>
-                {APPROVED.has(profile?.status) ? "Approved" : "Pending"}
-              </span>
-            </div>
+          <div className="wl-summary-row">
+            {[
+              { label: "Deliveries", val: profile.total_deliveries || 0 },
+              { label: "Rating",     val: `⭐ ${profile.rating?.toFixed(1) || "5.0"}` },
+              { label: "Status",     val: profile.is_available ? "Online" : "Offline",
+                color: profile.is_available ? "#4ade80" : "var(--muted)" },
+            ].map(({ label, val, color }) => (
+              <div key={label} className="wl-summary-item">
+                <span className="wl-summary-val" style={color ? { color } : {}}>{val}</span>
+                <span className="wl-summary-lbl">{label}</span>
+              </div>
+            ))}
           </div>
         )}
 
-        {/* Quick Links */}
-        <div className="wl-links">
-          <Link to="/driver-dashboard" className="wl-link-card">
-            <div className="wl-link-icon" style={{ background: "rgba(74,222,128,0.1)" }}>
-              <span style={{ color: "#4ade80" }}><ShoppingBag className="w-5 h-5" /></span>
+        {/* ── Quick links ── */}
+        <div className="wl-quick-links">
+          <Link to="/driver-dashboard" className="wl-quick-card">
+            <div className="wl-quick-icon" style={{ background: "rgba(74,222,128,0.12)" }}>
+              <ShoppingBag size={18} style={{ color: "#4ade80" }} />
             </div>
-            <div>
-              <span className="wl-link-title">Driver Dashboard</span>
-              <span className="wl-link-sub">Orders & deliveries</span>
+            <div className="wl-quick-text">
+              <span className="wl-quick-title">Dashboard</span>
+              <span className="wl-quick-sub">Orders & deliveries</span>
             </div>
-            <ChevronRight className="w-5 h-5" style={{ color: "var(--muted)", marginLeft: "auto" }} />
+            <ChevronRight size={16} style={{ color: "var(--muted)" }} />
           </Link>
-          <Link to="/driver-dashboard?tab=orders" className="wl-link-card">
-            <div className="wl-link-icon" style={{ background: "rgba(96,165,250,0.1)" }}>
-              <span style={{ color: "#60a5fa" }}><Clock className="w-5 h-5" /></span>
+          <Link to="/driver-dashboard?tab=orders" className="wl-quick-card">
+            <div className="wl-quick-icon" style={{ background: "rgba(96,165,250,0.12)" }}>
+              <Clock size={18} style={{ color: "#60a5fa" }} />
             </div>
-            <div>
-              <span className="wl-link-title">Available Orders</span>
-              <span className="wl-link-sub">Accept new orders</span>
+            <div className="wl-quick-text">
+              <span className="wl-quick-title">Available Orders</span>
+              <span className="wl-quick-sub">Accept new deliveries</span>
             </div>
-            <ChevronRight className="w-5 h-5" style={{ color: "var(--muted)", marginLeft: "auto" }} />
+            <ChevronRight size={16} style={{ color: "var(--muted)" }} />
           </Link>
         </div>
 
-        {/* Transactions */}
-        <div className="wl-tx-header">
-          <h2 className="wl-tx-title">Transaction History</h2>
-          <span className="wl-tx-count">{transactions.length}</span>
+        {/* ── Transactions ── */}
+        <div className="wl-tx-section">
+          <div className="wl-tx-header">
+            <h2 className="wl-tx-title">Transactions</h2>
+            <span className="wl-tx-badge">{transactions.length}</span>
+          </div>
+
+          {transactions.length === 0 ? (
+            <div className="wl-empty">
+              <Clock size={36} style={{ color: "var(--muted)", opacity: 0.5 }} />
+              <p>No transactions yet</p>
+              <span>Your earnings will appear here after your first delivery</span>
+            </div>
+          ) : (
+            <div className="wl-tx-list">
+              {transactions.map((tx, i) => {
+                const cfg = TX_CFG[tx.type] || TX_DEFAULT;
+                const pos = tx.amount > 0;
+                const TxIcon = cfg.Icon;
+                return (
+                  <div key={tx.id || i} className="wl-tx">
+                    <div className="wl-tx-icon" style={{ background: cfg.bg }}>
+                      <TxIcon size={16} style={{ color: cfg.color }} />
+                    </div>
+                    <div className="wl-tx-info">
+                      <p className="wl-tx-desc">{tx.description || cfg.label}</p>
+                      <p className="wl-tx-date">
+                        {new Date(tx.created_at).toLocaleDateString("en-ZA", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                        {tx.reference && <span className="wl-tx-ref"> · #{tx.reference.slice(-6).toUpperCase()}</span>}
+                      </p>
+                    </div>
+                    <div className="wl-tx-amount-col">
+                      <span className={`wl-tx-amount${pos ? " wl-pos" : " wl-neg"}`}>
+                        {pos ? "+" : "−"}R{Math.abs(tx.amount).toFixed(2)}
+                      </span>
+                      {tx.balance_after != null && (
+                        <span className="wl-tx-balance">R{tx.balance_after.toFixed(2)}</span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
-        {transactions.length === 0 ? (
-          <div className="wl-empty">
-            <Clock className="w-10 h-10" style={{ color: "var(--muted)" }} />
-            <p>No transactions yet</p>
-            <span>Start delivering to see earnings here</span>
+        {/* ── Info footer ── */}
+        <div className="wl-info-footer">
+          <div className="wl-info-row">
+            <Info size={13} style={{ color: "var(--muted)", flexShrink: 0 }} />
+            <span>Earnings credited after delivery confirmation · Min withdrawal <strong>R50</strong> · Payout 24–48 hrs</span>
           </div>
-        ) : (
-          <div className="wl-tx-list">
-            {transactions.map(tx => {
-              const col = TX_COLOR[tx.type] || DEFAULT_TX;
-              const pos = tx.amount > 0;
-              return (
-                <div key={tx.id} className="wl-tx">
-                  <div className="wl-tx-icon" style={{ background: col.bg, color: col.c }}>
-                    {TX_ICON[tx.type] || <Zap className="w-4 h-4" />}
-                  </div>
-                  <div className="wl-tx-info">
-                    <p className="wl-tx-lbl">{tx.description}</p>
-                    <p className="wl-tx-date">
-                      {new Date(tx.created_at).toLocaleDateString("en-ZA", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
-                      {tx.order_id && <span style={{ opacity: 0.6 }}> · #{tx.reference?.slice(-8) || tx.order_id?.slice(-8)}</span>}
-                    </p>
-                  </div>
-                  <div className="wl-tx-right">
-                    <span className={`wl-tx-amt ${pos ? "wl-pos" : "wl-neg"}`}>
-                      {pos ? "+" : ""}R{Math.abs(tx.amount).toFixed(2)}
-                    </span>
-                    {tx.balance_after != null && (
-                      <span className="wl-tx-bal">Bal: R{tx.balance_after.toFixed(2)}</span>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+          <div className="wl-info-row">
+            <Shield size={13} style={{ color: "#4ade80", flexShrink: 0 }} />
+            <span style={{ color: "rgba(74,222,128,0.6)" }}>Auto sign-out after 5 min of inactivity for your security</span>
           </div>
-        )}
+        </div>
+
       </div>
 
-      {/* Withdrawal Modal */}
-      {showWithdraw && (
-        <div className="wl-overlay" onClick={() => !withdrawing && setShowWithdraw(false)}>
+      {/* ── Withdrawal Modal ── */}
+      {showModal && (
+        <div className="wl-overlay" onClick={() => !withdrawing && setShowModal(false)}>
           <div className="wl-modal" onClick={e => e.stopPropagation()}>
-            {withdrawSuccess ? (
+
+            {withdrawOk ? (
               <div className="wl-modal-success">
-                <div className="wl-succ-icon"><CheckCircle2 className="w-10 h-10" style={{ color: "#4ade80" }} /></div>
-                <h3 style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 26, letterSpacing: 2, color: "var(--text)" }}>Withdrawal Submitted!</h3>
-                <p style={{ fontSize: 13, color: "var(--muted)" }}>Funds transferred within 24–48 hours.</p>
+                <div className="wl-succ-icon"><CheckCircle2 size={36} style={{ color: "#4ade80" }} /></div>
+                <h3 className="wl-modal-ok-title">Withdrawal Submitted</h3>
+                <p className="wl-modal-ok-sub">Funds will arrive within 24–48 hours to {profile?.bank_name} {masked}.</p>
               </div>
             ) : (
               <>
-                <div className="wl-modal-head">
-                  <h3 className="wl-modal-title">Withdraw Funds</h3>
-                  <button className="wl-modal-close" onClick={() => setShowWithdraw(false)}><X className="w-5 h-5" /></button>
-                </div>
-                <div className="wl-modal-body">
-                  <div className="wl-modal-info">
-                    <div className="wl-mrow"><span>Available</span><span style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 18, color: "var(--text)" }}>R{(balance?.balance ?? 0).toFixed(2)}</span></div>
-                    <div className="wl-mrow"><span>Bank</span><span>{profile?.bank_name} — {maskedAccount}</span></div>
-                    <div className="wl-mrow"><span>Holder</span><span>{profile?.account_holder || "—"}</span></div>
+                {/* Modal header */}
+                <div className="wl-modal-hd">
+                  <div>
+                    <h3 className="wl-modal-title">Withdraw funds</h3>
+                    <p className="wl-modal-sub">To {profile?.bank_name} · {masked}</p>
                   </div>
-                  {withdrawError && (
-                    <div className="wl-notice wl-notice-red">
-                      <AlertCircle className="w-4 h-4" style={{ flexShrink: 0 }} /><span>{withdrawError}</span>
+                  <button className="wl-icon-btn" onClick={() => setShowModal(false)}><X size={16} /></button>
+                </div>
+
+                {/* Available */}
+                <div className="wl-modal-avail">
+                  <span className="wl-modal-avail-lbl">Available</span>
+                  <span className="wl-modal-avail-val">R{(balance?.balance ?? 0).toFixed(2)}</span>
+                </div>
+
+                <form onSubmit={handleWithdraw} className="wl-modal-form">
+                  {/* Amount input */}
+                  <div className="wl-modal-input-wrap">
+                    <span className="wl-modal-r">R</span>
+                    <input
+                      type="number" step="0.01" min="50" max={balance?.balance ?? 0}
+                      value={amount}
+                      onChange={e => { setAmount(e.target.value); setWithdrawErr(null); }}
+                      placeholder="0.00"
+                      className="wl-modal-input"
+                      disabled={withdrawing}
+                      autoFocus
+                    />
+                  </div>
+                  <p className="wl-modal-hint">Minimum R50</p>
+
+                  {/* Quick amounts */}
+                  <div className="wl-modal-quick">
+                    {[50, 100, 200].filter(a => a <= (balance?.balance ?? 0)).map(a => (
+                      <button key={a} type="button" className="wl-modal-quick-btn" onClick={() => setAmount(a.toFixed(2))} disabled={withdrawing}>R{a}</button>
+                    ))}
+                    {(balance?.balance ?? 0) >= 50 && (
+                      <button type="button" className="wl-modal-quick-btn wl-modal-quick-all" onClick={() => setAmount((balance?.balance ?? 0).toFixed(2))} disabled={withdrawing}>All</button>
+                    )}
+                  </div>
+
+                  {withdrawErr && (
+                    <div className="wl-notice wl-notice-red" style={{ marginTop: 0 }}>
+                      <AlertCircle size={14} style={{ flexShrink: 0 }} />
+                      <span>{withdrawErr}</span>
                     </div>
                   )}
-                  <form onSubmit={handleWithdraw} className="wl-modal-form">
-                    <div className="wl-amt-wrap">
-                      <span className="wl-amt-r">R</span>
-                      <input
-                        type="number" step="0.01" min="50" max={balance?.balance ?? 0}
-                        value={withdrawAmount}
-                        onChange={e => { setWithdrawAmount(e.target.value); setWithdrawError(null); }}
-                        placeholder="0.00" className="wl-amt-inp" disabled={withdrawing}
-                      />
-                    </div>
-                    <p style={{ fontSize: 11, color: "var(--muted)" }}>Minimum: R50</p>
-                    <div className="wl-quick-amts">
-                      {[50, 100, 200].filter(a => a <= (balance?.balance ?? 0)).map(a => (
-                        <button key={a} type="button" onClick={() => setWithdrawAmount(a.toFixed(2))} className="wl-quick-btn" disabled={withdrawing}>R{a}</button>
-                      ))}
-                      {(balance?.balance ?? 0) >= 50 && (
-                        <button type="button" onClick={() => setWithdrawAmount((balance?.balance ?? 0).toFixed(2))} className="wl-quick-btn" disabled={withdrawing}>All</button>
-                      )}
-                    </div>
-                    <button type="submit" disabled={withdrawing} className="wl-submit-btn">
-                      {withdrawing ? <><Loader className="w-5 h-5 wl-spin" /> Processing…</> : <><Download className="w-5 h-5" /> Withdraw Funds</>}
-                    </button>
-                  </form>
-                </div>
+
+                  <button type="submit" disabled={withdrawing || !amount} className="wl-modal-submit">
+                    {withdrawing
+                      ? <><Loader size={16} className="wl-spin" /> Processing…</>
+                      : <><Download size={16} /> Withdraw R{amount || "0.00"}</>}
+                  </button>
+                </form>
               </>
             )}
           </div>
@@ -524,144 +512,306 @@ export default function WalletPage() {
   );
 }
 
-const styles = `
-  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-  :root{--red:#DA291C;--red2:#b91c1c;--gold:#FFC72C;--dark:#0e0700;--card:#1a0e00;--border:rgba(255,199,44,0.1);--text:#fff8e7;--muted:rgba(255,248,231,0.42);}
-  .wl-root{min-height:100vh;background:radial-gradient(ellipse 80% 35% at 50% 0%,rgba(218,41,28,0.12) 0%,transparent 65%),var(--dark);font-family:'Plus Jakarta Sans',system-ui,sans-serif;color:var(--text);overflow-x:hidden;padding-bottom:60px;}
-  
-  /* Inactivity Warning */
-  .wl-warn-bar{position:fixed;top:0;left:0;right:0;z-index:200;background:rgba(218,41,28,0.95);backdrop-filter:blur(10px);color:white;display:flex;align-items:center;justify-content:center;gap:8px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer;animation:wlSlideDown 0.3s ease;}
-  .wl-warn-bar strong{font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:1px;}
-  @keyframes wlSlideDown{from{transform:translateY(-100%)}to{transform:translateY(0)}}
-  
-  /* Header */
-  .wl-header{position:sticky;top:0;z-index:100;background:rgba(14,7,0,0.95);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);}
-  .wl-header-inner{max-width:680px;margin:0 auto;padding:13px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;}
-  .wl-back-btn{width:36px;height:36px;border-radius:10px;flex-shrink:0;background:rgba(255,248,231,0.05);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--muted);cursor:pointer;transition:all 0.2s;}
-  .wl-back-btn:hover{color:var(--text);border-color:rgba(255,199,44,0.3);}
-  .wl-hbrand{display:flex;align-items:center;gap:8px;}
-  .wl-logo{width:32px;height:32px;background:var(--gold);border-radius:9px;display:flex;align-items:center;justify-content:center;box-shadow:0 0 14px rgba(255,199,44,0.25);}
-  .wl-brand{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:3px;color:var(--text);}
-  .wl-signout-btn{width:36px;height:36px;border-radius:10px;flex-shrink:0;background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.25);display:flex;align-items:center;justify-content:center;color:#f87171;cursor:pointer;transition:all 0.2s;}
-  .wl-signout-btn:hover{background:rgba(248,113,113,0.2);color:#fca5a5;}
-  
-  /* Center / Gate */
-  .wl-center{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;text-align:center;padding:40px 24px;}
-  .wl-gate-icon,.wl-err-icon{width:80px;height:80px;border-radius:22px;display:flex;align-items:center;justify-content:center;}
-  .wl-err-gold{background:rgba(255,199,44,0.1);border:1px solid rgba(255,199,44,0.2);}
-  .wl-err-red{background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.25);}
-  .wl-big-title{font-family:'Bebas Neue',sans-serif;font-size:32px;letter-spacing:2px;margin:0;}
-  .wl-sub{font-size:14px;color:var(--muted);max-width:320px;line-height:1.6;margin:0;}
-  .wl-red-btn{display:inline-flex;align-items:center;gap:8px;background:var(--red);color:white;border:none;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;font-weight:900;font-size:15px;padding:14px 32px;border-radius:50px;text-decoration:none;box-shadow:0 6px 20px rgba(218,41,28,0.4);transition:all 0.2s;margin-top:4px;}
-  .wl-red-btn:hover{background:var(--red2);transform:scale(1.03);}
-  .wl-ghost-link{background:none;border:none;cursor:pointer;font-size:13px;color:var(--gold);font-weight:700;text-decoration:none;font-family:'Plus Jakarta Sans',sans-serif;}
-  .wl-cold-card{display:flex;align-items:flex-start;gap:10px;background:rgba(255,199,44,0.08);border:1px solid rgba(255,199,44,0.2);border-radius:14px;padding:14px 16px;max-width:340px;font-size:12px;color:var(--muted);text-align:left;line-height:1.6;}
-  .wl-cold-card strong{color:var(--text);}
-  .wl-countdown{display:flex;flex-direction:column;align-items:center;gap:10px;margin-top:4px;}
-  .wl-ring{width:64px;height:64px;border-radius:50%;border:3px solid rgba(255,199,44,0.25);border-top-color:var(--gold);display:flex;align-items:center;justify-content:center;animation:wlSpin 1s linear infinite;}
-  .wl-ring-num{font-family:'Bebas Neue',sans-serif;font-size:24px;color:var(--gold);animation:wlCounterSpin 1s linear infinite;}
-  @keyframes wlCounterSpin{to{transform:rotate(-360deg);}}
-  
-  /* Body */
-  .wl-body{max-width:680px;margin:0 auto;padding:24px 16px;display:flex;flex-direction:column;gap:20px;}
-  
-  /* Info Card */
-  .wl-info-card{display:flex;align-items:flex-start;gap:12px;background:rgba(255,199,44,0.06);border:1px solid rgba(255,199,44,0.15);border-radius:16px;padding:16px 18px;}
-  .wl-info-title{font-size:13px;font-weight:800;color:var(--gold);margin-bottom:4px;}
-  .wl-info-text{font-size:12px;color:var(--muted);line-height:1.6;}
-  .wl-info-text strong{color:var(--text);}
-  
-  /* Balance Card */
-  .wl-balance-card{background:linear-gradient(135deg,var(--card) 0%,rgba(26,14,0,0.95) 100%);border:1px solid var(--border);border-radius:24px;padding:28px 24px;}
-  .wl-bal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
-  .wl-bal-label{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);}
-  .wl-withdraw-btn{display:flex;align-items:center;gap:6px;background:var(--red);color:white;border:none;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;font-weight:800;font-size:12px;padding:8px 16px;border-radius:50px;transition:all 0.2s;}
-  .wl-withdraw-btn:hover{background:var(--red2);}
-  .wl-bal-amount{display:flex;align-items:baseline;gap:4px;margin-bottom:8px;}
-  .wl-cur{font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--muted);}
-  .wl-amt{font-family:'Bebas Neue',sans-serif;font-size:64px;letter-spacing:-1px;color:var(--text);line-height:1;}
-  .wl-notice{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border-radius:12px;font-size:12px;font-weight:700;margin-top:8px;}
-  .wl-notice-blue{background:rgba(96,165,250,0.1);border:1px solid rgba(96,165,250,0.25);color:#60a5fa;}
-  .wl-notice-red{background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.25);color:#f87171;}
-  .wl-stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding-top:20px;border-top:1px solid rgba(255,199,44,0.08);margin-top:16px;}
-  .wl-stat{display:flex;flex-direction:column;align-items:center;gap:6px;}
-  .wl-stat-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;}
-  .wl-stat-lbl{font-size:10px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);text-align:center;}
-  .wl-stat-val{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:0.5px;color:var(--text);}
-  
-  /* Driver Row */
-  .wl-driver-row{display:flex;align-items:center;gap:16px;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px 20px;}
-  .wl-dstat{flex:1;text-align:center;display:flex;flex-direction:column;gap:4px;}
-  .wl-dstat-lbl{font-size:10px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);}
-  .wl-dstat-val{font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--text);}
-  .wl-divider{width:1px;height:32px;background:rgba(255,199,44,0.1);}
-  
-  /* Links */
-  .wl-links{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;}
-  .wl-link-card{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;text-decoration:none;transition:all 0.25s;}
-  .wl-link-card:hover{border-color:rgba(255,199,44,0.25);transform:translateY(-2px);}
-  .wl-link-icon{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
-  .wl-link-title{display:block;font-size:13px;font-weight:800;color:var(--text);}
-  .wl-link-sub{display:block;font-size:11px;color:var(--muted);}
-  
-  /* Transactions */
-  .wl-tx-header{display:flex;align-items:center;justify-content:space-between;margin-top:12px;}
-  .wl-tx-title{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:1.5px;color:var(--text);}
-  .wl-tx-count{font-size:11px;font-weight:800;color:var(--muted);background:rgba(255,248,231,0.06);padding:3px 10px;border-radius:50px;}
-  .wl-empty{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;padding:60px 24px;background:var(--card);border:1px solid var(--border);border-radius:18px;}
-  .wl-empty p{font-size:15px;font-weight:800;color:var(--text);}
-  .wl-empty span{font-size:13px;color:var(--muted);}
-  .wl-tx-list{background:var(--card);border:1px solid var(--border);border-radius:18px;overflow:hidden;}
-  .wl-tx{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid rgba(255,248,231,0.04);transition:background 0.2s;}
-  .wl-tx:last-child{border-bottom:none;}
-  .wl-tx:hover{background:rgba(255,248,231,0.02);}
-  .wl-tx-icon{width:36px;height:36px;border-radius:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
-  .wl-tx-info{flex:1;min-width:0;}
-  .wl-tx-lbl{font-size:13px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .wl-tx-date{font-size:11px;color:var(--muted);margin-top:2px;}
-  .wl-tx-right{display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0;}
-  .wl-tx-amt{font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:0.5px;}
-  .wl-pos{color:#4ade80;}.wl-neg{color:#f87171;}
-  .wl-tx-bal{font-size:10px;color:var(--muted);font-weight:700;}
-  
-  /* Modal */
-  .wl-overlay{position:fixed;inset:0;z-index:1000;background:rgba(14,7,0,0.9);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:20px;}
-  .wl-modal{background:var(--card);border:1px solid var(--border);border-radius:24px;width:100%;max-width:440px;box-shadow:0 24px 64px rgba(0,0,0,0.6);animation:wlScale 0.3s cubic-bezier(0.34,1.56,0.64,1);}
-  .wl-modal-head{display:flex;align-items:center;justify-content:space-between;padding:24px 24px 0;}
-  .wl-modal-title{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:1.5px;color:var(--text);}
-  .wl-modal-close{width:32px;height:32px;border-radius:8px;background:rgba(255,248,231,0.05);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--muted);cursor:pointer;transition:all 0.2s;}
-  .wl-modal-close:hover{color:var(--text);}
-  .wl-modal-body{padding:24px;display:flex;flex-direction:column;gap:14px;}
-  .wl-modal-info{background:rgba(255,248,231,0.03);border:1px solid var(--border);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px;}
-  .wl-mrow{display:flex;align-items:center;justify-content:space-between;font-size:13px;color:var(--muted);}
-  .wl-modal-form{display:flex;flex-direction:column;gap:12px;}
-  .wl-amt-wrap{display:flex;align-items:center;gap:10px;background:rgba(255,248,231,0.04);border:1.5px solid var(--border);border-radius:12px;padding:0 16px;transition:border-color 0.2s;}
-  .wl-amt-wrap:focus-within{border-color:rgba(255,199,44,0.4);}
-  .wl-amt-r{font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--muted);}
-  .wl-amt-inp{flex:1;background:none;border:none;outline:none;color:var(--text);font-size:28px;font-weight:900;font-family:'Bebas Neue',sans-serif;padding:12px 0;}
-  .wl-amt-inp::placeholder{color:rgba(255,248,231,0.15);}
-  .wl-quick-amts{display:flex;gap:8px;flex-wrap:wrap;}
-  .wl-quick-btn{background:rgba(255,248,231,0.04);border:1px solid var(--border);border-radius:10px;padding:9px 16px;cursor:pointer;font-size:12px;font-weight:800;color:var(--text);transition:all 0.2s;font-family:'Plus Jakarta Sans',sans-serif;}
-  .wl-quick-btn:hover:not(:disabled){background:rgba(255,199,44,0.1);border-color:rgba(255,199,44,0.3);}
-  .wl-quick-btn:disabled{opacity:0.4;cursor:not-allowed;}
-  .wl-submit-btn{display:flex;align-items:center;justify-content:center;gap:10px;background:var(--red);color:white;border:none;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;font-weight:900;font-size:15px;padding:15px;border-radius:14px;box-shadow:0 6px 20px rgba(218,41,28,0.4);transition:all 0.2s;}
-  .wl-submit-btn:hover:not(:disabled){background:var(--red2);transform:scale(1.02);}
-  .wl-submit-btn:disabled{opacity:0.55;cursor:not-allowed;}
-  .wl-modal-success{padding:40px 24px;display:flex;flex-direction:column;align-items:center;gap:16px;text-align:center;}
-  .wl-succ-icon{width:72px;height:72px;border-radius:20px;background:rgba(74,222,128,0.1);border:1px solid rgba(74,222,128,0.25);display:flex;align-items:center;justify-content:center;}
-  
-  /* Animations */
-  @keyframes wlSpin{to{transform:rotate(360deg);}}.wl-spin{animation:wlSpin 0.8s linear infinite;}
-  @keyframes wlScale{from{opacity:0;transform:scale(0.9)}to{opacity:1;transform:scale(1)}}
-  
-  /* Mobile */
-  @media(max-width:640px){
-    .wl-body{padding:16px 12px;}
-    .wl-amt{font-size:48px;}
-    .wl-stats-row{grid-template-columns:1fr;}
-    .wl-links{grid-template-columns:1fr;}
-    .wl-driver-row{flex-direction:column;gap:12px;}
-    .wl-divider{width:100%;height:1px;}
-    .wl-warn-bar{font-size:12px;padding:8px 12px;}
+/* ─────────────────────────────────────────────
+   Styles
+───────────────────────────────────────────── */
+const css = `
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
+
+  :root {
+    --red:    #DA291C;
+    --red2:   #b91c1c;
+    --gold:   #FFC72C;
+    --dark:   #0a0600;
+    --card:   #130c00;
+    --card2:  #1a1000;
+    --border: rgba(255,199,44,0.1);
+    --text:   #fff8e7;
+    --muted:  rgba(255,248,231,0.42);
+    --faint:  rgba(255,248,231,0.06);
+  }
+
+  /* ── Root ── */
+  .wl-root {
+    min-height: 100vh;
+    background: var(--dark);
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    color: var(--text);
+    padding-bottom: 60px;
+  }
+
+  /* ── Auto sign-out warning ── */
+  .wl-timeout-banner {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    background: rgba(218,41,28,0.95);
+    backdrop-filter: blur(10px);
+    padding: 10px 20px;
+    font-size: 13px; font-weight: 700; color: #fff;
+    box-shadow: 0 2px 20px rgba(218,41,28,0.4);
+    animation: wlBannerIn 0.3s ease;
+  }
+  @keyframes wlBannerIn {
+    from { transform: translateY(-100%); opacity: 0; }
+    to   { transform: none; opacity: 1; }
+  }
+  .wl-timeout-dismiss {
+    margin-left: 8px; padding: 4px 12px;
+    background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.35);
+    border-radius: 20px; color: #fff; font-size: 12px; font-weight: 800;
+    cursor: pointer; font-family: 'Plus Jakarta Sans', sans-serif;
+    transition: background 0.15s;
+  }
+  .wl-timeout-dismiss:hover { background: rgba(255,255,255,0.3); }
+
+  /* ── Nav ── */
+  .wl-nav {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(10,6,0,0.96);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+  }
+  .wl-nav-inner {
+    max-width: 680px; margin: 0 auto;
+    padding: 0 20px; height: 60px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .wl-nav-brand { display: flex; align-items: center; gap: 8px; flex: 1; }
+  .wl-flame {
+    width: 28px; height: 28px; border-radius: 8px;
+    background: var(--gold); flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 12px rgba(255,199,44,0.25);
+  }
+  .wl-nav-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 18px; letter-spacing: 2.5px; color: var(--text);
+  }
+  .wl-nav-right { display: flex; align-items: center; gap: 8px; }
+
+  /* Session chip */
+  .wl-session-chip {
+    display: flex; align-items: center; gap: 5px;
+    padding: 5px 10px; border-radius: 20px;
+    background: rgba(74,222,128,0.08);
+    border: 1px solid rgba(74,222,128,0.18);
+    font-size: 11px; font-weight: 800;
+    color: rgba(74,222,128,0.65);
+    font-family: 'Plus Jakarta Sans', monospace;
+    transition: all 0.3s;
+    cursor: default;
+  }
+  .wl-session-warn {
+    background: rgba(218,41,28,0.1) !important;
+    border-color: rgba(218,41,28,0.35) !important;
+    color: #f87171 !important;
+    animation: wlChipPulse 1s ease infinite;
+  }
+  @keyframes wlChipPulse {
+    0%,100% { opacity: 1; }
+    50%     { opacity: 0.6; }
+  }
+
+  /* Icon buttons */
+  .wl-icon-btn {
+    width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
+    background: var(--faint); border: 1px solid rgba(255,248,231,0.08);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--muted); cursor: pointer; transition: all 0.18s;
+  }
+  .wl-icon-btn:hover { color: var(--text); border-color: rgba(255,199,44,0.25); }
+  .wl-icon-btn-red:hover { background: rgba(218,41,28,0.15); color: #f87171; border-color: rgba(218,41,28,0.3); }
+
+  /* ── Gate / error screens ── */
+  .wl-gate {
+    min-height: 100vh;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 16px; text-align: center; padding: 40px 24px;
+  }
+  .wl-gate-icon  { width: 76px; height: 76px; border-radius: 20px; background: rgba(255,199,44,0.1); border: 1px solid rgba(255,199,44,0.2); display: flex; align-items: center; justify-content: center; }
+  .wl-err-icon   { width: 72px; height: 72px; border-radius: 20px; display: flex; align-items: center; justify-content: center; }
+  .wl-err-gold   { background: rgba(255,199,44,0.1); border: 1px solid rgba(255,199,44,0.2); }
+  .wl-err-red    { background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.25); }
+  .wl-gate-title { font-family: 'Bebas Neue', sans-serif; font-size: 28px; letter-spacing: 2px; margin: 0; }
+  .wl-gate-sub   { font-size: 14px; color: var(--muted); max-width: 300px; line-height: 1.6; margin: 0; }
+  .wl-btn-red    { display: inline-flex; align-items: center; gap: 8px; background: var(--red); color: white; border: none; cursor: pointer; font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 900; font-size: 14px; padding: 13px 28px; border-radius: 50px; text-decoration: none; box-shadow: 0 6px 20px rgba(218,41,28,0.38); transition: all 0.2s; }
+  .wl-btn-red:hover { background: var(--red2); transform: scale(1.02); }
+  .wl-ghost      { font-size: 13px; font-weight: 700; color: var(--gold); text-decoration: none; background: none; border: none; cursor: pointer; font-family: 'Plus Jakarta Sans', sans-serif; }
+  .wl-countdown  { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .wl-ring       { width: 60px; height: 60px; border-radius: 50%; border: 3px solid rgba(255,199,44,0.2); border-top-color: var(--gold); animation: wlSpin 1s linear infinite; display: flex; align-items: center; justify-content: center; }
+  .wl-ring span  { font-family: 'Bebas Neue', sans-serif; font-size: 22px; color: var(--gold); animation: wlCounterSpin 1s linear infinite; }
+  @keyframes wlCounterSpin { to { transform: rotate(-360deg); } }
+
+  /* ── Body ── */
+  .wl-body { max-width: 680px; margin: 0 auto; padding: 20px 16px; display: flex; flex-direction: column; gap: 14px; }
+
+  /* ── Balance card ── */
+  .wl-balance-card {
+    background: linear-gradient(160deg, #1e1000 0%, #110a00 100%);
+    border: 1px solid rgba(255,199,44,0.14);
+    border-radius: 22px; padding: 24px;
+    box-shadow: 0 16px 48px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,248,231,0.04);
+    display: flex; flex-direction: column; gap: 16px;
+  }
+  .wl-status-row { display: flex; align-items: center; justify-content: space-between; }
+  .wl-status-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 12px; border-radius: 20px;
+    background: rgba(255,248,231,0.06); border: 1px solid rgba(255,248,231,0.1);
+    font-size: 11px; font-weight: 800; color: var(--muted);
+    letter-spacing: 0.03em;
+  }
+  .wl-status-active {
+    background: rgba(74,222,128,0.08) !important;
+    border-color: rgba(74,222,128,0.2) !important;
+    color: rgba(74,222,128,0.8) !important;
+  }
+  .wl-status-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: currentColor;
+    animation: wlDotPulse 1.5s ease infinite;
+  }
+  @keyframes wlDotPulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(1.4)} }
+  .wl-refresh-btn {
+    background: none; border: none; color: var(--muted); cursor: pointer;
+    display: flex; align-items: center; padding: 6px; border-radius: 8px;
+    transition: all 0.15s;
+  }
+  .wl-refresh-btn:hover { color: var(--gold); background: rgba(255,199,44,0.08); }
+
+  .wl-bal-wrap    { display: flex; align-items: baseline; gap: 4px; line-height: 1; }
+  .wl-bal-currency { font-family: 'Bebas Neue', sans-serif; font-size: 28px; color: var(--muted); }
+  .wl-bal-amount  { font-family: 'Bebas Neue', sans-serif; font-size: 64px; letter-spacing: -2px; color: var(--text); }
+  .wl-bal-label   { font-size: 12px; font-weight: 600; color: var(--muted); margin-top: -8px; }
+
+  .wl-stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 1px; background: rgba(255,248,231,0.07); border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,248,231,0.07); }
+  .wl-stat  { background: rgba(255,248,231,0.03); padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; }
+  .wl-stat-val { font-size: 14px; font-weight: 900; }
+  .wl-stat-lbl { font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+
+  .wl-withdraw-cta {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 14px; border-radius: 14px;
+    background: var(--red); color: #fff; border: none; cursor: pointer;
+    font-family: 'Plus Jakarta Sans', sans-serif; font-size: 14px; font-weight: 900;
+    box-shadow: 0 4px 18px rgba(218,41,28,0.38); transition: all 0.2s;
+  }
+  .wl-withdraw-cta:hover { background: var(--red2); transform: translateY(-1px); }
+
+  .wl-notice { display: flex; align-items: flex-start; gap: 10px; padding: 11px 14px; border-radius: 11px; font-size: 12px; font-weight: 600; line-height: 1.5; }
+  .wl-notice-blue { background: rgba(96,165,250,0.1); border: 1px solid rgba(96,165,250,0.25); color: #60a5fa; }
+  .wl-notice-red  { background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.25); color: #f87171; }
+
+  /* ── Driver summary row ── */
+  .wl-summary-row {
+    display: flex; align-items: center;
+    background: var(--card2); border: 1px solid var(--border); border-radius: 14px;
+    overflow: hidden;
+  }
+  .wl-summary-item { flex: 1; text-align: center; padding: 14px 12px; border-right: 1px solid var(--border); }
+  .wl-summary-item:last-child { border-right: none; }
+  .wl-summary-val { display: block; font-size: 16px; font-weight: 900; color: var(--text); }
+  .wl-summary-lbl { display: block; font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 3px; }
+
+  /* ── Quick links ── */
+  .wl-quick-links { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .wl-quick-card  { display: flex; align-items: center; gap: 12px; background: var(--card2); border: 1px solid var(--border); border-radius: 14px; padding: 14px; text-decoration: none; transition: all 0.2s; }
+  .wl-quick-card:hover { border-color: rgba(255,199,44,0.22); transform: translateY(-1px); }
+  .wl-quick-icon  { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .wl-quick-text  { flex: 1; min-width: 0; }
+  .wl-quick-title { display: block; font-size: 13px; font-weight: 800; color: var(--text); }
+  .wl-quick-sub   { display: block; font-size: 11px; color: var(--muted); margin-top: 1px; }
+
+  /* ── Transactions ── */
+  .wl-tx-section { display: flex; flex-direction: column; gap: 10px; }
+  .wl-tx-header  { display: flex; align-items: center; gap: 10px; }
+  .wl-tx-title   { font-size: 15px; font-weight: 800; color: var(--text); flex: 1; }
+  .wl-tx-badge   { font-size: 11px; font-weight: 800; color: var(--muted); background: var(--faint); padding: 3px 10px; border-radius: 20px; }
+
+  .wl-empty      { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; padding: 48px 24px; background: var(--card2); border: 1px solid var(--border); border-radius: 16px; }
+  .wl-empty p    { font-size: 15px; font-weight: 800; color: var(--text); margin: 0; }
+  .wl-empty span { font-size: 12px; color: var(--muted); }
+
+  .wl-tx-list    { background: var(--card2); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
+  .wl-tx         { display: flex; align-items: center; gap: 12px; padding: 13px 16px; border-bottom: 1px solid rgba(255,248,231,0.04); transition: background 0.15s; }
+  .wl-tx:last-child { border-bottom: none; }
+  .wl-tx:hover   { background: rgba(255,248,231,0.02); }
+  .wl-tx-icon    { width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  .wl-tx-info    { flex: 1; min-width: 0; }
+  .wl-tx-desc    { font-size: 13px; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 0; }
+  .wl-tx-date    { font-size: 11px; color: var(--muted); margin: 2px 0 0; }
+  .wl-tx-ref     { opacity: 0.6; font-family: monospace; }
+  .wl-tx-amount-col { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; flex-shrink: 0; }
+  .wl-tx-amount  { font-family: 'Bebas Neue', sans-serif; font-size: 15px; letter-spacing: 0.5px; }
+  .wl-pos        { color: #4ade80; }
+  .wl-neg        { color: #f87171; }
+  .wl-tx-balance { font-size: 10px; color: var(--muted); font-weight: 700; }
+
+  /* ── Info footer ── */
+  .wl-info-footer { display: flex; flex-direction: column; gap: 8px; padding: 14px 16px; background: var(--faint); border: 1px solid rgba(255,248,231,0.06); border-radius: 12px; }
+  .wl-info-row    { display: flex; align-items: flex-start; gap: 8px; font-size: 11px; font-weight: 600; color: var(--muted); line-height: 1.5; }
+  .wl-info-row strong { color: var(--text); }
+
+  /* ── Overlay ── */
+  .wl-overlay { position: fixed; inset: 0; z-index: 1000; background: rgba(10,6,0,0.88); backdrop-filter: blur(10px); display: flex; align-items: flex-end; justify-content: center; padding: 0; }
+  @media (min-width: 480px) { .wl-overlay { align-items: center; padding: 20px; } }
+
+  /* ── Modal ── */
+  .wl-modal {
+    background: var(--card2);
+    border: 1px solid rgba(255,199,44,0.14);
+    border-radius: 24px 24px 0 0;
+    width: 100%; max-width: 460px;
+    box-shadow: 0 -20px 60px rgba(0,0,0,0.5);
+    animation: wlModalUp 0.3s cubic-bezier(0.34,1.2,0.64,1);
+    overflow: hidden;
+  }
+  @media (min-width: 480px) { .wl-modal { border-radius: 24px; animation: wlModalScale 0.3s cubic-bezier(0.34,1.2,0.64,1); } }
+  @keyframes wlModalUp    { from { transform: translateY(100%); opacity: 0; } to { transform: none; opacity: 1; } }
+  @keyframes wlModalScale { from { transform: scale(0.92); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+  .wl-modal-hd   { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 22px 22px 0; }
+  .wl-modal-title { font-size: 18px; font-weight: 900; color: var(--text); margin: 0; }
+  .wl-modal-sub   { font-size: 12px; color: var(--muted); margin: 3px 0 0; }
+
+  .wl-modal-avail { display: flex; align-items: center; justify-content: space-between; margin: 16px 22px 0; padding: 12px 14px; background: rgba(255,248,231,0.04); border: 1px solid var(--border); border-radius: 11px; }
+  .wl-modal-avail-lbl { font-size: 12px; font-weight: 700; color: var(--muted); }
+  .wl-modal-avail-val { font-family: 'Bebas Neue', sans-serif; font-size: 20px; color: var(--text); }
+
+  .wl-modal-form  { display: flex; flex-direction: column; gap: 12px; padding: 16px 22px 24px; }
+  .wl-modal-input-wrap { display: flex; align-items: center; gap: 8px; background: rgba(255,248,231,0.05); border: 1.5px solid var(--border); border-radius: 14px; padding: 0 16px; transition: border-color 0.2s; }
+  .wl-modal-input-wrap:focus-within { border-color: rgba(255,199,44,0.4); }
+  .wl-modal-r     { font-family: 'Bebas Neue', sans-serif; font-size: 24px; color: var(--muted); flex-shrink: 0; }
+  .wl-modal-input { flex: 1; background: none; border: none; outline: none; color: var(--text); font-family: 'Bebas Neue', sans-serif; font-size: 36px; letter-spacing: -0.5px; padding: 10px 0; }
+  .wl-modal-input::placeholder { color: rgba(255,248,231,0.15); }
+  .wl-modal-hint  { font-size: 11px; color: var(--muted); font-weight: 600; margin: -4px 0 0 2px; }
+
+  .wl-modal-quick { display: flex; gap: 8px; flex-wrap: wrap; }
+  .wl-modal-quick-btn { padding: 8px 16px; border-radius: 10px; background: rgba(255,248,231,0.06); border: 1px solid var(--border); color: var(--text); font-size: 13px; font-weight: 800; cursor: pointer; font-family: 'Plus Jakarta Sans', sans-serif; transition: all 0.15s; }
+  .wl-modal-quick-btn:hover:not(:disabled) { background: rgba(255,199,44,0.1); border-color: rgba(255,199,44,0.3); }
+  .wl-modal-quick-all { background: rgba(255,199,44,0.08); border-color: rgba(255,199,44,0.2); color: var(--gold); }
+  .wl-modal-quick-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .wl-modal-submit { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 15px; background: var(--red); color: #fff; border: none; border-radius: 14px; cursor: pointer; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 15px; font-weight: 900; box-shadow: 0 6px 20px rgba(218,41,28,0.38); transition: all 0.2s; }
+  .wl-modal-submit:hover:not(:disabled) { background: var(--red2); transform: translateY(-1px); }
+  .wl-modal-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .wl-modal-success { padding: 48px 24px; display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center; }
+  .wl-succ-icon     { width: 72px; height: 72px; border-radius: 20px; background: rgba(74,222,128,0.1); border: 1px solid rgba(74,222,128,0.25); display: flex; align-items: center; justify-content: center; }
+  .wl-modal-ok-title { font-family: 'Bebas Neue', sans-serif; font-size: 26px; letter-spacing: 2px; color: var(--text); margin: 0; }
+  .wl-modal-ok-sub   { font-size: 13px; color: var(--muted); line-height: 1.6; max-width: 280px; margin: 0; }
+
+  @keyframes wlSpin { to { transform: rotate(360deg); } }
+  .wl-spin { animation: wlSpin 0.8s linear infinite; }
+
+  @media (max-width: 600px) {
+    .wl-body       { padding: 16px 12px; }
+    .wl-bal-amount { font-size: 52px; }
+    .wl-stats      { grid-template-columns: 1fr; }
+    .wl-quick-links { grid-template-columns: 1fr; }
+    .wl-summary-row { flex-direction: column; gap: 0; }
+    .wl-summary-item { border-right: none; border-bottom: 1px solid var(--border); }
+    .wl-summary-item:last-child { border-bottom: none; }
   }
 `;
