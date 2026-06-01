@@ -22,7 +22,7 @@ import SecurityTimeoutAlert from "../components/SecurityTimeoutAlert";
    Constants
 ───────────────────────────────────────────── */
 const AUTO_SIGNOUT_MS  = 1.5 * 60 * 1000;   // 2 min
-const WARN_AT_MS       = 30 * 1000;        // show warning when 30s remain
+const WARN_AT_MS       = 45 * 1000;        // show warning when 45s remain
 const APPROVED         = new Set(["approved", "active", "offline"]);
 
 const TX_CFG = {
