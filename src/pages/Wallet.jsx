@@ -16,7 +16,7 @@ import {
   Banknote, Wallet,
 } from "lucide-react";
 import { Loader3 } from "../components/Loader";
-import SecurityTimeoutAlert from "../components/SecurityTimeoutAlert_BankStyle";
+import {SecurityTimeoutAlert} from "../components/SecurityTimeoutAlert_BankStyle";
 
 /* ─────────────────────────────────────────────
    Constants
