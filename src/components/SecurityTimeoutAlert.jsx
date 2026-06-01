@@ -61,7 +61,7 @@ export default function SecurityTimeoutAlert({
   );
 };
 
- export default SecurityTimeoutAlert;
+ // export default SecurityTimeoutAlert;
 
 const styles = `
   .ba-root {
