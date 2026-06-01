@@ -10,7 +10,7 @@ export default function SecurityTimeoutAlert({
   onDismiss,
 }) {
   const isUrgent = secs <= 10;
-  const totalTime = 30;
+  const totalTime = 15;
   const progressPct = (secs / totalTime) * 100;
 
   return (
