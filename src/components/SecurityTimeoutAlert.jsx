@@ -1,8 +1,8 @@
 import React from "react";
 import { Timer, Shield, X, AlertCircle } from "lucide-react";
 
-// ── Smart Security Timeout Alert ──
-// Refined, authoritative, minimal. 30-second countdown with subtle motion.
+// ── SA Bank-Style Security Timeout Alert ──
+// Bold red, crisp white, purple accent. Authoritative and unmistakably premium.
 
 export default function SecurityTimeoutAlert({
   secs,
@@ -10,7 +10,7 @@ export default function SecurityTimeoutAlert({
   onDismiss,
 }) {
   const isUrgent = secs <= 10;
-  const totalTime = 15;
+  const totalTime = 30;
   const progressPct = (secs / totalTime) * 100;
 
   return (
@@ -50,7 +50,6 @@ export default function SecurityTimeoutAlert({
         </div>
       </div>
 
-      {/* Progress bar */}
       <div className="ba-progress-track">
         <div
           className={`ba-progress-fill ${isUrgent ? "ba-progress-urgent" : ""}`}
@@ -59,9 +58,7 @@ export default function SecurityTimeoutAlert({
       </div>
     </div>
   );
-};
-
- // export default SecurityTimeoutAlert;
+}
 
 const styles = `
   .ba-root {
@@ -71,9 +68,15 @@ const styles = `
     right: 0;
     z-index: 9999;
     background: #ffffff;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 3px solid #C8102E;
     font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    animation: ba-slideDown 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    animation: ba-slideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 4px 24px rgba(200, 16, 46, 0.08);
+  }
+
+  .ba-urgent {
+    border-bottom-color: #9B2242;
+    animation: ba-slideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1), ba-shake 0.5s ease-in-out;
   }
 
   @keyframes ba-slideDown {
@@ -81,25 +84,18 @@ const styles = `
     to { transform: translateY(0); opacity: 1; }
   }
 
-  .ba-urgent {
-    border-bottom-color: #dc2626;
-  }
-
-  .ba-urgent .ba-icon-wrap {
-    animation: ba-pulse 1.5s ease-in-out infinite;
-  }
-
-  @keyframes ba-pulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.05); }
+  @keyframes ba-shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-4px); }
+    75% { transform: translateX(4px); }
   }
 
   /* Bar */
   .ba-bar {
     display: flex;
     align-items: center;
-    gap: 16px;
-    padding: 16px 24px;
+    gap: 18px;
+    padding: 18px 28px;
     max-width: 1200px;
     margin: 0 auto;
   }
@@ -107,37 +103,45 @@ const styles = `
   @media (max-width: 640px) {
     .ba-bar {
       flex-wrap: wrap;
-      padding: 14px 16px;
-      gap: 12px;
+      padding: 16px 18px;
+      gap: 14px;
     }
   }
 
   /* Icon */
   .ba-icon-wrap {
     flex-shrink: 0;
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
-    background: #f3f4f6;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: #FDF2F4;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: background 0.2s ease;
+    border: 1.5px solid #F9D0D9;
+    transition: all 0.3s ease;
   }
 
   .ba-urgent .ba-icon-wrap {
-    background: #fef2f2;
+    background: #FDF2F4;
+    border-color: #C8102E;
+    animation: ba-pulse 1.2s ease-in-out infinite;
+  }
+
+  @keyframes ba-pulse {
+    0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(200, 16, 46, 0.2); }
+    50% { transform: scale(1.05); box-shadow: 0 0 0 8px rgba(200, 16, 46, 0); }
   }
 
   .ba-icon {
-    width: 20px;
-    height: 20px;
-    color: #6b7280;
+    width: 22px;
+    height: 22px;
+    color: #C8102E;
     stroke-width: 2;
   }
 
   .ba-icon-alert {
-    color: #dc2626;
+    color: #C8102E;
   }
 
   /* Content */
@@ -147,43 +151,51 @@ const styles = `
   }
 
   .ba-title {
-    font-size: 14px;
-    font-weight: 600;
-    color: #111827;
-    margin: 0 0 3px;
+    font-size: 14.5px;
+    font-weight: 700;
+    color: #1A1A1A;
+    margin: 0 0 4px;
     letter-spacing: -0.2px;
   }
 
   .ba-body {
     font-size: 13.5px;
     font-weight: 400;
-    color: #4b5563;
+    color: #4A4A4A;
     margin: 0;
     line-height: 1.5;
   }
 
   .ba-countdown {
     font-family: 'SF Mono', SFMono-Regular, 'Roboto Mono', monospace;
-    font-weight: 700;
-    color: #111827;
-    background: #f3f4f6;
-    padding: 2px 7px;
-    border-radius: 5px;
-    font-size: 12.5px;
-    letter-spacing: 0.3px;
+    font-weight: 800;
+    color: #C8102E;
+    background: #FDF2F4;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 13px;
+    letter-spacing: 0.5px;
+    border: 1px solid #F9D0D9;
     transition: all 0.2s ease;
   }
 
   .ba-countdown-urgent {
-    color: #dc2626;
-    background: #fef2f2;
+    color: #ffffff;
+    background: #C8102E;
+    border-color: #9B2242;
+    animation: ba-countdownPulse 1s ease-in-out infinite;
+  }
+
+  @keyframes ba-countdownPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
   }
 
   /* Actions */
   .ba-actions {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
     flex-shrink: 0;
   }
 
@@ -197,68 +209,70 @@ const styles = `
   .ba-btn {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 7px;
     font-family: inherit;
     font-size: 13px;
-    font-weight: 600;
+    font-weight: 700;
     cursor: pointer;
     border: none;
     outline: none;
     transition: all 0.15s ease;
     white-space: nowrap;
+    letter-spacing: 0.2px;
   }
 
   .ba-btn-icon {
-    width: 15px;
-    height: 15px;
-    stroke-width: 2;
+    width: 16px;
+    height: 16px;
+    stroke-width: 2.5;
   }
 
   .ba-btn-primary {
-    background: #111827;
+    background: #C8102E;
     color: #ffffff;
-    padding: 9px 18px;
+    padding: 10px 20px;
     border-radius: 8px;
-    letter-spacing: -0.1px;
+    box-shadow: 0 2px 8px rgba(200, 16, 46, 0.25);
   }
 
   .ba-btn-primary:hover {
-    background: #374151;
+    background: #A00D24;
     transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(200, 16, 46, 0.35);
   }
 
   .ba-btn-primary:active {
-    background: #1f2937;
+    background: #8A0B1F;
     transform: translateY(0);
   }
 
   .ba-btn-ghost {
     background: transparent;
-    color: #9ca3af;
-    padding: 9px;
+    color: #6B2D5C;
+    padding: 10px;
     border-radius: 8px;
   }
 
   .ba-btn-ghost:hover {
-    background: #f3f4f6;
-    color: #374151;
+    background: #F5F0F4;
+    color: #4A1F40;
   }
 
   /* Progress bar */
   .ba-progress-track {
-    height: 3px;
-    background: #f3f4f6;
+    height: 4px;
+    background: #F3E8F0;
     width: 100%;
     overflow: hidden;
   }
 
   .ba-progress-fill {
     height: 100%;
-    background: #6b7280;
+    background: #6B2D5C;
     transition: width 1s linear;
   }
 
   .ba-progress-urgent {
-    background: #dc2626;
+    background: #C8102E;
   }
 `;
