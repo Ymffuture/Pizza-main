@@ -15,8 +15,8 @@ import {
   RefreshCw, WifiOff, Shield, LogOut, Timer,
   Banknote, Wallet,
 } from "lucide-react";
-import Loader3 from "../components/Loader";
-import {SecurityTimeoutAlert} from "../components/SecurityTimeoutAlert";
+import {Loader3} from "../components/Loader";
+import SecurityTimeoutAlert from "../components/SecurityTimeoutAlert";
 
 /* ─────────────────────────────────────────────
    Constants
