@@ -246,7 +246,7 @@ export default function WalletPage() {
       {/* ── Auto sign-out warning banner ── */}
       {showWarning && (
         <SecurityTimeoutAlert 
-  secs={45} 
+  secs={secs} 
   onStaySignedIn={() => resetTimer()} 
   onDismiss={() => setShowWarning(false)} 
 />
@@ -264,10 +264,12 @@ export default function WalletPage() {
           </div>
           <div className="wl-nav-right">
             {/* Session timer */}
+            {showWarning &&
             <div className={`wl-session-chip${showWarning ? " wl-session-warn" : ""}`} title={`Auto sign-out in ${Math.floor(secs / 60)}m ${secs % 60}s`}>
               <Shield size={11} />
               <span>{Math.floor(secs / 60)}:{String(secs % 60).padStart(2, "0")}</span>
             </div>
+            }
             <button className="wl-icon-btn wl-icon-btn-red" onClick={handleAutoSignOut} title="Sign out now">
               <LogOut size={16} />
             </button>
