@@ -4,7 +4,7 @@ import { Timer, Shield, X, AlertCircle } from "lucide-react";
 // ── Smart Security Timeout Alert ──
 // Refined, authoritative, minimal. 30-second countdown with subtle motion.
 
-const export SecurityTimeoutAlert = ({ secs, onStaySignedIn, onDismiss }) => {
+export const SecurityTimeoutAlert = ({ secs, onStaySignedIn, onDismiss }) => {
   const isUrgent = secs <= 10;
   const totalTime = 30;
   const progressPct = (secs / totalTime) * 100;
