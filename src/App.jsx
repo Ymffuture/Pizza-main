@@ -10,6 +10,10 @@ import RequireAuth        from "./components/RequireAuth";
 import ErrorBoundary      from "./components/ErrorBoundary";
 import PageLoader         from "./components/PageLoader";
 import AiChat             from "./components/AiChat";
+import PrivacyPage from "./components/Privacy";
+import TermsPage   from "./components/Terms";
+import SupportPage from "./components/Support";
+
 
 const Home             = lazy(() => import("./pages/Home"));
 const Menu             = lazy(() => import("./pages/Menu"));
@@ -62,6 +66,10 @@ export default function App() {
                     <Route path="/auth/github/callback"  element={<GitHubCallback />} />
                     <Route path="/auth/spotify/callback" element={<SpotifyCallback />} />
                    <Route path="/pkm" element={<PKM />} />
+                    <Route path="/privacy" element={<PrivacyPage />} />
+<Route path="/terms"   element={<TermsPage />} />
+<Route path="/support" element={<SupportPage />} />
+
 
                     <Route path="/wallet" element={
   <RequireAuth>
