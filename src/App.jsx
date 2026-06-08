@@ -13,7 +13,8 @@ import AiChat             from "./components/AiChat";
 import PrivacyPage from "./components/Privacy";
 import TermsPage   from "./components/Terms";
 import SupportPage from "./components/Support";
-
+import { UserStatusProvider } from "./context/UserStatusContext";
+import AccountStatusBanner    from "./components/AccountStatusBanner";
 
 const Home             = lazy(() => import("./pages/Home"));
 const Menu             = lazy(() => import("./pages/Menu"));
@@ -43,6 +44,8 @@ export default function App() {
   return (
     <ErrorBoundary>
       <AuthProvider>
+        <UserStatusProvider>
+    <AccountStatusBanner />
         <OrderProvider>
           <CartProvider>
             <ToastProvider>
@@ -100,6 +103,7 @@ export default function App() {
             </ToastProvider>
           </CartProvider>
         </OrderProvider>
+          </UserStatusProvider>
       </AuthProvider>
     </ErrorBoundary>
   );
