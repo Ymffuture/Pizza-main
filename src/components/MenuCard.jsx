@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { formatCurrency } from "../utils/formatCurrency";
 import { ShoppingBag, ZoomIn, X,Star, Tags } from "lucide-react";
 import StarRating from "./StarRating";
-import { FeatureGate } from "./components/AccountStatusBanner";
+import { FeatureGate } from "./AccountStatusBanner";
 /* ─────────────────────────────────────────────
    3-D Lightbox — full-screen image viewer with
    mouse-drag orbit + touch drag orbit
