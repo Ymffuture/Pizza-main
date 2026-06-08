@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { formatCurrency } from "../utils/formatCurrency";
 import { ShoppingBag, ZoomIn, X,Star, Tags } from "lucide-react";
 import StarRating from "./StarRating";
+import { FeatureGate } from "./components/AccountStatusBanner";
 /* ─────────────────────────────────────────────
    3-D Lightbox — full-screen image viewer with
    mouse-drag orbit + touch drag orbit
@@ -215,7 +216,7 @@ export default function MenuCard({ item, onSelect }) {
               ))}
             </div>
           </div>
-
+<FeatureGate feature="canAddToCart">
           <button
             className="mc-add-btn"
             onClick={() => onSelect(item)}
@@ -225,6 +226,7 @@ export default function MenuCard({ item, onSelect }) {
             <ShoppingBag className="w-4 h-4" style={{ position: "relative" }} />
             <span style={{ position: "relative" }}>Add to Order</span>
           </button>
+</FeatureGate>
         </div>
       </div>
     </>
