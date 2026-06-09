@@ -7,6 +7,7 @@ import { useCart } from "../context/CartContext";
 import { useToast } from "../components/Toast";
 import Footer from "../components/Footer";
 import Avatar from "../components/Avatar";
+import NotificationBell from "../components/NotificationBell";
 import {
   ShoppingBag, RefreshCw, UtensilsCrossed, Zap, PanelLeftClose, MessagesSquare, LayoutDashboard,
   ChevronRight, Flame, Search, SlidersHorizontal, LogOut,
@@ -167,7 +168,7 @@ export default function Menu() {
     <>
       <style>{styles}</style>
       <ActiveOrderTracker />
-
+<NotificationBell />
       <div className="mn-root">
 
         {/* Mobile overlay */}
