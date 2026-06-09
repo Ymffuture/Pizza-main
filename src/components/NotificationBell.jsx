@@ -110,7 +110,7 @@ export default function NotificationBell() {
           <div ref={panelRef} className="nb-panel z-[999]" role="dialog" aria-label="Notifications">
 
             {/* Header */}
-            <div className="nb-panel-hd">
+            <div className="nb-panel-hd z-[999]">
               <div className="nb-panel-hd-left">
                 <span className="nb-panel-title">Notifications</span>
                 {unread > 0 && (
@@ -218,7 +218,10 @@ export default function NotificationBell() {
 const css = `
 @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
-.nb-root { position: relative; }
+.nb-root {
+position: relative; 
+z-index: 9999;
+}
 
 /* ── Bell button ── */
 .nb-btn {
