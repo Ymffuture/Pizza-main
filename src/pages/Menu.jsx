@@ -168,7 +168,7 @@ export default function Menu() {
     <>
       <style>{styles}</style>
       <ActiveOrderTracker />
-<NotificationBell />
+
       <div className="mn-root">
 
         {/* Mobile overlay */}
@@ -192,7 +192,9 @@ export default function Menu() {
                 <div className="mn-sidebar-brand-text">
                   <span className="mn-sidebar-brand">KotaBites</span>
                   <span className="mn-sidebar-tagline">Fresh · Fast · Fire</span>
+                  <NotificationBell />
                 </div>
+          
               )}
               {/* Desktop collapse toggle */}
               <button
