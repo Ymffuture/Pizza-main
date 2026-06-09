@@ -340,6 +340,7 @@ export default function Menu() {
 
           {/* Top bar */}
           <header className="mn-topbar">
+            <NotificationBell  className="z-[999]" />
             <button className="mn-topbar-menu lg-hidden" onClick={() => setSidebarOpen(true)}>
               <PanelLeftOpen className="w-6 h-6" />
             </button>
@@ -376,7 +377,7 @@ export default function Menu() {
                 </button>
               )}
             </div>
-              <NotificationBell  className="z-[999]" />
+              
           </div>
 
           {/* Category pills - STICKY */}
