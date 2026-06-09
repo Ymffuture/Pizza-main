@@ -107,7 +107,7 @@ export default function NotificationBell() {
 
         {/* Panel */}
         {open && (
-          <div ref={panelRef} className="nb-panel" role="dialog" aria-label="Notifications">
+          <div ref={panelRef} className="nb-panel z-50" role="dialog" aria-label="Notifications">
 
             {/* Header */}
             <div className="nb-panel-hd">
