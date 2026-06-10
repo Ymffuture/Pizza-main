@@ -170,9 +170,7 @@ export default function Menu() {
       <ActiveOrderTracker />
 
       {/* NotificationBell rendered at root level — outside any constrained/stacking contexts */}
-      <div className="mn-notif-bell-wrapper">
-        
-      </div>
+      
 
       <div className="mn-root">
 
@@ -350,7 +348,10 @@ export default function Menu() {
               <span className="mn-topbar-title">{activeCategory}</span>
               <span className="mn-topbar-sub">{filtered.length} items</span>
             </div>
-            <NotificationBell />
+            <div className="mn-notif-bell-wrapper">
+        <NotificationBell />
+      </div>
+            
             <button className="mn-topbar-cart" onClick={() => navigate("/cart")}>
               <ShoppingBag className="w-5 h-5" />
               {count > 0 && <span className="mn-topbar-cart-badge">{count}</span>}
