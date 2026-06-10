@@ -3,26 +3,27 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Bell, X, CheckCheck, Info, AlertTriangle,
   Star, Zap, Megaphone, RefreshCw, BellOff,
+  ChevronUp, Trash2
 } from "lucide-react";
 import axiosClient from "../api/axiosClient";
 import { useAuth } from "../context/AuthContext";
 
 const TYPE_CFG = {
-  info:        { Icon: Info,          color: "#3b82f6", bg: "rgba(59,130,246,0.12)",  border: "rgba(59,130,246,0.2)"  },
-  warning:     { Icon: AlertTriangle, color: "#f59e0b", bg: "rgba(245,158,11,0.12)",  border: "rgba(245,158,11,0.2)"  },
-  promo:       { Icon: Star,          color: "#fbbf24", bg: "rgba(251,191,36,0.12)",  border: "rgba(251,191,36,0.2)"  },
-  update:      { Icon: Zap,           color: "#8b5cf6", bg: "rgba(139,92,246,0.12)",  border: "rgba(139,92,246,0.2)"  },
-  maintenance: { Icon: AlertTriangle, color: "#f97316", bg: "rgba(249,115,22,0.12)",  border: "rgba(249,115,22,0.2)"  },
-  urgent:      { Icon: Megaphone,     color: "#ef4444", bg: "rgba(239,68,68,0.12)",   border: "rgba(239,68,68,0.2)"   },
+  info:        { Icon: Info,          color: "#1877F2", bg: "rgba(24,119,242,0.1)",  border: "rgba(24,119,242,0.2)"  },
+  warning:     { Icon: AlertTriangle, color: "#F5A623", bg: "rgba(245,166,35,0.1)",  border: "rgba(245,166,35,0.2)"  },
+  promo:       { Icon: Star,          color: "#E4A11B", bg: "rgba(228,161,27,0.1)",  border: "rgba(228,161,27,0.2)"  },
+  update:      { Icon: Zap,           color: "#7C3AED", bg: "rgba(124,58,237,0.1)",  border: "rgba(124,58,237,0.2)"  },
+  maintenance: { Icon: AlertTriangle, color: "#F97316", bg: "rgba(249,115,22,0.1)",  border: "rgba(249,115,22,0.2)"  },
+  urgent:      { Icon: Megaphone,     color: "#EF4444", bg: "rgba(239,68,68,0.1)",   border: "rgba(239,68,68,0.2)"   },
 };
 const DEFAULT_CFG = TYPE_CFG.info;
 
 function timeAgo(dateStr) {
   const diff = Math.floor((Date.now() - new Date(dateStr)) / 1000);
-  if (diff < 60)   return "just now";
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-  return `${Math.floor(diff / 86400)}d ago`;
+  if (diff < 60)   return "Just now";
+  if (diff < 3600) return `${Math.floor(diff / 60)}m`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
+  return `${Math.floor(diff / 86400)}d`;
 }
 
 export default function NotificationBell() {
@@ -30,7 +31,8 @@ export default function NotificationBell() {
   const [notifications, setNotifications] = useState([]);
   const [open, setOpen]     = useState(false);
   const [loading, setLoad]  = useState(false);
-  const panelRef = useRef(null);
+  const [activeTab, setActiveTab] = useState("all"); // "all" | "unread"
+  const sheetRef = useRef(null);
   const btnRef   = useRef(null);
 
   const unread = notifications.filter(n => !n.is_read).length;
@@ -51,11 +53,11 @@ export default function NotificationBell() {
     return () => clearInterval(id);
   }, [load]);
 
-  // Close on outside click
+  // Close on outside click (only when clicking outside both sheet and button)
   useEffect(() => {
     if (!open) return;
     const fn = (e) => {
-      if (!panelRef.current?.contains(e.target) && !btnRef.current?.contains(e.target))
+      if (!sheetRef.current?.contains(e.target) && !btnRef.current?.contains(e.target))
         setOpen(false);
     };
     document.addEventListener("mousedown", fn);
@@ -70,7 +72,7 @@ export default function NotificationBell() {
     return () => window.removeEventListener("keydown", fn);
   }, [open]);
 
-  // Lock body scroll when panel is open (mobile)
+  // Prevent body scroll when sheet is open
   useEffect(() => {
     if (open) {
       document.body.style.overflow = "hidden";
@@ -93,142 +95,188 @@ export default function NotificationBell() {
     setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
   };
 
+  const deleteNotification = async (id) => {
+    try {
+      await axiosClient.delete(`/notifications/${id}`);
+      setNotifications(prev => prev.filter(n => n.id !== id));
+    } catch { /* silent */ }
+  };
+
+  const filteredNotifications = activeTab === "unread"
+    ? notifications.filter(n => !n.is_read)
+    : notifications;
+
   if (!isAuth) return null;
 
   return (
     <>
       <style>{css}</style>
-      <div className="nb-root">
+      <div className="fb-root">
 
-        {/* Bell button */}
+        {/* Bell button - Facebook Messenger style */}
         <button
           ref={btnRef}
-          className={`nb-btn${open ? " nb-btn-open" : ""}${unread > 0 ? " nb-btn-has-unread" : ""}`}
+          className={`fb-btn${open ? " fb-btn-open" : ""}${unread > 0 ? " fb-btn-has-unread" : ""}`}
           onClick={() => { setOpen(o => !o); }}
           aria-label={`Notifications${unread > 0 ? ` (${unread} unread)` : ""}`}
         >
-          {unread > 0
-            ? <Bell style={{ width: 18, height: 18 }} className="nb-bell-ring" />
-            : <Bell style={{ width: 18, height: 18 }} />}
+          <div className="fb-btn-inner">
+            {unread > 0
+              ? <Bell style={{ width: 20, height: 20 }} className="fb-bell-shake" />
+              : <Bell style={{ width: 20, height: 20 }} />
+            }
+          </div>
           {unread > 0 && (
-            <span className="nb-badge">{unread > 9 ? "9+" : unread}</span>
+            <span className="fb-badge">{unread > 99 ? "99+" : unread}</span>
           )}
         </button>
 
-        {/* Backdrop */}
+        {/* Overlay */}
         {open && (
           <div 
-            className="nb-backdrop" 
+            className="fb-overlay" 
             onClick={() => setOpen(false)}
             aria-hidden="true"
           />
         )}
 
-        {/* Panel — slides up from bottom */}
+        {/* Bottom Sheet Panel - Facebook style */}
         {open && (
-          <div ref={panelRef} className="nb-panel" role="dialog" aria-label="Notifications">
+          <div ref={sheetRef} className="fb-sheet" role="dialog" aria-label="Notifications">
 
-            {/* Drag handle (mobile) */}
-            <div className="nb-drag-handle" onClick={() => setOpen(false)}>
-              <div className="nb-drag-bar" />
+            {/* Drag handle */}
+            <div className="fb-sheet-handle-bar" onClick={() => setOpen(false)}>
+              <div className="fb-sheet-handle" />
             </div>
 
             {/* Header */}
-            <div className="nb-panel-hd">
-              <div className="nb-panel-hd-left">
-                <span className="nb-panel-title">Notifications</span>
-                {unread > 0 && (
-                  <span className="nb-panel-unread-pill">{unread} new</span>
-                )}
-              </div>
-              <div className="nb-panel-hd-actions">
-                {unread > 0 && (
-                  <button className="nb-mark-all" onClick={markAllRead} title="Mark all as read">
-                    <CheckCheck style={{ width: 13, height: 13 }} />
-                    All read
+            <div className="fb-sheet-header">
+              <div className="fb-sheet-header-top">
+                <h2 className="fb-sheet-title">Notifications</h2>
+                <div className="fb-sheet-actions">
+                  {unread > 0 && (
+                    <button className="fb-action-btn fb-mark-all" onClick={markAllRead} title="Mark all as read">
+                      <CheckCheck style={{ width: 16, height: 16 }} />
+                      <span>Mark all read</span>
+                    </button>
+                  )}
+                  <button 
+                    className={`fb-action-btn fb-refresh${loading ? " fb-spin" : ""}`} 
+                    onClick={load} 
+                    title="Refresh"
+                  >
+                    <RefreshCw style={{ width: 16, height: 16 }} />
                   </button>
-                )}
-                <button
-                  className={`nb-refresh${loading ? " nb-refresh-spin" : ""}`}
-                  onClick={load}
-                  title="Refresh"
+                  <button className="fb-action-btn fb-close" onClick={() => setOpen(false)} title="Close">
+                    <X style={{ width: 16, height: 16 }} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Tabs */}
+              <div className="fb-tabs">
+                <button 
+                  className={`fb-tab${activeTab === "all" ? " fb-tab-active" : ""}`}
+                  onClick={() => setActiveTab("all")}
                 >
-                  <RefreshCw style={{ width: 13, height: 13 }} />
+                  All
                 </button>
-                <button className="nb-close" onClick={() => setOpen(false)} title="Close">
-                  <X style={{ width: 14, height: 14 }} />
+                <button 
+                  className={`fb-tab${activeTab === "unread" ? " fb-tab-active" : ""}`}
+                  onClick={() => setActiveTab("unread")}
+                >
+                  Unread
+                  {unread > 0 && <span className="fb-tab-badge">{unread}</span>}
                 </button>
               </div>
             </div>
 
             {/* Body */}
-            <div className="nb-panel-body">
-              {loading && notifications.length === 0 ? (
-                <div className="nb-empty">
-                  <div className="nb-dots">
-                    <span /><span /><span />
+            <div className="fb-sheet-body">
+              {loading && filteredNotifications.length === 0 ? (
+                <div className="fb-empty">
+                  <div className="fb-skeleton-list">
+                    {[1,2,3,4].map(i => (
+                      <div key={i} className="fb-skeleton-item">
+                        <div className="fb-skeleton-avatar" />
+                        <div className="fb-skeleton-lines">
+                          <div className="fb-skeleton-line fb-skeleton-line-short" />
+                          <div className="fb-skeleton-line" />
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  <p>Loading…</p>
                 </div>
-              ) : notifications.length === 0 ? (
-                <div className="nb-empty">
-                  <div className="nb-empty-icon">
-                    <BellOff style={{ width: 26, height: 26, color: "rgba(255,255,255,0.25)" }} />
+              ) : filteredNotifications.length === 0 ? (
+                <div className="fb-empty">
+                  <div className="fb-empty-icon">
+                    <BellOff style={{ width: 32, height: 32, color: "#B0B3B8" }} />
                   </div>
-                  <p className="nb-empty-title">You're all caught up</p>
-                  <p className="nb-empty-sub">No notifications yet</p>
+                  <p className="fb-empty-title">
+                    {activeTab === "unread" ? "No unread notifications" : "You're all caught up"}
+                  </p>
+                  <p className="fb-empty-sub">
+                    {activeTab === "unread" 
+                      ? "Check the All tab to see older notifications" 
+                      : "When you get notifications, they'll show up here"}
+                  </p>
                 </div>
               ) : (
-                notifications.map(n => {
-                  const cfg   = TYPE_CFG[n.type] ?? DEFAULT_CFG;
-                  const NIcon = cfg.Icon;
-                  return (
-                    <div
-                      key={n.id}
-                      className={`nb-item${n.is_read ? " nb-item-read" : " nb-item-unread"}`}
-                      onClick={() => !n.is_read && markRead(n.id)}
-                      role={n.is_read ? undefined : "button"}
-                      tabIndex={n.is_read ? undefined : 0}
-                      onKeyDown={e => e.key === "Enter" && !n.is_read && markRead(n.id)}
-                    >
-                      {/* Left accent */}
-                      {!n.is_read && (
-                        <div className="nb-item-accent" style={{ background: cfg.color }} />
-                      )}
-
-                      {/* Icon */}
+                <div className="fb-notif-list">
+                  {filteredNotifications.map(n => {
+                    const cfg   = TYPE_CFG[n.type] ?? DEFAULT_CFG;
+                    const NIcon = cfg.Icon;
+                    return (
                       <div
-                        className="nb-item-icon"
-                        style={{ background: cfg.bg, border: `1px solid ${cfg.border}` }}
+                        key={n.id}
+                        className={`fb-notif${n.is_read ? " fb-notif-read" : " fb-notif-unread"}`}
+                        onClick={() => !n.is_read && markRead(n.id)}
+                        role={n.is_read ? undefined : "button"}
+                        tabIndex={n.is_read ? undefined : 0}
+                        onKeyDown={e => e.key === "Enter" && !n.is_read && markRead(n.id)}
                       >
-                        <NIcon style={{ width: 14, height: 14, color: cfg.color }} />
-                      </div>
+                        {/* Avatar / Icon */}
+                        <div 
+                          className="fb-notif-avatar"
+                          style={{ background: cfg.bg, border: `1px solid ${cfg.border}` }}
+                        >
+                          <NIcon style={{ width: 18, height: 18, color: cfg.color }} />
+                        </div>
 
-                      {/* Content */}
-                      <div className="nb-item-content">
-                        <p className="nb-item-title"
-                          style={{ color: n.is_read ? "rgba(255,255,255,0.45)" : "#fafafa" }}>
-                          {n.title}
-                        </p>
-                        <p className="nb-item-msg">{n.message}</p>
-                        <p className="nb-item-time">{timeAgo(n.created_at)}</p>
-                      </div>
+                        {/* Content */}
+                        <div className="fb-notif-content">
+                          <p className="fb-notif-text">
+                            <span className="fb-notif-title">{n.title}</span>{" "}
+                            <span className="fb-notif-msg">{n.message}</span>
+                          </p>
+                          <p className="fb-notif-time">{timeAgo(n.created_at)}</p>
+                        </div>
 
-                      {/* Unread dot */}
-                      {!n.is_read && (
-                        <div className="nb-unread-dot" style={{ background: cfg.color }} />
-                      )}
-                    </div>
-                  );
-                })
+                        {/* Right side: unread dot + delete */}
+                        <div className="fb-notif-right">
+                          {!n.is_read && (
+                            <div className="fb-notif-dot" style={{ background: cfg.color }} />
+                          )}
+                          <button 
+                            className="fb-notif-delete"
+                            onClick={(e) => { e.stopPropagation(); deleteNotification(n.id); }}
+                            title="Remove"
+                          >
+                            <X style={{ width: 14, height: 14 }} />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               )}
             </div>
 
             {/* Footer */}
             {notifications.length > 0 && (
-              <div className="nb-panel-ft">
-                <span className="nb-ft-text">
-                  {notifications.length} notification{notifications.length !== 1 ? "s" : ""}
+              <div className="fb-sheet-footer">
+                <span className="fb-footer-text">
+                  {filteredNotifications.length} notification{filteredNotifications.length !== 1 ? "s" : ""}
                 </span>
               </div>
             )}
@@ -240,379 +288,465 @@ export default function NotificationBell() {
 }
 
 const css = `
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-
-.nb-root {
+.fb-root {
   position: relative;
   z-index: 9999;
 }
 
-/* ── Bell button ── */
-.nb-btn {
+/* ── Bell button (Facebook Messenger style) ── */
+.fb-btn {
   position: relative;
-  width: 36px; height: 36px;
-  border-radius: 10px;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.08);
-  display: flex; align-items: center; justify-content: center;
-  color: rgba(255,255,255,0.5);
+  width: 40px; 
+  height: 40px;
+  border-radius: 50%;
+  background: #E4E6EB;
+  border: none;
+  display: flex; 
+  align-items: center; 
+  justify-content: center;
+  color: #050505;
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.15s ease;
   flex-shrink: 0;
 }
-.nb-btn:hover {
-  background: rgba(255,255,255,0.1);
-  border-color: rgba(255,255,255,0.15);
-  color: rgba(255,255,255,0.9);
+.fb-btn:hover {
+  background: #D8DADF;
 }
-.nb-btn-open {
-  background: rgba(255,255,255,0.12) !important;
-  border-color: rgba(255,255,255,0.2) !important;
-  color: #fff !important;
+.fb-btn-open {
+  background: #E7F3FF !important;
+  color: #1877F2 !important;
 }
-.nb-btn-has-unread {
-  border-color: rgba(239,68,68,0.4);
-  color: rgba(255,255,255,0.7);
+.fb-btn-has-unread {
+  background: #E7F3FF;
+  color: #1877F2;
+}
+.fb-btn-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-/* Bell ring animation */
-@keyframes nbRing {
-  0%,100% { transform: rotate(0deg); }
-  10%     { transform: rotate(14deg); }
-  20%     { transform: rotate(-12deg); }
-  30%     { transform: rotate(8deg); }
-  40%     { transform: rotate(-6deg); }
-  50%     { transform: rotate(0deg); }
+/* Bell shake animation */
+@keyframes fbBellShake {
+  0%, 100% { transform: rotate(0deg); }
+  10% { transform: rotate(12deg); }
+  20% { transform: rotate(-10deg); }
+  30% { transform: rotate(8deg); }
+  40% { transform: rotate(-6deg); }
+  50% { transform: rotate(0deg); }
 }
-.nb-bell-ring {
-  animation: nbRing 2.5s ease infinite;
+.fb-bell-shake {
+  animation: fbBellShake 2s ease infinite;
   transform-origin: top center;
 }
 
-/* Badge */
-.nb-badge {
+/* Badge (Facebook red dot style) */
+.fb-badge {
   position: absolute;
-  top: -4px; right: -4px;
-  min-width: 16px; height: 16px;
-  padding: 0 3px;
-  background: #ef4444;
+  top: -2px; 
+  right: -2px;
+  min-width: 18px; 
+  height: 18px;
+  padding: 0 5px;
+  background: #F02849;
   color: white;
-  font-family: 'Inter', system-ui, sans-serif;
-  font-size: 9px; font-weight: 700;
-  border-radius: 8px;
-  border: 2px solid #0a0a0a;
-  display: flex; align-items: center; justify-content: center;
-  animation: nbBadgePop 0.3s cubic-bezier(0.34,1.56,0.64,1);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  font-size: 11px; 
+  font-weight: 600;
+  border-radius: 10px;
+  border: 2px solid #ffffff;
+  display: flex; 
+  align-items: center; 
+  justify-content: center;
+  animation: fbBadgePop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-@keyframes nbBadgePop { from { transform: scale(0); } to { transform: scale(1); } }
+@keyframes fbBadgePop { 
+  from { transform: scale(0); } 
+  to { transform: scale(1); } 
+}
 
-/* ── Backdrop ── */
-.nb-backdrop {
+/* ── Overlay ── */
+.fb-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.4);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  background: rgba(0, 0, 0, 0.5);
   z-index: 9998;
-  animation: nbBackdropIn 0.2s ease;
+  animation: fbFadeIn 0.2s ease;
 }
-@keyframes nbBackdropIn {
+@keyframes fbFadeIn {
   from { opacity: 0; }
-  to   { opacity: 1; }
+  to { opacity: 1; }
 }
 
-/* ── Panel ── */
-.nb-panel {
+/* ── Bottom Sheet (Facebook style) ── */
+.fb-sheet {
   position: fixed;
   bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 100%;
-  max-width: 420px;
-  max-height: 70vh;
-  background: rgba(20, 20, 22, 0.95);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid rgba(255,255,255,0.08);
-  border-bottom: none;
-  border-radius: 24px 24px 0 0;
-  box-shadow:
-    0 -8px 40px rgba(0,0,0,0.4),
-    0 0 0 1px rgba(255,255,255,0.04);
-  display: flex; flex-direction: column;
+  left: 0;
+  right: 0;
+  max-width: 500px;
+  margin: 0 auto;
+  background: #ffffff;
+  border-radius: 16px 16px 0 0;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+  display: flex; 
+  flex-direction: column;
   overflow: hidden;
   z-index: 9999;
-  font-family: 'Inter', system-ui, sans-serif;
-  animation: nbPanelSlideUp 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  animation: fbSheetUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  max-height: 85vh;
 }
-@keyframes nbPanelSlideUp {
+@keyframes fbSheetUp {
   from { 
     opacity: 0; 
-    transform: translateX(-50%) translateY(100%);
+    transform: translateY(100%); 
   }
-  to   { 
+  to { 
     opacity: 1; 
-    transform: translateX(-50%) translateY(0);
+    transform: translateY(0); 
   }
 }
 
 /* Drag handle */
-.nb-drag-handle {
+.fb-sheet-handle-bar {
   display: flex;
-  align-items: center;
   justify-content: center;
-  padding: 10px 0 6px;
+  padding: 8px 0 4px;
   cursor: pointer;
-  flex-shrink: 0;
 }
-.nb-drag-bar {
+.fb-sheet-handle {
   width: 36px;
   height: 4px;
+  background: #CED0D4;
   border-radius: 2px;
-  background: rgba(255,255,255,0.15);
-  transition: background 0.2s;
-}
-.nb-drag-handle:hover .nb-drag-bar {
-  background: rgba(255,255,255,0.3);
 }
 
-/* Header */
-.nb-panel-hd {
+/* ── Header ── */
+.fb-sheet-header {
+  flex-shrink: 0;
+  padding: 4px 16px 0;
+  border-bottom: 1px solid #E4E6EB;
+}
+.fb-sheet-header-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 16px 12px;
-  flex-shrink: 0;
+  margin-bottom: 8px;
 }
-.nb-panel-hd-left { display: flex; align-items: center; gap: 8px; }
-.nb-panel-title {
-  font-family: 'Inter', sans-serif;
-  font-size: 15px; 
+.fb-sheet-title {
+  font-size: 20px;
   font-weight: 700;
-  letter-spacing: -0.01em;
-  color: #fafafa; 
-  line-height: 1;
+  color: #050505;
+  margin: 0;
+  letter-spacing: -0.3px;
 }
-.nb-panel-unread-pill {
-  padding: 2px 8px;
-  background: rgba(239,68,68,0.15);
-  border: 1px solid rgba(239,68,68,0.25);
-  border-radius: 50px;
-  font-size: 10px; 
-  font-weight: 700;
-  color: #f87171;
-  letter-spacing: 0.02em;
+.fb-sheet-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
-.nb-panel-hd-actions { display: flex; align-items: center; gap: 4px; }
 
-.nb-mark-all {
-  display: flex; align-items: center; gap: 5px;
-  padding: 5px 10px;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 8px;
-  color: rgba(255,255,255,0.6);
-  font-family: 'Inter', sans-serif;
-  font-size: 11px; 
+.fb-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px;
+  border-radius: 50%;
+  background: #F0F2F5;
+  border: none;
+  color: #050505;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-size: 13px;
+  font-weight: 600;
+}
+.fb-action-btn:hover {
+  background: #E4E6EB;
+}
+.fb-mark-all {
+  border-radius: 6px;
+  padding: 8px 12px;
+  white-space: nowrap;
+}
+.fb-close:hover {
+  background: #F02849;
+  color: white;
+}
+
+@keyframes fbSpin { 
+  to { transform: rotate(360deg); } 
+}
+.fb-spin svg { 
+  animation: fbSpin 0.8s linear infinite; 
+}
+
+/* ── Tabs ── */
+.fb-tabs {
+  display: flex;
+  gap: 8px;
+  padding-bottom: 8px;
+}
+.fb-tab {
+  padding: 6px 16px;
+  border-radius: 18px;
+  background: transparent;
+  border: none;
+  color: #65676B;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.15s;
-  letter-spacing: -0.01em;
+  position: relative;
 }
-.nb-mark-all:hover { 
-  background: rgba(255,255,255,0.1); 
-  color: #fff; 
-  border-color: rgba(255,255,255,0.2);
+.fb-tab:hover {
+  background: #F0F2F5;
 }
-
-.nb-refresh, .nb-close {
-  width: 28px; height: 28px;
-  border-radius: 8px;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.08);
-  display: flex; align-items: center; justify-content: center;
-  color: rgba(255,255,255,0.4);
-  cursor: pointer;
-  transition: all 0.15s;
+.fb-tab-active {
+  background: #E7F3FF !important;
+  color: #1877F2 !important;
 }
-.nb-refresh:hover, .nb-close:hover {
-  color: #fff;
-  background: rgba(255,255,255,0.1);
-  border-color: rgba(255,255,255,0.15);
-}
-.nb-close:hover { 
-  background: rgba(239,68,68,0.15); 
-  color: #f87171; 
-  border-color: rgba(239,68,68,0.2);
+.fb-tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  background: #F02849;
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 9px;
+  margin-left: 6px;
 }
 
-@keyframes nbSpin { to { transform: rotate(360deg); } }
-.nb-refresh-spin svg { animation: nbSpin 0.8s linear infinite; }
-
-/* Body */
-.nb-panel-body {
+/* ── Body ── */
+.fb-sheet-body {
   flex: 1;
   overflow-y: auto;
+  overscroll-behavior: contain;
   scrollbar-width: thin;
-  scrollbar-color: rgba(255,255,255,0.1) transparent;
+  scrollbar-color: #BCC0C4 transparent;
 }
-.nb-panel-body::-webkit-scrollbar { width: 4px; }
-.nb-panel-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+.fb-sheet-body::-webkit-scrollbar { 
+  width: 6px; 
+}
+.fb-sheet-body::-webkit-scrollbar-thumb { 
+  background: #BCC0C4; 
+  border-radius: 3px; 
+}
 
-/* Empty */
-.nb-empty {
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  gap: 10px; padding: 48px 24px;
+/* Skeleton loading */
+@keyframes fbSkeleton {
+  0% { background-position: -200px 0; }
+  100% { background-position: calc(200px + 100%) 0; }
+}
+.fb-skeleton-list {
+  padding: 12px 16px;
+}
+.fb-skeleton-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+}
+.fb-skeleton-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(90deg, #F0F2F5 25%, #E4E6EB 50%, #F0F2F5 75%);
+  background-size: 200px 100%;
+  animation: fbSkeleton 1.5s ease-in-out infinite;
+  flex-shrink: 0;
+}
+.fb-skeleton-lines {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.fb-skeleton-line {
+  height: 12px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #F0F2F5 25%, #E4E6EB 50%, #F0F2F5 75%);
+  background-size: 200px 100%;
+  animation: fbSkeleton 1.5s ease-in-out infinite;
+}
+.fb-skeleton-line-short {
+  width: 60%;
+}
+
+/* Empty state */
+.fb-empty {
+  display: flex; 
+  flex-direction: column;
+  align-items: center; 
+  justify-content: center;
+  gap: 8px; 
+  padding: 60px 24px;
   text-align: center;
 }
-.nb-empty-icon {
-  width: 52px; height: 52px;
-  border-radius: 14px;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.06);
-  display: flex; align-items: center; justify-content: center;
-}
-.nb-empty-title {
-  font-size: 14px; 
-  font-weight: 600;
-  color: rgba(255,255,255,0.5); 
-  margin: 0;
-  letter-spacing: -0.01em;
-}
-.nb-empty-sub {
-  font-size: 12px; 
-  color: rgba(255,255,255,0.25);
-  margin: 0;
-}
-
-/* Loading dots */
-.nb-dots { display: flex; gap: 6px; align-items: center; }
-.nb-dots span {
-  width: 6px; height: 6px;
+.fb-empty-icon {
+  width: 64px; 
+  height: 64px;
   border-radius: 50%;
-  background: rgba(255,255,255,0.3);
-  animation: nbDot 1.2s ease-in-out infinite;
+  background: #F0F2F5;
+  display: flex; 
+  align-items: center; 
+  justify-content: center;
+  margin-bottom: 4px;
 }
-.nb-dots span:nth-child(2) { animation-delay: 0.2s; }
-.nb-dots span:nth-child(3) { animation-delay: 0.4s; }
-@keyframes nbDot { 0%,80%,100%{transform:scale(0.5);opacity:0.4} 40%{transform:scale(1);opacity:1} }
-.nb-empty p { font-size: 12px; color: rgba(255,255,255,0.3); margin: 0; }
+.fb-empty-title {
+  font-size: 16px; 
+  font-weight: 600;
+  color: #050505; 
+  margin: 0;
+}
+.fb-empty-sub {
+  font-size: 14px; 
+  color: #65676B;
+  margin: 0;
+  max-width: 280px;
+  line-height: 1.4;
+}
 
-/* Notification item */
-.nb-item {
-  position: relative;
+/* ── Notification list ── */
+.fb-notif-list {
+  padding: 4px 0;
+}
+.fb-notif {
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  padding: 12px 16px;
-  border-bottom: 1px solid rgba(255,255,255,0.04);
-  transition: background 0.18s;
-  overflow: hidden;
-}
-.nb-item:last-child { border-bottom: none; }
-.nb-item-unread {
-  background: rgba(255,255,255,0.02);
+  padding: 10px 16px;
+  transition: background 0.15s;
+  position: relative;
   cursor: pointer;
 }
-.nb-item-unread:hover { background: rgba(255,255,255,0.05); }
-.nb-item-read { opacity: 0.55; }
+.fb-notif:hover {
+  background: #F0F2F5;
+}
+.fb-notif-unread {
+  background: #E7F3FF;
+}
+.fb-notif-unread:hover {
+  background: #DBE7F3;
+}
+.fb-notif-read {
+  opacity: 0.85;
+}
 
-.nb-item-accent {
-  position: absolute;
-  left: 0; top: 0; bottom: 0;
-  width: 2px;
-  border-radius: 0 2px 2px 0;
-}
-.nb-item-icon {
-  width: 32px; height: 32px;
-  border-radius: 9px; flex-shrink: 0;
-  display: flex; align-items: center; justify-content: center;
-  margin-top: 2px;
-}
-.nb-item-content { flex: 1; min-width: 0; }
-.nb-item-title {
-  font-size: 13px; 
-  font-weight: 600;
-  margin: 0 0 3px;
-  line-height: 1.3;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  letter-spacing: -0.01em;
-}
-.nb-item-msg {
-  font-size: 12px;
-  color: rgba(255,255,255,0.45);
-  margin: 0 0 4px;
-  line-height: 1.5;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-.nb-item-time {
-  font-size: 10px; 
-  font-weight: 600;
-  color: rgba(255,255,255,0.25);
-  letter-spacing: 0.02em;
-  margin: 0;
-}
-.nb-unread-dot {
-  width: 7px; height: 7px;
+/* Avatar */
+.fb-notif-avatar {
+  width: 40px; 
+  height: 40px;
   border-radius: 50%;
   flex-shrink: 0;
-  margin-top: 6px;
-  box-shadow: 0 0 6px currentColor;
+  display: flex; 
+  align-items: center; 
+  justify-content: center;
+  margin-top: 2px;
 }
 
-/* Footer */
-.nb-panel-ft {
-  padding: 10px 16px;
-  border-top: 1px solid rgba(255,255,255,0.05);
-  background: rgba(255,255,255,0.02);
+/* Content */
+.fb-notif-content {
+  flex: 1; 
+  min-width: 0;
+}
+.fb-notif-text {
+  font-size: 14px;
+  line-height: 1.4;
+  margin: 0 0 2px;
+  color: #050505;
+}
+.fb-notif-title {
+  font-weight: 600;
+}
+.fb-notif-msg {
+  color: #65676B;
+}
+.fb-notif-time {
+  font-size: 12px; 
+  font-weight: 500;
+  color: #1877F2;
+  margin: 0;
+}
+.fb-notif-read .fb-notif-time {
+  color: #65676B;
+}
+
+/* Right side */
+.fb-notif-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+.fb-notif-dot {
+  width: 8px; 
+  height: 8px;
+  border-radius: 50%;
   flex-shrink: 0;
 }
-.nb-ft-text {
-  font-size: 10px; 
-  font-weight: 600;
-  color: rgba(255,255,255,0.2);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+.fb-notif-delete {
+  width: 28px; 
+  height: 28px;
+  border-radius: 50%;
+  background: transparent;
+  border: none;
+  color: #B0B3B8;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: all 0.15s;
+}
+.fb-notif:hover .fb-notif-delete {
+  opacity: 1;
+}
+.fb-notif-delete:hover {
+  background: #F0F2F5;
+  color: #F02849;
 }
 
-/* ── Desktop override: panel anchored to bell button ── */
-@media (min-width: 640px) {
-  .nb-backdrop {
-    display: none;
-  }
-  .nb-panel {
-    position: absolute;
-    bottom: auto;
-    top: calc(100% + 10px);
-    left: auto;
-    right: 0;
-    transform: none;
-    width: 360px;
-    max-height: 480px;
+/* ── Footer ── */
+.fb-sheet-footer {
+  padding: 10px 16px;
+  border-top: 1px solid #E4E6EB;
+  background: #F0F2F5;
+  flex-shrink: 0;
+  text-align: center;
+}
+.fb-footer-text {
+  font-size: 12px; 
+  font-weight: 500;
+  color: #65676B;
+}
+
+/* ── Responsive ── */
+@media (min-width: 501px) {
+  .fb-sheet {
     border-radius: 16px;
-    border: 1px solid rgba(255,255,255,0.08);
-    box-shadow:
-      0 16px 48px rgba(0,0,0,0.5),
-      0 0 0 1px rgba(255,255,255,0.04);
-    animation: nbPanelDrop 0.25s cubic-bezier(0.32, 0.72, 0, 1);
+    bottom: auto;
+    top: 50%;
+    left: 50%;
+    right: auto;
+    transform: translate(-50%, -50%);
+    max-height: 600px;
+    width: 420px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+    animation: fbModalIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   }
-  @keyframes nbPanelDrop {
-    from { opacity: 0; transform: translateY(-8px) scale(0.97); }
-    to   { opacity: 1; transform: none; }
-  }
-  .nb-drag-handle {
+  .fb-sheet-handle-bar {
     display: none;
   }
-}
-
-/* ── Small mobile adjustments ── */
-@media (max-width: 420px) {
-  .nb-panel {
-    max-height: 75vh;
+  @keyframes fbModalIn {
+    from { opacity: 0; transform: translate(-50%, -45%) scale(0.96); }
+    to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
   }
 }
 `;
