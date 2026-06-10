@@ -362,24 +362,23 @@ export default function Menu() {
 
           {/* Search bar - STICKY */}
           <div className="mn-search-bar-wrap">
-            <div className="mn-search-bar-inner">
-              <Search className="mn-search-bar-icon" />
-              <input
-                type="text"
-                placeholder="Search menu..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="mn-search-bar-input"
-              />
-              {search && (
-                <button className="mn-search-bar-clear" onClick={() => setSearch("")}>
-                  <X className="w-4 h-4" />
-                </button>
-              )}
-              <NotificationBell  className="z-[999]" />
-            </div>
-              
-          </div>
+  <div className="mn-search-bar-inner">
+    <Search className="mn-search-bar-icon" />
+    <input
+      type="text"
+      placeholder="Search menu..."
+      value={search}
+      onChange={(e) => setSearch(e.target.value)}
+      className="mn-search-bar-input"
+    />
+    {search && (
+      <button className="mn-search-bar-clear" onClick={() => setSearch("")}>
+        <X className="w-4 h-4" />
+      </button>
+    )}
+    <NotificationBell />  {/* No z-[999] needed — handled internally */}
+  </div>
+</div>
 
           {/* Category pills - STICKY */}
           <div className="mn-cats-wrap">
