@@ -3,18 +3,17 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Bell, X, CheckCheck, Info, AlertTriangle,
   Star, Zap, Megaphone, RefreshCw, BellOff,
-  ChevronUp, Trash2
 } from "lucide-react";
 import axiosClient from "../api/axiosClient";
 import { useAuth } from "../context/AuthContext";
 
 const TYPE_CFG = {
-  info:        { Icon: Info,          color: "#1877F2", bg: "rgba(24,119,242,0.1)",  border: "rgba(24,119,242,0.2)"  },
-  warning:     { Icon: AlertTriangle, color: "#F5A623", bg: "rgba(245,166,35,0.1)",  border: "rgba(245,166,35,0.2)"  },
-  promo:       { Icon: Star,          color: "#E4A11B", bg: "rgba(228,161,27,0.1)",  border: "rgba(228,161,27,0.2)"  },
-  update:      { Icon: Zap,           color: "#7C3AED", bg: "rgba(124,58,237,0.1)",  border: "rgba(124,58,237,0.2)"  },
-  maintenance: { Icon: AlertTriangle, color: "#F97316", bg: "rgba(249,115,22,0.1)",  border: "rgba(249,115,22,0.2)"  },
-  urgent:      { Icon: Megaphone,     color: "#EF4444", bg: "rgba(239,68,68,0.1)",   border: "rgba(239,68,68,0.2)"   },
+  info:        { Icon: Info,          color: "#0070f3", bg: "rgba(0,112,243,0.06)",  border: "rgba(0,112,243,0.12)"  },
+  warning:     { Icon: AlertTriangle, color: "#f5a623", bg: "rgba(245,166,35,0.06)",  border: "rgba(245,166,35,0.12)"  },
+  promo:       { Icon: Star,          color: "#7928ca", bg: "rgba(121,40,202,0.06)",  border: "rgba(121,40,202,0.12)"  },
+  update:      { Icon: Zap,           color: "#0070f3", bg: "rgba(0,112,243,0.06)",  border: "rgba(0,112,243,0.12)"  },
+  maintenance: { Icon: AlertTriangle, color: "#f5a623", bg: "rgba(245,166,35,0.06)",  border: "rgba(245,166,35,0.12)"  },
+  urgent:      { Icon: Megaphone,     color: "#e00",    bg: "rgba(224,0,0,0.06)",    border: "rgba(224,0,0,0.12)"    },
 };
 const DEFAULT_CFG = TYPE_CFG.info;
 
@@ -108,153 +107,153 @@ export default function NotificationBell() {
   return (
     <>
       <style>{css}</style>
-      <div className="fb-root">
+      <div className="vc-root">
 
-        {/* Compact bell button */}
+        {/* Bell button — Vercel minimal style */}
         <button
           ref={btnRef}
-          className={`fb-btn${open ? " fb-btn-open" : ""}${unread > 0 ? " fb-btn-has-unread" : ""}`}
+          className={`vc-btn${open ? " vc-btn-open" : ""}${unread > 0 ? " vc-btn-unread" : ""}`}
           onClick={() => { setOpen(o => !o); }}
           aria-label={`Notifications${unread > 0 ? ` (${unread} unread)` : ""}`}
         >
-          <div className="fb-btn-inner">
+          <div className="vc-btn-inner">
             {unread > 0
-              ? <Bell style={{ width: 18, height: 18 }} className="fb-bell-shake" />
+              ? <Bell style={{ width: 18, height: 18 }} className="vc-bell-shake" />
               : <Bell style={{ width: 18, height: 18 }} />
             }
           </div>
           {unread > 0 && (
-            <span className="fb-badge">{unread > 99 ? "99+" : unread}</span>
+            <span className="vc-badge">{unread > 99 ? "99+" : unread}</span>
           )}
         </button>
 
-        {/* Overlay */}
+        {/* Overlay — Vercel subtle */}
         {open && (
           <div 
-            className="fb-overlay" 
+            className="vc-overlay" 
             onClick={() => setOpen(false)}
             aria-hidden="true"
           />
         )}
 
-        {/* Bottom Sheet — ALWAYS slides up from bottom */}
+        {/* Bottom Sheet — Vercel + Facebook hybrid */}
         {open && (
-          <div ref={sheetRef} className="fb-sheet" role="dialog" aria-label="Notifications">
+          <div ref={sheetRef} className="vc-sheet" role="dialog" aria-label="Notifications">
 
             {/* Drag handle */}
-            <div className="fb-sheet-handle-bar" onClick={() => setOpen(false)}>
-              <div className="fb-sheet-handle" />
+            <div className="vc-handle-bar" onClick={() => setOpen(false)}>
+              <div className="vc-handle" />
             </div>
 
             {/* Header */}
-            <div className="fb-sheet-header">
-              <div className="fb-sheet-header-top">
-                <h2 className="fb-sheet-title">Notifications</h2>
-                <div className="fb-sheet-actions">
+            <div className="vc-header">
+              <div className="vc-header-top">
+                <h2 className="vc-title">Notifications</h2>
+                <div className="vc-header-actions">
                   {unread > 0 && (
-                    <button className="fb-action-btn fb-mark-all" onClick={markAllRead} title="Mark all as read">
-                      <CheckCheck style={{ width: 16, height: 16 }} />
-                      <span>Mark all read</span>
+                    <button className="vc-hbtn vc-mark-all" onClick={markAllRead} title="Mark all as read">
+                      <CheckCheck style={{ width: 14, height: 14 }} />
+                      <span>Mark all</span>
                     </button>
                   )}
                   <button 
-                    className={`fb-action-btn fb-refresh${loading ? " fb-spin" : ""}`} 
+                    className={`vc-hbtn vc-refresh${loading ? " vc-spin" : ""}`} 
                     onClick={load} 
                     title="Refresh"
                   >
-                    <RefreshCw style={{ width: 16, height: 16 }} />
+                    <RefreshCw style={{ width: 14, height: 14 }} />
                   </button>
-                  <button className="fb-action-btn fb-close" onClick={() => setOpen(false)} title="Close">
-                    <X style={{ width: 16, height: 16 }} />
+                  <button className="vc-hbtn vc-close" onClick={() => setOpen(false)} title="Close">
+                    <X style={{ width: 14, height: 14 }} />
                   </button>
                 </div>
               </div>
 
-              {/* Tabs */}
-              <div className="fb-tabs">
+              {/* Tabs — Vercel pill style */}
+              <div className="vc-tabs">
                 <button 
-                  className={`fb-tab${activeTab === "all" ? " fb-tab-active" : ""}`}
+                  className={`vc-tab${activeTab === "all" ? " vc-tab-active" : ""}`}
                   onClick={() => setActiveTab("all")}
                 >
                   All
                 </button>
                 <button 
-                  className={`fb-tab${activeTab === "unread" ? " fb-tab-active" : ""}`}
+                  className={`vc-tab${activeTab === "unread" ? " vc-tab-active" : ""}`}
                   onClick={() => setActiveTab("unread")}
                 >
                   Unread
-                  {unread > 0 && <span className="fb-tab-badge">{unread}</span>}
+                  {unread > 0 && <span className="vc-tab-dot" />}
                 </button>
               </div>
             </div>
 
             {/* Body */}
-            <div className="fb-sheet-body">
+            <div className="vc-body">
               {loading && filteredNotifications.length === 0 ? (
-                <div className="fb-empty">
-                  <div className="fb-skeleton-list">
+                <div className="vc-empty">
+                  <div className="vc-skeleton-list">
                     {[1,2,3,4].map(i => (
-                      <div key={i} className="fb-skeleton-item">
-                        <div className="fb-skeleton-avatar" />
-                        <div className="fb-skeleton-lines">
-                          <div className="fb-skeleton-line fb-skeleton-line-short" />
-                          <div className="fb-skeleton-line" />
+                      <div key={i} className="vc-skeleton-item">
+                        <div className="vc-skeleton-avatar" />
+                        <div className="vc-skeleton-lines">
+                          <div className="vc-skeleton-line vc-skeleton-short" />
+                          <div className="vc-skeleton-line" />
                         </div>
                       </div>
                     ))}
                   </div>
                 </div>
               ) : filteredNotifications.length === 0 ? (
-                <div className="fb-empty">
-                  <div className="fb-empty-icon">
-                    <BellOff style={{ width: 32, height: 32, color: "#B0B3B8" }} />
+                <div className="vc-empty">
+                  <div className="vc-empty-icon">
+                    <BellOff style={{ width: 28, height: 28, color: "#888" }} />
                   </div>
-                  <p className="fb-empty-title">
-                    {activeTab === "unread" ? "No unread notifications" : "You're all caught up"}
+                  <p className="vc-empty-title">
+                    {activeTab === "unread" ? "No unread notifications" : "All caught up"}
                   </p>
-                  <p className="fb-empty-sub">
+                  <p className="vc-empty-sub">
                     {activeTab === "unread" 
-                      ? "Check the All tab to see older notifications" 
-                      : "When you get notifications, they'll show up here"}
+                      ? "Switch to All to see older notifications" 
+                      : "New notifications will appear here"}
                   </p>
                 </div>
               ) : (
-                <div className="fb-notif-list">
+                <div className="vc-list">
                   {filteredNotifications.map(n => {
                     const cfg   = TYPE_CFG[n.type] ?? DEFAULT_CFG;
                     const NIcon = cfg.Icon;
                     return (
                       <div
                         key={n.id}
-                        className={`fb-notif${n.is_read ? " fb-notif-read" : " fb-notif-unread"}`}
+                        className={`vc-item${n.is_read ? " vc-item-read" : " vc-item-unread"}`}
                         onClick={() => !n.is_read && markRead(n.id)}
                         role={n.is_read ? undefined : "button"}
                         tabIndex={n.is_read ? undefined : 0}
                         onKeyDown={e => e.key === "Enter" && !n.is_read && markRead(n.id)}
                       >
                         <div 
-                          className="fb-notif-avatar"
+                          className="vc-item-avatar"
                           style={{ background: cfg.bg, border: `1px solid ${cfg.border}` }}
                         >
-                          <NIcon style={{ width: 18, height: 18, color: cfg.color }} />
+                          <NIcon style={{ width: 16, height: 16, color: cfg.color }} />
                         </div>
-                        <div className="fb-notif-content">
-                          <p className="fb-notif-text">
-                            <span className="fb-notif-title">{n.title}</span>{" "}
-                            <span className="fb-notif-msg">{n.message}</span>
+                        <div className="vc-item-content">
+                          <p className="vc-item-text">
+                            <span className="vc-item-title">{n.title}</span>{" "}
+                            <span className="vc-item-msg">{n.message}</span>
                           </p>
-                          <p className="fb-notif-time">{timeAgo(n.created_at)}</p>
+                          <p className="vc-item-time">{timeAgo(n.created_at)}</p>
                         </div>
-                        <div className="fb-notif-right">
+                        <div className="vc-item-right">
                           {!n.is_read && (
-                            <div className="fb-notif-dot" style={{ background: cfg.color }} />
+                            <div className="vc-item-dot" style={{ background: cfg.color }} />
                           )}
                           <button 
-                            className="fb-notif-delete"
+                            className="vc-item-delete"
                             onClick={(e) => { e.stopPropagation(); deleteNotification(n.id); }}
                             title="Remove"
                           >
-                            <X style={{ width: 14, height: 14 }} />
+                            <X style={{ width: 13, height: 13 }} />
                           </button>
                         </div>
                       </div>
@@ -266,8 +265,8 @@ export default function NotificationBell() {
 
             {/* Footer */}
             {notifications.length > 0 && (
-              <div className="fb-sheet-footer">
-                <span className="fb-footer-text">
+              <div className="vc-footer">
+                <span className="vc-footer-text">
                   {filteredNotifications.length} notification{filteredNotifications.length !== 1 ? "s" : ""}
                 </span>
               </div>
@@ -280,49 +279,51 @@ export default function NotificationBell() {
 }
 
 const css = `
-.fb-root {
+/* ── Root ── */
+.vc-root {
   position: relative;
   display: inline-flex;
   align-items: center;
   z-index: 9999;
 }
 
-/* ── Compact bell button ── */
-.fb-btn {
+/* ── Bell button — Vercel minimal ── */
+.vc-btn {
   position: relative;
-  width: 34px; 
-  height: 34px;
-  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
   background: transparent;
-  border: none;
-  display: flex; 
-  align-items: center; 
+  border: 1px solid transparent;
+  display: flex;
+  align-items: center;
   justify-content: center;
-  color: purple;
+  color: #666;
   cursor: pointer;
   transition: all 0.15s ease;
   flex-shrink: 0;
-  right:50px ;
 }
-.fb-btn:hover {
-  background: #F0F2F5;
-  color: #050505;
+.vc-btn:hover {
+  background: #fafafa;
+  border-color: #eaeaea;
+  color: #000;
 }
-.fb-btn-open {
-  background: #E7F3FF !important;
-  color: #1877F2 !important;
+.vc-btn-open {
+  background: #fafafa !important;
+  border-color: #eaeaea !important;
+  color: #000 !important;
 }
-.fb-btn-has-unread {
-  color: #1877F2;
+.vc-btn-unread {
+  color: #0070f3;
 }
-.fb-btn-inner {
+.vc-btn-inner {
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-/* Bell shake animation */
-@keyframes fbBellShake {
+/* Bell shake */
+@keyframes vcBellShake {
   0%, 100% { transform: rotate(0deg); }
   10% { transform: rotate(12deg); }
   20% { transform: rotate(-10deg); }
@@ -330,395 +331,402 @@ const css = `
   40% { transform: rotate(-6deg); }
   50% { transform: rotate(0deg); }
 }
-.fb-bell-shake {
-  animation: fbBellShake 2s ease infinite;
+.vc-bell-shake {
+  animation: vcBellShake 2s ease infinite;
   transform-origin: top center;
 }
 
-/* Badge */
-.fb-badge {
+/* Badge — Vercel red dot */
+.vc-badge {
   position: absolute;
-  top: 2px; 
+  top: 2px;
   right: 2px;
-  min-width: 16px; 
+  min-width: 16px;
   height: 16px;
   padding: 0 4px;
-  background: #F02849;
-  color: white;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  font-size: 10px; 
+  background: #e00;
+  color: #fff;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+  font-size: 10px;
   font-weight: 600;
   border-radius: 8px;
-  border: 2px solid #ffffff;
-  display: flex; 
-  align-items: center; 
+  border: 2px solid #fff;
+  display: flex;
+  align-items: center;
   justify-content: center;
-  animation: fbBadgePop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  animation: vcBadgePop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-@keyframes fbBadgePop { 
-  from { transform: scale(0); } 
-  to { transform: scale(1); } 
+@keyframes vcBadgePop {
+  from { transform: scale(0); }
+  to { transform: scale(1); }
 }
 
-/* ── Overlay ── */
-.fb-overlay {
+/* ── Overlay — Vercel subtle ── */
+.vc-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(2px);
   z-index: 9998;
-  animation: fbFadeIn 0.2s ease;
+  animation: vcFadeIn 0.2s ease;
 }
-@keyframes fbFadeIn {
+@keyframes vcFadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
 }
 
-/* ── Bottom Sheet — ALWAYS from bottom, all screen sizes ── */
-.fb-sheet {
+/* ── Bottom Sheet — Vercel aesthetic + Facebook behavior ── */
+.vc-sheet {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
-  max-width: 500px;
+  max-width: 480px;
   margin: 0 auto;
-  background: #ffffff;
-  border-radius: 16px 16px 0 0;
-  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
-  display: flex; 
+  background: #fff;
+  border-radius: 12px 12px 0 0;
+  box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.12);
+  display: flex;
   flex-direction: column;
   overflow: hidden;
   z-index: 9999;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  animation: fbSheetUp 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-  max-height: 90vh;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+  animation: vcSheetUp 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  max-height: 85vh;
 }
-@keyframes fbSheetUp {
-  from { 
-    opacity: 0; 
-    transform: translateY(100%); 
+@keyframes vcSheetUp {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
   }
-  to { 
-    opacity: 1; 
-    transform: translateY(0); 
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
 /* Drag handle */
-.fb-sheet-handle-bar {
+.vc-handle-bar {
   display: flex;
   justify-content: center;
-  padding: 8px 0 4px;
+  padding: 10px 0 6px;
   cursor: pointer;
 }
-.fb-sheet-handle {
-  width: 36px;
+.vc-handle {
+  width: 32px;
   height: 4px;
-  background: #CED0D4;
+  background: #ddd;
   border-radius: 2px;
 }
 
 /* ── Header ── */
-.fb-sheet-header {
+.vc-header {
   flex-shrink: 0;
-  padding: 4px 16px 0;
-  border-bottom: 1px solid #E4E6EB;
+  padding: 2px 16px 0;
+  border-bottom: 1px solid #eaeaea;
 }
-.fb-sheet-header-top {
+.vc-header-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
-.fb-sheet-title {
-  font-size: 20px;
-  font-weight: 700;
-  color: #050505;
+.vc-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #000;
   margin: 0;
-  letter-spacing: -0.3px;
+  letter-spacing: -0.02em;
 }
-.fb-sheet-actions {
+.vc-header-actions {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
 }
 
-.fb-action-btn {
+.vc-hbtn {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 4px;
-  padding: 8px;
-  border-radius: 50%;
-  background: #F0F2F5;
-  border: none;
-  color: #050505;
+  padding: 6px;
+  border-radius: 6px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: #666;
   cursor: pointer;
   transition: all 0.15s;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 500;
 }
-.fb-action-btn:hover {
-  background: #E4E6EB;
+.vc-hbtn:hover {
+  background: #fafafa;
+  border-color: #eaeaea;
+  color: #000;
 }
-.fb-mark-all {
+.vc-mark-all {
   border-radius: 6px;
-  padding: 8px 12px;
+  padding: 6px 10px;
   white-space: nowrap;
 }
-.fb-close:hover {
-  background: #F02849;
-  color: white;
+.vc-close:hover {
+  background: #fafafa;
+  border-color: #eaeaea;
+  color: #e00;
 }
 
-@keyframes fbSpin { 
-  to { transform: rotate(360deg); } 
+@keyframes vcSpin {
+  to { transform: rotate(360deg); }
 }
-.fb-spin svg { 
-  animation: fbSpin 0.8s linear infinite; 
+.vc-spin svg {
+  animation: vcSpin 0.8s linear infinite;
 }
 
-/* ── Tabs ── */
-.fb-tabs {
+/* ── Tabs — Vercel pill style ── */
+.vc-tabs {
   display: flex;
-  gap: 8px;
-  padding-bottom: 8px;
+  gap: 4px;
+  padding-bottom: 10px;
 }
-.fb-tab {
-  padding: 6px 16px;
-  border-radius: 18px;
+.vc-tab {
+  padding: 5px 14px;
+  border-radius: 6px;
   background: transparent;
-  border: none;
-  color: #65676B;
-  font-size: 14px;
-  font-weight: 600;
+  border: 1px solid transparent;
+  color: #666;
+  font-size: 13px;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.15s;
   position: relative;
 }
-.fb-tab:hover {
-  background: #F0F2F5;
+.vc-tab:hover {
+  background: #fafafa;
+  border-color: #eaeaea;
+  color: #000;
 }
-.fb-tab-active {
-  background: #E7F3FF !important;
-  color: #1877F2 !important;
+.vc-tab-active {
+  background: #000 !important;
+  border-color: #000 !important;
+  color: #fff !important;
 }
-.fb-tab-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 5px;
-  background: #F02849;
-  color: white;
-  font-size: 11px;
-  font-weight: 600;
-  border-radius: 9px;
+.vc-tab-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  background: #e00;
+  border-radius: 50%;
   margin-left: 6px;
+  vertical-align: middle;
 }
 
 /* ── Body ── */
-.fb-sheet-body {
+.vc-body {
   flex: 1;
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: thin;
-  scrollbar-color: #BCC0C4 transparent;
+  scrollbar-color: #ddd transparent;
 }
-.fb-sheet-body::-webkit-scrollbar { 
-  width: 6px; 
+.vc-body::-webkit-scrollbar {
+  width: 4px;
 }
-.fb-sheet-body::-webkit-scrollbar-thumb { 
-  background: #BCC0C4; 
-  border-radius: 3px; 
+.vc-body::-webkit-scrollbar-thumb {
+  background: #ddd;
+  border-radius: 2px;
 }
 
-/* Skeleton loading */
-@keyframes fbSkeleton {
+/* Skeleton */
+@keyframes vcSkeleton {
   0% { background-position: -200px 0; }
   100% { background-position: calc(200px + 100%) 0; }
 }
-.fb-skeleton-list {
+.vc-skeleton-list {
   padding: 12px 16px;
 }
-.fb-skeleton-item {
+.vc-skeleton-item {
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 10px 0;
 }
-.fb-skeleton-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: linear-gradient(90deg, #F0F2F5 25%, #E4E6EB 50%, #F0F2F5 75%);
+.vc-skeleton-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: linear-gradient(90deg, #f5f5f5 25%, #eaeaea 50%, #f5f5f5 75%);
   background-size: 200px 100%;
-  animation: fbSkeleton 1.5s ease-in-out infinite;
+  animation: vcSkeleton 1.5s ease-in-out infinite;
   flex-shrink: 0;
 }
-.fb-skeleton-lines {
+.vc-skeleton-lines {
   flex: 1;
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
-.fb-skeleton-line {
-  height: 12px;
-  border-radius: 6px;
-  background: linear-gradient(90deg, #F0F2F5 25%, #E4E6EB 50%, #F0F2F5 75%);
+.vc-skeleton-line {
+  height: 10px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #f5f5f5 25%, #eaeaea 50%, #f5f5f5 75%);
   background-size: 200px 100%;
-  animation: fbSkeleton 1.5s ease-in-out infinite;
+  animation: vcSkeleton 1.5s ease-in-out infinite;
 }
-.fb-skeleton-line-short {
-  width: 60%;
+.vc-skeleton-short {
+  width: 55%;
 }
 
-/* Empty state */
-.fb-empty {
-  display: flex; 
+/* Empty */
+.vc-empty {
+  display: flex;
   flex-direction: column;
-  align-items: center; 
+  align-items: center;
   justify-content: center;
-  gap: 8px; 
-  padding: 60px 24px;
+  gap: 8px;
+  padding: 56px 24px;
   text-align: center;
 }
-.fb-empty-icon {
-  width: 64px; 
-  height: 64px;
-  border-radius: 50%;
-  background: #F0F2F5;
-  display: flex; 
-  align-items: center; 
+.vc-empty-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  background: #fafafa;
+  border: 1px solid #eaeaea;
+  display: flex;
+  align-items: center;
   justify-content: center;
   margin-bottom: 4px;
 }
-.fb-empty-title {
-  font-size: 16px; 
+.vc-empty-title {
+  font-size: 15px;
   font-weight: 600;
-  color: #050505; 
+  color: #000;
   margin: 0;
 }
-.fb-empty-sub {
-  font-size: 14px; 
-  color: #65676B;
+.vc-empty-sub {
+  font-size: 13px;
+  color: #888;
   margin: 0;
-  max-width: 280px;
+  max-width: 260px;
   line-height: 1.4;
 }
 
 /* ── Notification list ── */
-.fb-notif-list {
+.vc-list {
   padding: 4px 0;
 }
-.fb-notif {
+.vc-item {
   display: flex;
   align-items: flex-start;
   gap: 12px;
   padding: 10px 16px;
-  transition: background 0.15s;
+  transition: background 0.12s;
   position: relative;
   cursor: pointer;
+  border-bottom: 1px solid transparent;
 }
-.fb-notif:hover {
-  background: #F0F2F5;
+.vc-item:hover {
+  background: #fafafa;
 }
-.fb-notif-unread {
-  background: #E7F3FF;
+.vc-item-unread {
+  background: #fafafa;
 }
-.fb-notif-unread:hover {
-  background: #DBE7F3;
+.vc-item-unread:hover {
+  background: #f5f5f5;
 }
-.fb-notif-read {
-  opacity: 0.85;
+.vc-item-read {
+  opacity: 0.7;
 }
 
 /* Avatar */
-.fb-notif-avatar {
-  width: 40px; 
-  height: 40px;
-  border-radius: 50%;
+.vc-item-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
   flex-shrink: 0;
-  display: flex; 
-  align-items: center; 
+  display: flex;
+  align-items: center;
   justify-content: center;
-  margin-top: 2px;
+  margin-top: 1px;
 }
 
 /* Content */
-.fb-notif-content {
-  flex: 1; 
+.vc-item-content {
+  flex: 1;
   min-width: 0;
 }
-.fb-notif-text {
-  font-size: 14px;
-  line-height: 1.4;
+.vc-item-text {
+  font-size: 13px;
+  line-height: 1.45;
   margin: 0 0 2px;
-  color: #050505;
+  color: #000;
 }
-.fb-notif-title {
+.vc-item-title {
   font-weight: 600;
 }
-.fb-notif-msg {
-  color: #65676B;
+.vc-item-msg {
+  color: #666;
 }
-.fb-notif-time {
-  font-size: 12px; 
+.vc-item-time {
+  font-size: 11px;
   font-weight: 500;
-  color: #1877F2;
+  color: #0070f3;
   margin: 0;
 }
-.fb-notif-read .fb-notif-time {
-  color: #65676B;
+.vc-item-read .vc-item-time {
+  color: #888;
 }
 
 /* Right side */
-.fb-notif-right {
+.vc-item-right {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex-shrink: 0;
-  margin-top: 4px;
+  margin-top: 3px;
 }
-.fb-notif-dot {
-  width: 8px; 
-  height: 8px;
+.vc-item-dot {
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   flex-shrink: 0;
 }
-.fb-notif-delete {
-  width: 28px; 
-  height: 28px;
-  border-radius: 50%;
+.vc-item-delete {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
   background: transparent;
-  border: none;
-  color: #B0B3B8;
+  border: 1px solid transparent;
+  color: #bbb;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   opacity: 0;
-  transition: all 0.15s;
+  transition: all 0.12s;
 }
-.fb-notif:hover .fb-notif-delete {
+.vc-item:hover .vc-item-delete {
   opacity: 1;
 }
-.fb-notif-delete:hover {
-  background: #F0F2F5;
-  color: #F02849;
+.vc-item-delete:hover {
+  background: #f5f5f5;
+  border-color: #eaeaea;
+  color: #e00;
 }
 
 /* ── Footer ── */
-.fb-sheet-footer {
+.vc-footer {
   padding: 10px 16px;
-  border-top: 1px solid #E4E6EB;
-  background: #F0F2F5;
+  border-top: 1px solid #eaeaea;
+  background: #fafafa;
   flex-shrink: 0;
   text-align: center;
 }
-.fb-footer-text {
-  font-size: 12px; 
+.vc-footer-text {
+  font-size: 11px;
   font-weight: 500;
-  color: #65676B;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 `;
