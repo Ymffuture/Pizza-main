@@ -291,6 +291,7 @@ const css = `
 .fb-root {
   position: relative;
   z-index: 9999;
+  top:20px;
 }
 
 /* ── Bell button (Facebook Messenger style) ── */
