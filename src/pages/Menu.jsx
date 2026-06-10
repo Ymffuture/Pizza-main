@@ -340,7 +340,7 @@ export default function Menu() {
 
           {/* Top bar */}
           <header className="mn-topbar">
-            <NotificationBell  className="z-[999]" />
+            
             <button className="mn-topbar-menu lg-hidden" onClick={() => setSidebarOpen(true)}>
               <PanelLeftOpen className="w-6 h-6" />
             </button>
@@ -348,7 +348,7 @@ export default function Menu() {
               <span className="mn-topbar-title">{activeCategory}</span>
               <span className="mn-topbar-sub">{filtered.length} items</span>
             </div>
-          
+          <NotificationBell  className="z-[999]" />
             <button className="mn-topbar-cart" onClick={() => navigate("/cart")}>
               <ShoppingBag className="w-5 h-5" />
               {count > 0 && <span className="mn-topbar-cart-badge">{count}</span>}
