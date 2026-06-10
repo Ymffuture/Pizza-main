@@ -169,6 +169,11 @@ export default function Menu() {
       <style>{styles}</style>
       <ActiveOrderTracker />
 
+      {/* NotificationBell rendered at root level — outside any constrained/stacking contexts */}
+      <div className="mn-notif-bell-wrapper">
+        <NotificationBell />
+      </div>
+
       <div className="mn-root">
 
         {/* Mobile overlay */}
@@ -192,9 +197,7 @@ export default function Menu() {
                 <div className="mn-sidebar-brand-text">
                   <span className="mn-sidebar-brand">KotaBites</span>
                   <span className="mn-sidebar-tagline">Fresh · Fast · Fire</span>
-                  
                 </div>
-          
               )}
               {/* Desktop collapse toggle */}
               <button
@@ -340,7 +343,6 @@ export default function Menu() {
 
           {/* Top bar */}
           <header className="mn-topbar">
-            
             <button className="mn-topbar-menu lg-hidden" onClick={() => setSidebarOpen(true)}>
               <PanelLeftOpen className="w-6 h-6" />
             </button>
@@ -348,7 +350,6 @@ export default function Menu() {
               <span className="mn-topbar-title">{activeCategory}</span>
               <span className="mn-topbar-sub">{filtered.length} items</span>
             </div>
-          
             <button className="mn-topbar-cart" onClick={() => navigate("/cart")}>
               <ShoppingBag className="w-5 h-5" />
               {count > 0 && <span className="mn-topbar-cart-badge">{count}</span>}
@@ -362,23 +363,22 @@ export default function Menu() {
 
           {/* Search bar - STICKY */}
           <div className="mn-search-bar-wrap">
-  <div className="mn-search-bar-inner">
-    <Search className="mn-search-bar-icon" />
-    <input
-      type="text"
-      placeholder="Search menu..."
-      value={search}
-      onChange={(e) => setSearch(e.target.value)}
-      className="mn-search-bar-input"
-    />
-    {search && (
-      <button className="mn-search-bar-clear" onClick={() => setSearch("")}>
-        <X className="w-4 h-4" />
-      </button>
-    )}
-    <NotificationBell />  {/* No z-[999] needed — handled internally */}
-  </div>
-</div>
+            <div className="mn-search-bar-inner">
+              <Search className="mn-search-bar-icon" />
+              <input
+                type="text"
+                placeholder="Search menu..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="mn-search-bar-input"
+              />
+              {search && (
+                <button className="mn-search-bar-clear" onClick={() => setSearch("")}>
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          </div>
 
           {/* Category pills - STICKY */}
           <div className="mn-cats-wrap">
@@ -457,6 +457,29 @@ const styles = `
     --border: rgba(255,199,44,0.1);
     --text:   #fff8e7;
     --muted:  rgba(255,248,231,0.42);
+  }
+
+  /* ─── Notification Bell Wrapper ───
+     Rendered at root level to escape all stacking contexts.
+     The bell button is visually positioned in the search bar area
+     but the DOM is outside any backdrop-filter / overflow containers. */
+  .mn-notif-bell-wrapper {
+    position: fixed;
+    top: 12px;
+    right: 80px;
+    z-index: 9999;
+  }
+  @media (max-width: 1023px) {
+    .mn-notif-bell-wrapper {
+      top: 14px;
+      right: 72px;
+    }
+  }
+  @media (max-width: 640px) {
+    .mn-notif-bell-wrapper {
+      top: 14px;
+      right: 64px;
+    }
   }
 
   /* ─── Root ─── */
@@ -548,7 +571,7 @@ const styles = `
   .mn-collapse-btn {
     width: 26px; height: 26px; border-radius: 7px;
     background: rgba(255,248,231,0.05); border: 1px solid rgba(255,199,44,0.15);
-    display: none;          /* overridden by .lg-only below */
+    display: none;
     align-items: center; justify-content: center;
     color: var(--muted); cursor: pointer; transition: all 0.2s;
     flex-shrink: 0; margin-left: auto;
