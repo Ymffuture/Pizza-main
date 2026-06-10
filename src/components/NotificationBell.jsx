@@ -290,8 +290,8 @@ const css = `
 /* ── Compact bell button ── */
 .fb-btn {
   position: relative;
-  width: 50px; 
-  height: 50px;
+  width: 34px; 
+  height: 34px;
   border-radius: 50%;
   background: transparent;
   border: none;
