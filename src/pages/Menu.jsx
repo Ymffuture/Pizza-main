@@ -791,7 +791,7 @@ const styles = `
   }
   .mn-search-bar-inner {
     position: relative; display: flex; align-items: center;
-    max-width: 600px; margin: 0 auto; width: 100%;
+    max-width: 600px; margin: 0 auto; width: 100%; gap: 8px;
   }
   .mn-search-bar-icon {
     position: absolute; left: 16px;
@@ -805,7 +805,7 @@ const styles = `
     color: var(--text); font-size: 14px; font-weight: 500;
     font-family: 'Plus Jakarta Sans', sans-serif;
     outline: none; transition: border-color 0.2s, background 0.2s;
-    box-sizing: border-box;
+    box-sizing: border-box; flex: 1;
   }
   .mn-search-bar-input:focus { border-color: rgba(255,199,44,0.35); background: rgba(255,248,231,0.08); }
   .mn-search-bar-input::placeholder { color: var(--muted); }
