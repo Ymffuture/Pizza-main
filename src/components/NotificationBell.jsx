@@ -31,7 +31,7 @@ export default function NotificationBell() {
   const [notifications, setNotifications] = useState([]);
   const [open, setOpen]     = useState(false);
   const [loading, setLoad]  = useState(false);
-  const [activeTab, setActiveTab] = useState("all"); // "all" | "unread"
+  const [activeTab, setActiveTab] = useState("all");
   const sheetRef = useRef(null);
   const btnRef   = useRef(null);
 
@@ -53,7 +53,6 @@ export default function NotificationBell() {
     return () => clearInterval(id);
   }, [load]);
 
-  // Close on outside click (only when clicking outside both sheet and button)
   useEffect(() => {
     if (!open) return;
     const fn = (e) => {
@@ -64,7 +63,6 @@ export default function NotificationBell() {
     return () => document.removeEventListener("mousedown", fn);
   }, [open]);
 
-  // Close on Escape
   useEffect(() => {
     if (!open) return;
     const fn = (e) => e.key === "Escape" && setOpen(false);
@@ -72,7 +70,6 @@ export default function NotificationBell() {
     return () => window.removeEventListener("keydown", fn);
   }, [open]);
 
-  // Prevent body scroll when sheet is open
   useEffect(() => {
     if (open) {
       document.body.style.overflow = "hidden";
@@ -113,7 +110,7 @@ export default function NotificationBell() {
       <style>{css}</style>
       <div className="fb-root">
 
-        {/* Bell button - Facebook Messenger style */}
+        {/* Compact bell button */}
         <button
           ref={btnRef}
           className={`fb-btn${open ? " fb-btn-open" : ""}${unread > 0 ? " fb-btn-has-unread" : ""}`}
@@ -122,8 +119,8 @@ export default function NotificationBell() {
         >
           <div className="fb-btn-inner">
             {unread > 0
-              ? <Bell style={{ width: 20, height: 20 }} className="fb-bell-shake" />
-              : <Bell style={{ width: 20, height: 20 }} />
+              ? <Bell style={{ width: 18, height: 18 }} className="fb-bell-shake" />
+              : <Bell style={{ width: 18, height: 18 }} />
             }
           </div>
           {unread > 0 && (
@@ -140,7 +137,7 @@ export default function NotificationBell() {
           />
         )}
 
-        {/* Bottom Sheet Panel - Facebook style */}
+        {/* Bottom Sheet — ALWAYS slides up from bottom */}
         {open && (
           <div ref={sheetRef} className="fb-sheet" role="dialog" aria-label="Notifications">
 
@@ -235,15 +232,12 @@ export default function NotificationBell() {
                         tabIndex={n.is_read ? undefined : 0}
                         onKeyDown={e => e.key === "Enter" && !n.is_read && markRead(n.id)}
                       >
-                        {/* Avatar / Icon */}
                         <div 
                           className="fb-notif-avatar"
                           style={{ background: cfg.bg, border: `1px solid ${cfg.border}` }}
                         >
                           <NIcon style={{ width: 18, height: 18, color: cfg.color }} />
                         </div>
-
-                        {/* Content */}
                         <div className="fb-notif-content">
                           <p className="fb-notif-text">
                             <span className="fb-notif-title">{n.title}</span>{" "}
@@ -251,8 +245,6 @@ export default function NotificationBell() {
                           </p>
                           <p className="fb-notif-time">{timeAgo(n.created_at)}</p>
                         </div>
-
-                        {/* Right side: unread dot + delete */}
                         <div className="fb-notif-right">
                           {!n.is_read && (
                             <div className="fb-notif-dot" style={{ background: cfg.color }} />
@@ -290,35 +282,36 @@ export default function NotificationBell() {
 const css = `
 .fb-root {
   position: relative;
+  display: inline-flex;
+  align-items: center;
   z-index: 9999;
-
 }
 
-/* ── Bell button (Facebook Messenger style) ── */
+/* ── Compact bell button ── */
 .fb-btn {
   position: relative;
-  width: 40px; 
-  height: 40px;
+  width: 34px; 
+  height: 34px;
   border-radius: 50%;
-  background: #E4E6EB;
+  background: transparent;
   border: none;
   display: flex; 
   align-items: center; 
   justify-content: center;
-  color: #050505;
+  color: #65676B;
   cursor: pointer;
   transition: all 0.15s ease;
   flex-shrink: 0;
 }
 .fb-btn:hover {
-  background: #D8DADF;
+  background: #F0F2F5;
+  color: #050505;
 }
 .fb-btn-open {
   background: #E7F3FF !important;
   color: #1877F2 !important;
 }
 .fb-btn-has-unread {
-  background: #E7F3FF;
   color: #1877F2;
 }
 .fb-btn-inner {
@@ -341,20 +334,20 @@ const css = `
   transform-origin: top center;
 }
 
-/* Badge (Facebook red dot style) */
+/* Badge */
 .fb-badge {
   position: absolute;
-  top: -2px; 
-  right: -2px;
-  min-width: 18px; 
-  height: 18px;
-  padding: 0 5px;
+  top: 2px; 
+  right: 2px;
+  min-width: 16px; 
+  height: 16px;
+  padding: 0 4px;
   background: #F02849;
   color: white;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  font-size: 11px; 
+  font-size: 10px; 
   font-weight: 600;
-  border-radius: 10px;
+  border-radius: 8px;
   border: 2px solid #ffffff;
   display: flex; 
   align-items: center; 
@@ -379,10 +372,10 @@ const css = `
   to { opacity: 1; }
 }
 
-/* ── Bottom Sheet (Facebook style) ── */
+/* ── Bottom Sheet — ALWAYS from bottom, all screen sizes ── */
 .fb-sheet {
   position: fixed;
-  bottom: -20px;
+  bottom: 0;
   left: 0;
   right: 0;
   max-width: 500px;
@@ -395,8 +388,8 @@ const css = `
   overflow: hidden;
   z-index: 9999;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  animation: fbSheetUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  max-height: 90vh;
+  animation: fbSheetUp 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  max-height: 85vh;
 }
 @keyframes fbSheetUp {
   from { 
@@ -726,28 +719,5 @@ const css = `
   font-size: 12px; 
   font-weight: 500;
   color: #65676B;
-}
-
-/* ── Responsive ── */
-@media (min-width: 501px) {
-  .fb-sheet {
-    border-radius: 16px;
-    bottom: auto;
-    top: 50%;
-    left: 50%;
-    right: auto;
-    transform: translate(-50%, -50%);
-    max-height: 600px;
-    width: 420px;
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
-    animation: fbModalIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-  .fb-sheet-handle-bar {
-    display: none;
-  }
-  @keyframes fbModalIn {
-    from { opacity: 0; transform: translate(-50%, -45%) scale(0.96); }
-    to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-  }
 }
 `;
