@@ -290,8 +290,8 @@ const css = `
 /* ── Compact bell button ── */
 .fb-btn {
   position: relative;
-  width: 42px; 
-  height: 42px;
+  width: 50px; 
+  height: 50px;
   border-radius: 50%;
   background: transparent;
   border: none;
@@ -302,7 +302,7 @@ const css = `
   cursor: pointer;
   transition: all 0.15s ease;
   flex-shrink: 0;
-  right:28px ;
+  right:40px ;
 }
 .fb-btn:hover {
   background: #F0F2F5;
