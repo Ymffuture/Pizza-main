@@ -192,7 +192,7 @@ export default function Menu() {
                 <div className="mn-sidebar-brand-text">
                   <span className="mn-sidebar-brand">KotaBites</span>
                   <span className="mn-sidebar-tagline">Fresh · Fast · Fire</span>
-                  <NotificationBell  className="z-[999]" />
+                  
                 </div>
           
               )}
@@ -376,6 +376,7 @@ export default function Menu() {
                   <X className="w-4 h-4" />
                 </button>
               )}
+              <NotificationBell  className="z-[999]" />
             </div>
               
           </div>
