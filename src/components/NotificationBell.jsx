@@ -302,7 +302,7 @@ const css = `
   cursor: pointer;
   transition: all 0.15s ease;
   flex-shrink: 0;
-  right:40px ;
+  right:50px ;
 }
 .fb-btn:hover {
   background: #F0F2F5;
@@ -390,7 +390,7 @@ const css = `
   z-index: 9999;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   animation: fbSheetUp 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-  max-height: 85vh;
+  max-height: 90vh;
 }
 @keyframes fbSheetUp {
   from { 
