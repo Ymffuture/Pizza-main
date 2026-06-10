@@ -291,7 +291,7 @@ const css = `
 .fb-root {
   position: relative;
   z-index: 9999;
-  top:20px;
+
 }
 
 /* ── Bell button (Facebook Messenger style) ── */
@@ -382,7 +382,7 @@ const css = `
 /* ── Bottom Sheet (Facebook style) ── */
 .fb-sheet {
   position: fixed;
-  bottom: 0;
+  bottom: -20px;
   left: 0;
   right: 0;
   max-width: 500px;
@@ -396,7 +396,7 @@ const css = `
   z-index: 9999;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   animation: fbSheetUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  max-height: 85vh;
+  max-height: 90vh;
 }
 @keyframes fbSheetUp {
   from { 
