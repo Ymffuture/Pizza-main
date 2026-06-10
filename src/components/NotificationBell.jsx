@@ -302,7 +302,7 @@ const css = `
   cursor: pointer;
   transition: all 0.15s ease;
   flex-shrink: 0;
-  right:20px ;
+  right:28px ;
 }
 .fb-btn:hover {
   background: #F0F2F5;
