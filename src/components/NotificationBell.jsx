@@ -8,12 +8,12 @@ import axiosClient from "../api/axiosClient";
 import { useAuth } from "../context/AuthContext";
 
 const TYPE_CFG = {
-  info:        { Icon: Info,          color: "#60a5fa", bg: "rgba(96,165,250,0.14)",  border: "rgba(96,165,250,0.25)"  },
-  warning:     { Icon: AlertTriangle, color: "#fbbf24", bg: "rgba(251,191,36,0.12)",  border: "rgba(251,191,36,0.25)"  },
-  promo:       { Icon: Star,          color: "#FFC72C", bg: "rgba(255,199,44,0.12)",  border: "rgba(255,199,44,0.25)"  },
-  update:      { Icon: Zap,           color: "#a78bfa", bg: "rgba(167,139,250,0.12)", border: "rgba(167,139,250,0.25)" },
-  maintenance: { Icon: AlertTriangle, color: "#fb923c", bg: "rgba(251,146,60,0.12)",  border: "rgba(251,146,60,0.25)"  },
-  urgent:      { Icon: Megaphone,     color: "#f87171", bg: "rgba(248,113,113,0.12)", border: "rgba(248,113,113,0.25)" },
+  info:        { Icon: Info,          color: "#3b82f6", bg: "rgba(59,130,246,0.12)",  border: "rgba(59,130,246,0.2)"  },
+  warning:     { Icon: AlertTriangle, color: "#f59e0b", bg: "rgba(245,158,11,0.12)",  border: "rgba(245,158,11,0.2)"  },
+  promo:       { Icon: Star,          color: "#fbbf24", bg: "rgba(251,191,36,0.12)",  border: "rgba(251,191,36,0.2)"  },
+  update:      { Icon: Zap,           color: "#8b5cf6", bg: "rgba(139,92,246,0.12)",  border: "rgba(139,92,246,0.2)"  },
+  maintenance: { Icon: AlertTriangle, color: "#f97316", bg: "rgba(249,115,22,0.12)",  border: "rgba(249,115,22,0.2)"  },
+  urgent:      { Icon: Megaphone,     color: "#ef4444", bg: "rgba(239,68,68,0.12)",   border: "rgba(239,68,68,0.2)"   },
 };
 const DEFAULT_CFG = TYPE_CFG.info;
 
@@ -70,6 +70,16 @@ export default function NotificationBell() {
     return () => window.removeEventListener("keydown", fn);
   }, [open]);
 
+  // Lock body scroll when panel is open (mobile)
+  useEffect(() => {
+    if (open) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => { document.body.style.overflow = ""; };
+  }, [open]);
+
   const markRead = async (id) => {
     try {
       await axiosClient.patch(`/notifications/${id}/read`);
@@ -105,12 +115,26 @@ export default function NotificationBell() {
           )}
         </button>
 
-        {/* Panel */}
+        {/* Backdrop */}
         {open && (
-          <div ref={panelRef} className="nb-panel z-[999]" role="dialog" aria-label="Notifications">
+          <div 
+            className="nb-backdrop" 
+            onClick={() => setOpen(false)}
+            aria-hidden="true"
+          />
+        )}
+
+        {/* Panel — slides up from bottom */}
+        {open && (
+          <div ref={panelRef} className="nb-panel" role="dialog" aria-label="Notifications">
+
+            {/* Drag handle (mobile) */}
+            <div className="nb-drag-handle" onClick={() => setOpen(false)}>
+              <div className="nb-drag-bar" />
+            </div>
 
             {/* Header */}
-            <div className="nb-panel-hd z-[999]">
+            <div className="nb-panel-hd">
               <div className="nb-panel-hd-left">
                 <span className="nb-panel-title">Notifications</span>
                 {unread > 0 && (
@@ -149,7 +173,7 @@ export default function NotificationBell() {
               ) : notifications.length === 0 ? (
                 <div className="nb-empty">
                   <div className="nb-empty-icon">
-                    <BellOff style={{ width: 26, height: 26, color: "rgba(255,248,231,0.2)" }} />
+                    <BellOff style={{ width: 26, height: 26, color: "rgba(255,255,255,0.25)" }} />
                   </div>
                   <p className="nb-empty-title">You're all caught up</p>
                   <p className="nb-empty-sub">No notifications yet</p>
@@ -183,7 +207,7 @@ export default function NotificationBell() {
                       {/* Content */}
                       <div className="nb-item-content">
                         <p className="nb-item-title"
-                          style={{ color: n.is_read ? "rgba(255,248,231,0.55)" : "#fff8e7" }}>
+                          style={{ color: n.is_read ? "rgba(255,255,255,0.45)" : "#fafafa" }}>
                           {n.title}
                         </p>
                         <p className="nb-item-msg">{n.message}</p>
@@ -216,39 +240,39 @@ export default function NotificationBell() {
 }
 
 const css = `
-@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 .nb-root {
-position: relative; 
-z-index: 9999;
+  position: relative;
+  z-index: 9999;
 }
 
 /* ── Bell button ── */
 .nb-btn {
   position: relative;
-  width: 38px; height: 38px;
-  border-radius: 12px;
-  background: rgba(255,248,231,0.05);
-  border: 1px solid rgba(255,248,231,0.08);
+  width: 36px; height: 36px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.08);
   display: flex; align-items: center; justify-content: center;
-  color: rgba(255,248,231,0.5);
+  color: rgba(255,255,255,0.5);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   flex-shrink: 0;
 }
 .nb-btn:hover {
-  background: rgba(255,199,44,0.1);
-  border-color: rgba(255,199,44,0.25);
-  color: #FFC72C;
+  background: rgba(255,255,255,0.1);
+  border-color: rgba(255,255,255,0.15);
+  color: rgba(255,255,255,0.9);
 }
 .nb-btn-open {
-  background: rgba(255,199,44,0.1) !important;
-  border-color: rgba(255,199,44,0.35) !important;
-  color: #FFC72C !important;
+  background: rgba(255,255,255,0.12) !important;
+  border-color: rgba(255,255,255,0.2) !important;
+  color: #fff !important;
 }
 .nb-btn-has-unread {
-  border-color: rgba(218,41,28,0.35);
-  color: rgba(255,248,231,0.7);
+  border-color: rgba(239,68,68,0.4);
+  color: rgba(255,255,255,0.7);
 }
 
 /* Bell ring animation */
@@ -268,43 +292,88 @@ z-index: 9999;
 /* Badge */
 .nb-badge {
   position: absolute;
-  top: -5px; right: -5px;
-  min-width: 18px; height: 18px;
-  padding: 0 4px;
-  background: linear-gradient(135deg, #DA291C, #b91c1c);
+  top: -4px; right: -4px;
+  min-width: 16px; height: 16px;
+  padding: 0 3px;
+  background: #ef4444;
   color: white;
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 10px; font-weight: 900;
-  border-radius: 10px;
-  border: 2px solid #0e0700;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 9px; font-weight: 700;
+  border-radius: 8px;
+  border: 2px solid #0a0a0a;
   display: flex; align-items: center; justify-content: center;
   animation: nbBadgePop 0.3s cubic-bezier(0.34,1.56,0.64,1);
 }
 @keyframes nbBadgePop { from { transform: scale(0); } to { transform: scale(1); } }
 
+/* ── Backdrop ── */
+.nb-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 9998;
+  animation: nbBackdropIn 0.2s ease;
+}
+@keyframes nbBackdropIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
 /* ── Panel ── */
 .nb-panel {
-  position: absolute;
-  top: calc(100% + 10px);
-  right: 0;
-  width: 340px;
-  background: #130c00;
-  border: 1px solid rgba(255,199,44,0.15);
-  border-radius: 18px;
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 420px;
+  max-height: 70vh;
+  background: rgba(20, 20, 22, 0.95);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-bottom: none;
+  border-radius: 24px 24px 0 0;
   box-shadow:
-    0 24px 64px rgba(0,0,0,0.7),
-    0 0 0 1px rgba(255,199,44,0.05),
-    inset 0 1px 0 rgba(255,248,231,0.04);
+    0 -8px 40px rgba(0,0,0,0.4),
+    0 0 0 1px rgba(255,255,255,0.04);
   display: flex; flex-direction: column;
   overflow: hidden;
   z-index: 9999;
-  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
-  animation: nbPanelIn 0.25s cubic-bezier(0.34,1.2,0.64,1);
-  max-height: 480px;
+  font-family: 'Inter', system-ui, sans-serif;
+  animation: nbPanelSlideUp 0.35s cubic-bezier(0.32, 0.72, 0, 1);
 }
-@keyframes nbPanelIn {
-  from { opacity: 0; transform: translateY(-8px) scale(0.97); }
-  to   { opacity: 1; transform: none; }
+@keyframes nbPanelSlideUp {
+  from { 
+    opacity: 0; 
+    transform: translateX(-50%) translateY(100%);
+  }
+  to   { 
+    opacity: 1; 
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+/* Drag handle */
+.nb-drag-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 0 6px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.nb-drag-bar {
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255,255,255,0.15);
+  transition: background 0.2s;
+}
+.nb-drag-handle:hover .nb-drag-bar {
+  background: rgba(255,255,255,0.3);
 }
 
 /* Header */
@@ -312,58 +381,70 @@ z-index: 9999;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 16px 12px;
-  border-bottom: 1px solid rgba(255,199,44,0.08);
-  background: linear-gradient(135deg, rgba(255,199,44,0.06) 0%, transparent 60%);
+  padding: 8px 16px 12px;
   flex-shrink: 0;
 }
 .nb-panel-hd-left { display: flex; align-items: center; gap: 8px; }
 .nb-panel-title {
-  font-family: 'Bebas Neue', sans-serif;
-  font-size: 16px; letter-spacing: 2px;
-  color: #fff8e7; line-height: 1;
+  font-family: 'Inter', sans-serif;
+  font-size: 15px; 
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: #fafafa; 
+  line-height: 1;
 }
 .nb-panel-unread-pill {
   padding: 2px 8px;
-  background: rgba(218,41,28,0.2);
-  border: 1px solid rgba(218,41,28,0.35);
+  background: rgba(239,68,68,0.15);
+  border: 1px solid rgba(239,68,68,0.25);
   border-radius: 50px;
-  font-size: 10px; font-weight: 800;
+  font-size: 10px; 
+  font-weight: 700;
   color: #f87171;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
 }
 .nb-panel-hd-actions { display: flex; align-items: center; gap: 4px; }
 
 .nb-mark-all {
   display: flex; align-items: center; gap: 5px;
   padding: 5px 10px;
-  background: rgba(255,199,44,0.08);
-  border: 1px solid rgba(255,199,44,0.18);
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
   border-radius: 8px;
-  color: rgba(255,199,44,0.75);
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 10px; font-weight: 800;
+  color: rgba(255,255,255,0.6);
+  font-family: 'Inter', sans-serif;
+  font-size: 11px; 
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.15s;
-  letter-spacing: 0.03em;
+  letter-spacing: -0.01em;
 }
-.nb-mark-all:hover { background: rgba(255,199,44,0.15); color: #FFC72C; }
+.nb-mark-all:hover { 
+  background: rgba(255,255,255,0.1); 
+  color: #fff; 
+  border-color: rgba(255,255,255,0.2);
+}
 
 .nb-refresh, .nb-close {
   width: 28px; height: 28px;
   border-radius: 8px;
-  background: rgba(255,248,231,0.05);
-  border: 1px solid rgba(255,248,231,0.07);
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
   display: flex; align-items: center; justify-content: center;
-  color: rgba(255,248,231,0.35);
+  color: rgba(255,255,255,0.4);
   cursor: pointer;
   transition: all 0.15s;
 }
 .nb-refresh:hover, .nb-close:hover {
-  color: #fff8e7;
-  background: rgba(255,248,231,0.1);
+  color: #fff;
+  background: rgba(255,255,255,0.1);
+  border-color: rgba(255,255,255,0.15);
 }
-.nb-close:hover { background: rgba(218,41,28,0.2); color: #f87171; }
+.nb-close:hover { 
+  background: rgba(239,68,68,0.15); 
+  color: #f87171; 
+  border-color: rgba(239,68,68,0.2);
+}
 
 @keyframes nbSpin { to { transform: rotate(360deg); } }
 .nb-refresh-spin svg { animation: nbSpin 0.8s linear infinite; }
@@ -373,31 +454,35 @@ z-index: 9999;
   flex: 1;
   overflow-y: auto;
   scrollbar-width: thin;
-  scrollbar-color: rgba(255,199,44,0.15) transparent;
+  scrollbar-color: rgba(255,255,255,0.1) transparent;
 }
 .nb-panel-body::-webkit-scrollbar { width: 4px; }
-.nb-panel-body::-webkit-scrollbar-thumb { background: rgba(255,199,44,0.15); border-radius: 4px; }
+.nb-panel-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
 
 /* Empty */
 .nb-empty {
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
-  gap: 10px; padding: 44px 24px;
+  gap: 10px; padding: 48px 24px;
   text-align: center;
 }
 .nb-empty-icon {
-  width: 56px; height: 56px;
-  border-radius: 16px;
-  background: rgba(255,248,231,0.04);
-  border: 1px solid rgba(255,248,231,0.06);
+  width: 52px; height: 52px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.06);
   display: flex; align-items: center; justify-content: center;
 }
 .nb-empty-title {
-  font-size: 14px; font-weight: 800;
-  color: rgba(255,248,231,0.45); margin: 0;
+  font-size: 14px; 
+  font-weight: 600;
+  color: rgba(255,255,255,0.5); 
+  margin: 0;
+  letter-spacing: -0.01em;
 }
 .nb-empty-sub {
-  font-size: 12px; color: rgba(255,248,231,0.22);
+  font-size: 12px; 
+  color: rgba(255,255,255,0.25);
   margin: 0;
 }
 
@@ -406,13 +491,13 @@ z-index: 9999;
 .nb-dots span {
   width: 6px; height: 6px;
   border-radius: 50%;
-  background: rgba(255,199,44,0.4);
+  background: rgba(255,255,255,0.3);
   animation: nbDot 1.2s ease-in-out infinite;
 }
 .nb-dots span:nth-child(2) { animation-delay: 0.2s; }
 .nb-dots span:nth-child(3) { animation-delay: 0.4s; }
 @keyframes nbDot { 0%,80%,100%{transform:scale(0.5);opacity:0.4} 40%{transform:scale(1);opacity:1} }
-.nb-empty p { font-size: 12px; color: rgba(255,248,231,0.35); margin: 0; }
+.nb-empty p { font-size: 12px; color: rgba(255,255,255,0.3); margin: 0; }
 
 /* Notification item */
 .nb-item {
@@ -420,18 +505,18 @@ z-index: 9999;
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  padding: 12px 14px;
-  border-bottom: 1px solid rgba(255,248,231,0.04);
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
   transition: background 0.18s;
   overflow: hidden;
 }
 .nb-item:last-child { border-bottom: none; }
 .nb-item-unread {
-  background: rgba(255,199,44,0.03);
+  background: rgba(255,255,255,0.02);
   cursor: pointer;
 }
-.nb-item-unread:hover { background: rgba(255,199,44,0.06); }
-.nb-item-read { opacity: 0.65; }
+.nb-item-unread:hover { background: rgba(255,255,255,0.05); }
+.nb-item-read { opacity: 0.55; }
 
 .nb-item-accent {
   position: absolute;
@@ -447,14 +532,16 @@ z-index: 9999;
 }
 .nb-item-content { flex: 1; min-width: 0; }
 .nb-item-title {
-  font-size: 13px; font-weight: 700;
+  font-size: 13px; 
+  font-weight: 600;
   margin: 0 0 3px;
   line-height: 1.3;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  letter-spacing: -0.01em;
 }
 .nb-item-msg {
   font-size: 12px;
-  color: rgba(255,248,231,0.45);
+  color: rgba(255,255,255,0.45);
   margin: 0 0 4px;
   line-height: 1.5;
   display: -webkit-box;
@@ -463,9 +550,10 @@ z-index: 9999;
   overflow: hidden;
 }
 .nb-item-time {
-  font-size: 10px; font-weight: 700;
-  color: rgba(255,248,231,0.25);
-  letter-spacing: 0.03em;
+  font-size: 10px; 
+  font-weight: 600;
+  color: rgba(255,255,255,0.25);
+  letter-spacing: 0.02em;
   margin: 0;
 }
 .nb-unread-dot {
@@ -479,18 +567,52 @@ z-index: 9999;
 /* Footer */
 .nb-panel-ft {
   padding: 10px 16px;
-  border-top: 1px solid rgba(255,199,44,0.06);
-  background: rgba(255,248,231,0.02);
+  border-top: 1px solid rgba(255,255,255,0.05);
+  background: rgba(255,255,255,0.02);
   flex-shrink: 0;
 }
 .nb-ft-text {
-  font-size: 10px; font-weight: 700;
-  color: rgba(255,248,231,0.2);
+  font-size: 10px; 
+  font-weight: 600;
+  color: rgba(255,255,255,0.2);
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
 }
 
+/* ── Desktop override: panel anchored to bell button ── */
+@media (min-width: 640px) {
+  .nb-backdrop {
+    display: none;
+  }
+  .nb-panel {
+    position: absolute;
+    bottom: auto;
+    top: calc(100% + 10px);
+    left: auto;
+    right: 0;
+    transform: none;
+    width: 360px;
+    max-height: 480px;
+    border-radius: 16px;
+    border: 1px solid rgba(255,255,255,0.08);
+    box-shadow:
+      0 16px 48px rgba(0,0,0,0.5),
+      0 0 0 1px rgba(255,255,255,0.04);
+    animation: nbPanelDrop 0.25s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+  @keyframes nbPanelDrop {
+    from { opacity: 0; transform: translateY(-8px) scale(0.97); }
+    to   { opacity: 1; transform: none; }
+  }
+  .nb-drag-handle {
+    display: none;
+  }
+}
+
+/* ── Small mobile adjustments ── */
 @media (max-width: 420px) {
-  .nb-panel { width: calc(100vw - 20px); right: -50px; }
+  .nb-panel {
+    max-height: 75vh;
+  }
 }
 `;
