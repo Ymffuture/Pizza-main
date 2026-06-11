@@ -46,7 +46,7 @@ export default function App() {
     <ErrorBoundary>
       <AuthProvider>
         <UserStatusProvider>
-    <AccountStatusBanner />
+  
         <OrderProvider>
           <CartProvider>
             <ToastProvider>
@@ -54,6 +54,7 @@ export default function App() {
               <KotaToaster />
 
               <BrowserRouter>
+                <AccountStatusBanner />
                 <Suspense fallback={<PageLoader />}>
                   <Routes>
                     <Route path="/"                 element={<Home />} />
