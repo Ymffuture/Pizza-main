@@ -289,10 +289,10 @@ const css = `
 
 /* ── Bell button — Vercel minimal ── */
 .vc-btn {
-  position: relative;
+  position: absolute;
   width: 32px;
   height: 32px;
-  border-radius: 8px;
+  border-radius: 50px;
   background: transparent;
   border: 1px solid transparent;
   display: flex;
@@ -302,7 +302,7 @@ const css = `
   cursor: pointer;
   transition: all 0.15s ease;
   flex-shrink: 0;
-  left:50px;
+  left:56px;
 }
 .vc-btn:hover {
   background: #fafafa;
