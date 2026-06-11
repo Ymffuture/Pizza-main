@@ -302,8 +302,8 @@ const css = `
   cursor: pointer;
   transition: all 0.15s ease;
   flex-shrink: 0;
-  left:34px;
-  bottom :2px
+  left:20px;
+  bottom :1px;
 }
 .vc-btn:hover {
   background: #fafafa;
