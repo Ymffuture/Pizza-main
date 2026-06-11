@@ -1,6 +1,25 @@
 // src/components/AccountStatusBanner.jsx
+// ─────────────────────────────────────────────────────────────────────────────
+// Renders the correct restriction UI based on account status:
+//   warned     → dismissible amber top bar
+//   restricted → persistent orange top bar with feature chips
+//   suspended  → red modal (dismissible to browse) + countdown timer
+//   banned     → full-screen lock overlay (minimizable to corner badge)
+//
+// Also exports FeatureGate — wrap any feature to automatically show a
+// "locked" overlay when the user lacks permission.
+//
+// Usage:
+//   // In App.jsx root layout:
+//   <AccountStatusBanner />
+//
+//   // Around any feature:
+//   <FeatureGate feature="canAddToCart">
+//     <AddToCartButton />
+//   </FeatureGate>
+// ─────────────────────────────────────────────────────────────────────────────
 
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
 import {
   AlertTriangle, Ban, Lock, ShieldOff, X, Phone,
@@ -13,116 +32,93 @@ import {
   STATUS_META,
 } from "../context/UserStatusContext";
 
-/* ─── ICON MAP ───────────────────────────────────────────── */
+/* ─── Icon map for each feature key ─────────────────────────────────────── */
 const FEATURE_ICONS = {
-  canAddToCart: ShoppingCart,
-  canCheckout: ShoppingCart,
-  canOrder: ShoppingCart,
-  canUseWallet: Wallet,
+  canAddToCart:  ShoppingCart,
+  canCheckout:   ShoppingCart,
+  canOrder:      ShoppingCart,
+  canUseWallet:  Wallet,
   canUseRewards: Star,
-  canChat: MessageSquare,
+  canChat:       MessageSquare,
   canViewOrders: ClipboardList,
 };
 
-/* ─── COUNTDOWN HOOK (FIXED DRIFT + SAFE CLEANUP) ───────── */
+/* ─── Countdown hook ─────────────────────────────────────────────────────── */
 function useCountdown(expiresAt) {
   const [remaining, setRemaining] = useState(0);
 
   useEffect(() => {
     if (!expiresAt) return;
-
-    const end = new Date(expiresAt).getTime();
-
     const tick = () => {
-      const diff = Math.max(0, end - Date.now());
+      const diff = Math.max(0, Math.floor((new Date(expiresAt) - Date.now()) / 1000));
       setRemaining(diff);
     };
-
     tick();
     const id = setInterval(tick, 1000);
-
     return () => clearInterval(id);
   }, [expiresAt]);
 
-  const seconds = Math.floor(remaining / 1000) % 60;
-  const minutes = Math.floor(remaining / 60000) % 60;
-  const hours = Math.floor(remaining / 3600000) % 24;
-  const days = Math.floor(remaining / 86400000);
+  const days    = Math.floor(remaining / 86400);
+  const hours   = Math.floor((remaining % 86400) / 3600);
+  const minutes = Math.floor((remaining % 3600) / 60);
+  const seconds = remaining % 60;
+  const expired = remaining === 0 && !!expiresAt;
 
-  return {
-    days,
-    hours,
-    minutes,
-    seconds,
-    expired: remaining === 0 && !!expiresAt,
-    remaining,
-  };
+  return { days, hours, minutes, seconds, expired, remaining };
 }
 
-/* ─── Dismiss keys (SSR-safe + per-session fallback) ─────── */
+/* ─── Shared session-dismiss key ─────────────────────────────────────────── */
 const DISMISS_KEY = "kb_status_dismissed";
-const getKey = (suffix) => `${DISMISS_KEY}_${suffix}`;
 
-/* ═════════════════ WARNED ═════════════════ */
+/* ══════════════════════════════════════════════════════════════════════════
+   1. WARNED BANNER
+══════════════════════════════════════════════════════════════════════════ */
 function WarnedBanner({ reason, onDismiss }) {
   const [expanded, setExpanded] = useState(false);
 
   return (
-    <div className="ksb-warned">
-      <div className="ksb-warned-left">
-        <div className="ksb-warned-icon">
-          <AlertTriangle style={{ width: 13, height: 13 }} />
-        </div>
-
-        <div className="ksb-warned-text">
-          <span className="ksb-warned-label">Account Warning</span>
-          {reason && (
-            <span className="ksb-warned-reason">
-              {expanded
-                ? reason
-                : reason.length > 60
-                  ? reason.slice(0, 60) + "…"
-                  : reason}
-            </span>
+    <>
+      <div className="ksb-warned">
+        <div className="ksb-warned-left">
+          <div className="ksb-warned-icon">
+            <AlertTriangle style={{ width: 13, height: 13 }} />
+          </div>
+          <div className="ksb-warned-text">
+            <span className="ksb-warned-label">Account Warning</span>
+            {reason && (
+              <span className="ksb-warned-reason">
+                {expanded ? reason : reason.length > 60 ? reason.slice(0, 60) + "…" : reason}
+              </span>
+            )}
+          </div>
+          {reason && reason.length > 60 && (
+            <button className="ksb-expand-btn" onClick={() => setExpanded((e) => !e)}>
+              {expanded ? <ChevronUp style={{ width: 11, height: 11 }} /> : <ChevronDown style={{ width: 11, height: 11 }} />}
+            </button>
           )}
         </div>
-
-        {reason?.length > 60 && (
-          <button
-            className="ksb-expand-btn"
-            onClick={() => setExpanded((v) => !v)}
-          >
-            {expanded ? (
-              <ChevronUp style={{ width: 11, height: 11 }} />
-            ) : (
-              <ChevronDown style={{ width: 11, height: 11 }} />
-            )}
+        <div className="ksb-warned-actions">
+          <Link to="/info" className="ksb-warned-policy-link">
+            View Policy
+          </Link>
+          <button className="ksb-dismiss-btn" onClick={onDismiss} title="Dismiss">
+            <X style={{ width: 12, height: 12 }} />
           </button>
-        )}
+        </div>
       </div>
-
-      <div className="ksb-warned-actions">
-        <Link to="/info" className="ksb-warned-policy-link">
-          View Policy
-        </Link>
-
-        <button className="ksb-dismiss-btn" onClick={onDismiss}>
-          <X style={{ width: 12, height: 12 }} />
-        </button>
-      </div>
-    </div>
+    </>
   );
 }
 
-/* ═════════════════ RESTRICTED ═════════════════ */
+/* ══════════════════════════════════════════════════════════════════════════
+   2. RESTRICTED BANNER
+══════════════════════════════════════════════════════════════════════════ */
 function RestrictedBanner({ reason, affectedFeatures }) {
   const [showReason, setShowReason] = useState(false);
 
-  const lockedChips = useMemo(() => {
-    return (affectedFeatures || []).filter(
-      (f) => !["canCheckout", "canOrder"].includes(f)
-    );
-  }, [affectedFeatures]);
+  const lockedChips = affectedFeatures.filter(
+    (f) => !["canCheckout", "canOrder"].includes(f) // dedupe — show primary keys only
+  );
 
   return (
     <div className="ksb-restricted">
@@ -130,12 +126,8 @@ function RestrictedBanner({ reason, affectedFeatures }) {
         <div className="ksb-restr-icon-wrap">
           <Ban style={{ width: 13, height: 13 }} />
         </div>
-
         <div className="ksb-restr-content">
-          <span className="ksb-restr-label">
-            Some features are currently restricted
-          </span>
-
+          <span className="ksb-restr-label">Some features are currently restricted</span>
           <div className="ksb-restr-chips">
             {lockedChips.map((f) => {
               const Icon = FEATURE_ICONS[f] || Lock;
@@ -149,15 +141,10 @@ function RestrictedBanner({ reason, affectedFeatures }) {
           </div>
         </div>
       </div>
-
       <div className="ksb-restr-actions">
-        <button
-          className="ksb-why-btn"
-          onClick={() => setShowReason((s) => !s)}
-        >
+        <button className="ksb-why-btn" onClick={() => setShowReason((s) => !s)}>
           {showReason ? "Hide" : "Why?"}
         </button>
-
         <a href="tel:0653935339" className="ksb-appeal-btn">
           <Phone style={{ width: 11, height: 11 }} />
           Appeal
@@ -174,113 +161,147 @@ function RestrictedBanner({ reason, affectedFeatures }) {
   );
 }
 
-/* ═════════════════ SUSPENDED ═════════════════ */
-function SuspendedModal({
-  reason,
-  expiresAt,
-  affectedFeatures,
-  appealed,
-  onBrowse,
-}) {
-  const { days, hours, minutes, seconds, expired } =
-    useCountdown(expiresAt);
-
-  useEffect(() => {
-    document.body.style.overflow = "hidden";
-    return () => (document.body.style.overflow = "");
-  }, []);
-
+/* ══════════════════════════════════════════════════════════════════════════
+   3. SUSPENDED MODAL
+══════════════════════════════════════════════════════════════════════════ */
+function SuspendedModal({ reason, expiresAt, affectedFeatures, appealed, onBrowse }) {
+  const { days, hours, minutes, seconds, expired } = useCountdown(expiresAt);
   const expStr = expiresAt
-    ? new Date(expiresAt).toLocaleString("en-ZA")
+    ? new Date(expiresAt).toLocaleDateString("en-ZA", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
     : null;
 
-  const keyFeatures = useMemo(() => {
-    return (affectedFeatures || []).filter(
-      (f) => !["canCheckout", "canOrder"].includes(f)
-    );
-  }, [affectedFeatures]);
+  const keyFeatures = affectedFeatures.filter(
+    (f) => !["canCheckout", "canOrder"].includes(f)
+  );
 
   return (
     <div className="ksb-susp-backdrop">
       <div className="ksb-susp-modal">
+        {/* Glow top strip */}
+        <div className="ksb-susp-strip" />
+
+        {/* Icon */}
         <div className="ksb-susp-icon-ring">
           <Lock style={{ width: 28, height: 28, color: "#f87171" }} />
         </div>
 
+        {/* Title */}
         <h2 className="ksb-susp-title">Account Suspended</h2>
-
         <p className="ksb-susp-sub">
-          Temporary restriction applied to your account.
+          Your account has been temporarily suspended and some features are disabled.
         </p>
 
+        {/* Reason */}
         {reason && (
           <div className="ksb-susp-reason-box">
-            <AlertTriangle style={{ width: 13, height: 13 }} />
+            <AlertTriangle style={{ width: 13, height: 13, color: "#fb923c", flexShrink: 0 }} />
             <span>{reason}</span>
           </div>
         )}
 
+        {/* Countdown / Expiry */}
         {expiresAt && (
           <div className="ksb-susp-timer-section">
             <div className="ksb-susp-timer-label">
               <Timer style={{ width: 12, height: 12 }} />
-              {expired ? "Expired — refresh required" : `Until ${expStr}`}
+              {expired ? "Suspension ended — please refresh" : `Suspended until ${expStr}`}
             </div>
-
             {!expired && (
               <div className="ksb-susp-countdown">
-                <div>{days}d</div>
-                <div>{String(hours).padStart(2, "0")}h</div>
-                <div>{String(minutes).padStart(2, "0")}m</div>
-                <div>{String(seconds).padStart(2, "0")}s</div>
+                {days > 0 && (
+                  <div className="ksb-susp-tick">
+                    <span className="ksb-susp-tick-num">{days}</span>
+                    <span className="ksb-susp-tick-unit">days</span>
+                  </div>
+                )}
+                <div className="ksb-susp-tick">
+                  <span className="ksb-susp-tick-num">{String(hours).padStart(2, "0")}</span>
+                  <span className="ksb-susp-tick-unit">hrs</span>
+                </div>
+                <div className="ksb-susp-tick-sep">:</div>
+                <div className="ksb-susp-tick">
+                  <span className="ksb-susp-tick-num">{String(minutes).padStart(2, "0")}</span>
+                  <span className="ksb-susp-tick-unit">min</span>
+                </div>
+                <div className="ksb-susp-tick-sep">:</div>
+                <div className="ksb-susp-tick">
+                  <span className="ksb-susp-tick-num">{String(seconds).padStart(2, "0")}</span>
+                  <span className="ksb-susp-tick-unit">sec</span>
+                </div>
               </div>
             )}
-
             {expired && (
-              <button onClick={() => window.location.reload()}>
-                <RefreshCw />
-                Refresh
+              <button
+                className="ksb-refresh-btn"
+                onClick={() => window.location.reload()}
+              >
+                <RefreshCw style={{ width: 13, height: 13 }} />
+                Refresh to restore access
               </button>
             )}
           </div>
         )}
 
+        {/* Affected features */}
+        {keyFeatures.length > 0 && (
+          <div className="ksb-susp-features">
+            <p className="ksb-susp-feat-label">Disabled features:</p>
+            <div className="ksb-susp-feat-chips">
+              {keyFeatures.map((f) => {
+                const Icon = FEATURE_ICONS[f] || Lock;
+                return (
+                  <div key={f} className="ksb-susp-feat-chip">
+                    <Icon style={{ width: 11, height: 11 }} />
+                    {FEATURE_LABELS[f]}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Actions */}
         <div className="ksb-susp-actions">
           <a href="tel:0653935339" className="ksb-susp-contact-btn">
+            <Phone style={{ width: 14, height: 14 }} />
             Contact Support
           </a>
-
           {!appealed && (
             <Link to="/support" className="ksb-susp-appeal-link">
               Submit Appeal
+              <ExternalLink style={{ width: 11, height: 11 }} />
             </Link>
           )}
-
-          <button onClick={onBrowse} className="ksb-susp-browse-btn">
-            Browse Only
+          <button className="ksb-susp-browse-btn" onClick={onBrowse}>
+            Browse Menu Only
           </button>
         </div>
 
         <p className="ksb-susp-footer-note">
-          Some features are disabled
+          🔒 Wallet, Rewards & Cart are disabled during suspension
         </p>
       </div>
     </div>
   );
 }
 
-/* ═════════════════ BANNED ═════════════════ */
+/* ══════════════════════════════════════════════════════════════════════════
+   4. BANNED OVERLAY
+══════════════════════════════════════════════════════════════════════════ */
 function BannedOverlay({ reason, appealed }) {
-  const [min, setMin] = useState(false);
+  const [minimised, setMinimised] = useState(false);
 
-  if (min) {
+  if (minimised) {
     return (
-      <div
-        className="ksb-banned-badge"
-        onClick={() => setMin(false)}
-      >
-        <ShieldOff />
-        Account Banned
+      <div className="ksb-banned-badge" onClick={() => setMinimised(false)} title="Account banned — click for details">
+        <ShieldOff style={{ width: 13, height: 13 }} />
+        <span>Account Banned</span>
       </div>
     );
   }
@@ -288,72 +309,100 @@ function BannedOverlay({ reason, appealed }) {
   return (
     <div className="ksb-banned-overlay">
       <div className="ksb-banned-card">
-        <button
-          className="ksb-banned-minimise"
-          onClick={() => setMin(true)}
-        >
-          <X />
+        {/* Close to badge */}
+        <button className="ksb-banned-minimise" onClick={() => setMinimised(true)} title="Minimise">
+          <X style={{ width: 14, height: 14 }} />
         </button>
 
-        <h1 className="ksb-banned-title">Account Banned</h1>
+        {/* Warning icon */}
+        <div className="ksb-banned-icon-ring">
+          <ShieldOff style={{ width: 36, height: 36, color: "#ff2424" }} />
+        </div>
+
+        <h1 className="ksb-banned-title">Account Permanently Banned</h1>
+        <p className="ksb-banned-sub">
+          This account has been permanently disabled and no longer has access to KotaBites services.
+        </p>
 
         {reason && (
           <div className="ksb-banned-reason">
-            {reason}
+            <p className="ksb-banned-reason-head">Reason for ban:</p>
+            <p className="ksb-banned-reason-body">{reason}</p>
           </div>
         )}
 
-        <div className="ksb-banned-actions">
-          <a href="tel:0653935339">Call Support</a>
+        {/* All features locked */}
+        <div className="ksb-banned-locked-grid">
+          {[
+            { label: "Cart", Icon: ShoppingCart },
+            { label: "Wallet", Icon: Wallet },
+            { label: "Rewards", Icon: Star },
+            { label: "KotaBot", Icon: MessageSquare },
+            { label: "Orders", Icon: ClipboardList },
+          ].map(({ label, Icon }) => (
+            <div key={label} className="ksb-banned-locked-chip">
+              <Lock style={{ width: 10, height: 10 }} />
+              <Icon style={{ width: 10, height: 10 }} />
+              <span>{label}</span>
+            </div>
+          ))}
+        </div>
 
+        <div className="ksb-banned-actions">
+          <a href="tel:0653935339" className="ksb-banned-call-btn">
+            <Phone style={{ width: 14, height: 14 }} />
+            065 393 5339
+          </a>
           {!appealed && (
-            <Link to="/support">Appeal</Link>
+            <Link to="/support" className="ksb-banned-appeal-btn">
+              Submit Appeal
+            </Link>
           )}
         </div>
+
+        <p className="ksb-banned-policy">
+          <Link to="/terms" className="ksb-banned-policy-link">Terms & Conditions</Link>
+          {" · "}
+          <Link to="/info" className="ksb-banned-policy-link">Help Center</Link>
+        </p>
       </div>
     </div>
   );
 }
 
-/* ═════════════════ MAIN ═════════════════ */
+/* ══════════════════════════════════════════════════════════════════════════
+   5. MAIN ORCHESTRATOR — AccountStatusBanner
+══════════════════════════════════════════════════════════════════════════ */
 export default function AccountStatusBanner() {
   const {
-    status,
-    reason,
-    expiresAt,
-    affectedFeatures,
-    appealed,
+    status, reason, expiresAt, affectedFeatures, appealed,
   } = useUserStatus();
 
-  const [warnDismissed, setWarnDismissed] = useState(
-    () =>
-      typeof window !== "undefined" &&
-      sessionStorage.getItem(getKey("warned")) === "1"
+  // Dismissed states
+  const [warnDismissed,  setWarnDismissed]  = useState(
+    () => sessionStorage.getItem(DISMISS_KEY + "_warned") === "1"
   );
-
-  const [suspDismissed, setSuspDismissed] = useState(
-    () =>
-      typeof window !== "undefined" &&
-      sessionStorage.getItem(getKey("suspended")) === "1"
+  const [suspDismissed,  setSuspDismissed]  = useState(
+    () => sessionStorage.getItem(DISMISS_KEY + "_suspended") === "1"
   );
 
   const dismissWarn = useCallback(() => {
-    sessionStorage.setItem(getKey("warned"), "1");
+    sessionStorage.setItem(DISMISS_KEY + "_warned", "1");
     setWarnDismissed(true);
   }, []);
 
   const dismissSusp = useCallback(() => {
-    sessionStorage.setItem(getKey("suspended"), "1");
+    sessionStorage.setItem(DISMISS_KEY + "_suspended", "1");
     setSuspDismissed(true);
   }, []);
 
-  const prev = useRef(status);
-
+  // Reset dismissals if status changes (e.g. new suspension)
+  const prevStatusRef = useRef(status);
   useEffect(() => {
-    if (prev.current !== status) {
-      if (status === "warned") setWarnDismissed(false);
+    if (prevStatusRef.current !== status) {
       if (status === "suspended") setSuspDismissed(false);
-      prev.current = status;
+      if (status === "warned")    setWarnDismissed(false);
+      prevStatusRef.current = status;
     }
   }, [status]);
 
@@ -366,10 +415,7 @@ export default function AccountStatusBanner() {
       )}
 
       {status === "restricted" && (
-        <RestrictedBanner
-          reason={reason}
-          affectedFeatures={affectedFeatures}
-        />
+        <RestrictedBanner reason={reason} affectedFeatures={affectedFeatures} />
       )}
 
       {status === "suspended" && !suspDismissed && (
@@ -384,7 +430,7 @@ export default function AccountStatusBanner() {
 
       {status === "suspended" && suspDismissed && (
         <RestrictedBanner
-          reason={reason}
+          reason={reason ?? "Account is currently suspended"}
           affectedFeatures={affectedFeatures}
         />
       )}
@@ -393,6 +439,90 @@ export default function AccountStatusBanner() {
         <BannedOverlay reason={reason} appealed={appealed} />
       )}
     </>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   6. FEATURE GATE — wraps any feature and locks it when restricted
+══════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * FeatureGate wraps any child content.
+ * When the feature is disabled it renders a translucent locked overlay on top.
+ *
+ * Props:
+ *   feature   — keyof FEATURE_PERMISSIONS  e.g. "canAddToCart"
+ *   mode      — "overlay" | "hide" | "disable"   (default: "overlay")
+ *   label     — override lock message
+ *   children
+ *
+ * @example
+ *   <FeatureGate feature="canAddToCart">
+ *     <button onClick={addToCart}>Add to Cart</button>
+ *   </FeatureGate>
+ */
+export function FeatureGate({ feature, mode = "overlay", label, children }) {
+  const { features, status } = useUserStatus();
+  const allowed = features[feature] ?? true;
+  const [showTip, setShowTip] = useState(false);
+  const tipTimeout = useRef(null);
+
+  if (allowed) return children;
+
+  // "hide" mode — render nothing
+  if (mode === "hide") return null;
+
+  // "disable" mode — render children but pointer-events:none
+  if (mode === "disable") {
+    return (
+      <div style={{ position: "relative", pointerEvents: "none", opacity: 0.45, userSelect: "none" }}>
+        {children}
+      </div>
+    );
+  }
+
+  // "overlay" mode — render children under a lock overlay
+  const meta      = STATUS_META[status] ?? STATUS_META.active;
+  const lockLabel = label ?? `${FEATURE_LABELS[feature] ?? "Feature"} · ${meta.label}`;
+
+  const handleClick = (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    clearTimeout(tipTimeout.current);
+    setShowTip(true);
+    tipTimeout.current = setTimeout(() => setShowTip(false), 2800);
+  };
+
+  return (
+    <div className="kfg-wrap">
+      {/* Original children rendered but inert */}
+      <div className="kfg-children-inert" aria-hidden="true">
+        {children}
+      </div>
+
+      {/* Lock overlay — intercepts all clicks */}
+      <div
+        className="kfg-overlay"
+        style={{ "--fg-accent": meta.accent }}
+        onClick={handleClick}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => e.key === "Enter" && handleClick(e)}
+        aria-label={`${lockLabel} — locked`}
+      >
+        <div className="kfg-lock-icon">
+          <Lock style={{ width: 14, height: 14, color: meta.accent }} />
+        </div>
+
+        {/* Tooltip */}
+        {showTip && (
+          <div className="kfg-tooltip">
+            <Lock style={{ width: 10, height: 10 }} />
+            <span>{lockLabel}</span>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
