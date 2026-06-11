@@ -8,7 +8,7 @@ import { useToast } from "../components/Toast";
 import Footer from "../components/Footer";
 import Avatar from "../components/Avatar";
 import NotificationBell from "../components/NotificationBell";
-import AccountStatusBanner from "../components/AccountStatusBanner" 
+// import AccountStatusBanner from "../components/AccountStatusBanner" 
 import {
   ShoppingBag, RefreshCw, UtensilsCrossed, Zap, PanelLeftClose, MessagesSquare, LayoutDashboard,
   ChevronRight, Flame, Search, SlidersHorizontal, LogOut,
@@ -169,7 +169,7 @@ export default function Menu() {
     <>
       <style>{styles}</style>
       <ActiveOrderTracker />
-      <AccountStatusBanner />
+{/*  <AccountStatusBanner />*/} 
       {/* NotificationBell rendered at root level — outside any constrained/stacking contexts */}
       <div className="mn-notif-bell-wrapper right-4">
         <NotificationBell />
