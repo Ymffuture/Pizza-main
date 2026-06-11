@@ -15,6 +15,7 @@ import TermsPage   from "./components/Terms";
 import SupportPage from "./components/Support";
 import { UserStatusProvider } from "./context/UserStatusContext";
 import AccountStatusBanner    from "./components/AccountStatusBanner";
+import FeatureGate from "./components/FeatureGate" ;
 
 const Home             = lazy(() => import("./pages/Home"));
 const Menu             = lazy(() => import("./pages/Menu"));
@@ -82,7 +83,16 @@ export default function App() {
   </RequireAuth>
 } />
                     <Route path="/rewards" element={
-                      <RequireAuth><ClientWallet /></RequireAuth>
+                      <RequireAuth><FeatureGate
+  feature="canOrder"
+  fallback={
+    <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-700">
+      Your account cannot place orders at this time.
+    </div>
+  }
+>
+            <ClientWallet />
+</FeatureGate></RequireAuth>
                     } />
                     <Route path="/driver-dashboard" element={
                       <RequireAuth><DeliverDashboard /></RequireAuth>
