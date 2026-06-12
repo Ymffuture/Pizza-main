@@ -303,7 +303,7 @@ const css = `
   transition: all 0.15s ease;
   flex-shrink: 0;
   left:20px;
-  top:28px;
+  top:32px;
   
 }
 .vc-btn:hover {
