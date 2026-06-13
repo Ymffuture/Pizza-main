@@ -1,22 +1,21 @@
 // src/components/AccountStatusBanner.jsx
 // ─────────────────────────────────────────────────────────────────────────────
-// Renders the correct restriction UI based on account status:
-//   warned     → dismissible amber top bar
-//   restricted → persistent orange top bar with feature chips
-//   suspended  → red modal (dismissible to browse) + countdown timer
-//   banned     → full-screen lock overlay (minimizable to corner badge)
-//
-// Also exports FeatureGate — wrap any feature to automatically show a
-// "locked" overlay when the user lacks permission.
+// Renders the correct restriction UI based on account status.
+// SMART LAYOUT: Banners push content down instead of covering navbars/sidebars.
 //
 // Usage:
-//   // In App.jsx root layout:
-//   <AccountStatusBanner />
+//   // In App.jsx — place INSIDE your layout, not at root:
+//   <div className="app-layout">
+//     <Sidebar />
+//     <main className="main-area">
+//       <TopNavbar />
+//       <AccountStatusBanner layout="smart" />
+//       <PageContent />
+//     </main>
+//   </div>
 //
-//   // Around any feature:
-//   <FeatureGate feature="canAddToCart">
-//     <AddToCartButton />
-//   </FeatureGate>
+//   // Or with fixed layout (legacy):
+//   <AccountStatusBanner layout="fixed" />
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -71,60 +70,60 @@ function useCountdown(expiresAt) {
 const DISMISS_KEY = "kb_status_dismissed";
 
 /* ══════════════════════════════════════════════════════════════════════════
-   1. WARNED BANNER
+   1. WARNED BANNER  (smart layout — in-flow)
 ══════════════════════════════════════════════════════════════════════════ */
-function WarnedBanner({ reason, onDismiss }) {
+function WarnedBanner({ reason, onDismiss, layout }) {
   const [expanded, setExpanded] = useState(false);
+  const isFixed = layout === "fixed";
 
   return (
-    <>
-      <div className="ksb-warned">
-        <div className="ksb-warned-left">
-          <div className="ksb-warned-icon">
-            <AlertTriangle style={{ width: 13, height: 13 }} />
-          </div>
-          <div className="ksb-warned-text">
-            <span className="ksb-warned-label">Account Warning</span>
-            {reason && (
-              <span className="ksb-warned-reason">
-                {expanded ? reason : reason.length > 60 ? reason.slice(0, 60) + "…" : reason}
-              </span>
-            )}
-          </div>
-          {reason && reason.length > 60 && (
-            <button className="ksb-expand-btn" onClick={() => setExpanded((e) => !e)}>
-              {expanded ? <ChevronUp style={{ width: 11, height: 11 }} /> : <ChevronDown style={{ width: 11, height: 11 }} />}
-            </button>
+    <div className={`ksb-warned ${isFixed ? "ksb-warned--fixed" : "ksb-warned--smart"}`}>
+      <div className="ksb-warned-left">
+        <div className="ksb-warned-icon">
+          <AlertTriangle style={{ width: 14, height: 14 }} />
+        </div>
+        <div className="ksb-warned-text">
+          <span className="ksb-warned-label">Account Warning</span>
+          {reason && (
+            <span className="ksb-warned-reason">
+              {expanded ? reason : reason.length > 80 ? reason.slice(0, 80) + "…" : reason}
+            </span>
           )}
         </div>
-        <div className="ksb-warned-actions">
-          <Link to="/info" className="ksb-warned-policy-link">
-            View Policy
-          </Link>
-          <button className="ksb-dismiss-btn" onClick={onDismiss} title="Dismiss">
-            <X style={{ width: 12, height: 12 }} />
+        {reason && reason.length > 80 && (
+          <button className="ksb-expand-btn" onClick={() => setExpanded((e) => !e)} aria-label={expanded ? "Collapse" : "Expand"}>
+            {expanded ? <ChevronUp style={{ width: 12, height: 12 }} /> : <ChevronDown style={{ width: 12, height: 12 }} />}
           </button>
-        </div>
+        )}
       </div>
-    </>
+      <div className="ksb-warned-actions">
+        <Link to="/info" className="ksb-warned-policy-link">
+          View Policy
+        </Link>
+        <button className="ksb-dismiss-btn" onClick={onDismiss} title="Dismiss" aria-label="Dismiss warning">
+          <X style={{ width: 12, height: 12 }} />
+        </button>
+      </div>
+    </div>
   );
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   2. RESTRICTED BANNER
+   2. RESTRICTED BANNER  (smart layout — in-flow)
 ══════════════════════════════════════════════════════════════════════════ */
-function RestrictedBanner({ reason, affectedFeatures }) {
+function RestrictedBanner({ reason, affectedFeatures, layout }) {
   const [showReason, setShowReason] = useState(false);
+  const isFixed = layout === "fixed";
 
   const lockedChips = affectedFeatures.filter(
-    (f) => !["canCheckout", "canOrder"].includes(f) // dedupe — show primary keys only
+    (f) => !["canCheckout", "canOrder"].includes(f)
   );
 
   return (
-    <div className="ksb-restricted">
+    <div className={`ksb-restricted ${isFixed ? "ksb-restricted--fixed" : "ksb-restricted--smart"}`}>
       <div className="ksb-restricted-left">
         <div className="ksb-restr-icon-wrap">
-          <Ban style={{ width: 13, height: 13 }} />
+          <Ban style={{ width: 14, height: 14 }} />
         </div>
         <div className="ksb-restr-content">
           <span className="ksb-restr-label">Some features are currently restricted</span>
@@ -162,7 +161,7 @@ function RestrictedBanner({ reason, affectedFeatures }) {
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   3. SUSPENDED MODAL
+   3. SUSPENDED MODAL  (centered, doesn't block nav)
 ══════════════════════════════════════════════════════════════════════════ */
 function SuspendedModal({ reason, expiresAt, affectedFeatures, appealed, onBrowse }) {
   const { days, hours, minutes, seconds, expired } = useCountdown(expiresAt);
@@ -182,22 +181,16 @@ function SuspendedModal({ reason, expiresAt, affectedFeatures, appealed, onBrows
 
   return (
     <div className="ksb-susp-backdrop">
-      <div className="ksb-susp-modal">
-        {/* Glow top strip */}
+      <div className="ksb-susp-modal" role="dialog" aria-modal="true" aria-labelledby="susp-title">
         <div className="ksb-susp-strip" />
-
-        {/* Icon */}
         <div className="ksb-susp-icon-ring">
           <Lock style={{ width: 28, height: 28, color: "#f87171" }} />
         </div>
-
-        {/* Title */}
-        <h2 className="ksb-susp-title">Account Suspended</h2>
+        <h2 id="susp-title" className="ksb-susp-title">Account Suspended</h2>
         <p className="ksb-susp-sub">
           Your account has been temporarily suspended and some features are disabled.
         </p>
 
-        {/* Reason */}
         {reason && (
           <div className="ksb-susp-reason-box">
             <AlertTriangle style={{ width: 13, height: 13, color: "#fb923c", flexShrink: 0 }} />
@@ -205,7 +198,6 @@ function SuspendedModal({ reason, expiresAt, affectedFeatures, appealed, onBrows
           </div>
         )}
 
-        {/* Countdown / Expiry */}
         {expiresAt && (
           <div className="ksb-susp-timer-section">
             <div className="ksb-susp-timer-label">
@@ -213,7 +205,7 @@ function SuspendedModal({ reason, expiresAt, affectedFeatures, appealed, onBrows
               {expired ? "Suspension ended — please refresh" : `Suspended until ${expStr}`}
             </div>
             {!expired && (
-              <div className="ksb-susp-countdown">
+              <div className="ksb-susp-countdown" aria-live="polite">
                 {days > 0 && (
                   <div className="ksb-susp-tick">
                     <span className="ksb-susp-tick-num">{days}</span>
@@ -237,10 +229,7 @@ function SuspendedModal({ reason, expiresAt, affectedFeatures, appealed, onBrows
               </div>
             )}
             {expired && (
-              <button
-                className="ksb-refresh-btn"
-                onClick={() => window.location.reload()}
-              >
+              <button className="ksb-refresh-btn" onClick={() => window.location.reload()}>
                 <RefreshCw style={{ width: 13, height: 13 }} />
                 Refresh to restore access
               </button>
@@ -248,7 +237,6 @@ function SuspendedModal({ reason, expiresAt, affectedFeatures, appealed, onBrows
           </div>
         )}
 
-        {/* Affected features */}
         {keyFeatures.length > 0 && (
           <div className="ksb-susp-features">
             <p className="ksb-susp-feat-label">Disabled features:</p>
@@ -266,7 +254,6 @@ function SuspendedModal({ reason, expiresAt, affectedFeatures, appealed, onBrows
           </div>
         )}
 
-        {/* Actions */}
         <div className="ksb-susp-actions">
           <a href="tel:0653935339" className="ksb-susp-contact-btn">
             <Phone style={{ width: 14, height: 14 }} />
@@ -292,14 +279,14 @@ function SuspendedModal({ reason, expiresAt, affectedFeatures, appealed, onBrows
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   4. BANNED OVERLAY
+   4. BANNED OVERLAY  (minimizable, respects layout)
 ══════════════════════════════════════════════════════════════════════════ */
 function BannedOverlay({ reason, appealed }) {
   const [minimised, setMinimised] = useState(false);
 
   if (minimised) {
     return (
-      <div className="ksb-banned-badge" onClick={() => setMinimised(false)} title="Account banned — click for details">
+      <div className="ksb-banned-badge" onClick={() => setMinimised(false)} title="Account banned — click for details" role="button" tabIndex={0} onKeyDown={(e) => e.key === "Enter" && setMinimised(false)}>
         <ShieldOff style={{ width: 13, height: 13 }} />
         <span>Account Banned</span>
       </div>
@@ -308,18 +295,14 @@ function BannedOverlay({ reason, appealed }) {
 
   return (
     <div className="ksb-banned-overlay">
-      <div className="ksb-banned-card">
-        {/* Close to badge */}
-        <button className="ksb-banned-minimise" onClick={() => setMinimised(true)} title="Minimise">
+      <div className="ksb-banned-card" role="alertdialog" aria-modal="true" aria-labelledby="banned-title">
+        <button className="ksb-banned-minimise" onClick={() => setMinimised(true)} title="Minimise" aria-label="Minimise ban overlay">
           <X style={{ width: 14, height: 14 }} />
         </button>
-
-        {/* Warning icon */}
         <div className="ksb-banned-icon-ring">
           <ShieldOff style={{ width: 36, height: 36, color: "#ff2424" }} />
         </div>
-
-        <h1 className="ksb-banned-title">Account Permanently Banned</h1>
+        <h1 id="banned-title" className="ksb-banned-title">Account Permanently Banned</h1>
         <p className="ksb-banned-sub">
           This account has been permanently disabled and no longer has access to KotaBites services.
         </p>
@@ -331,7 +314,6 @@ function BannedOverlay({ reason, appealed }) {
           </div>
         )}
 
-        {/* All features locked */}
         <div className="ksb-banned-locked-grid">
           {[
             { label: "Cart", Icon: ShoppingCart },
@@ -373,12 +355,11 @@ function BannedOverlay({ reason, appealed }) {
 /* ══════════════════════════════════════════════════════════════════════════
    5. MAIN ORCHESTRATOR — AccountStatusBanner
 ══════════════════════════════════════════════════════════════════════════ */
-export default function AccountStatusBanner() {
+export default function AccountStatusBanner({ layout = "smart" }) {
   const {
     status, reason, expiresAt, affectedFeatures, appealed,
   } = useUserStatus();
 
-  // Dismissed states
   const [warnDismissed,  setWarnDismissed]  = useState(
     () => sessionStorage.getItem(DISMISS_KEY + "_warned") === "1"
   );
@@ -396,7 +377,6 @@ export default function AccountStatusBanner() {
     setSuspDismissed(true);
   }, []);
 
-  // Reset dismissals if status changes (e.g. new suspension)
   const prevStatusRef = useRef(status);
   useEffect(() => {
     if (prevStatusRef.current !== status) {
@@ -411,11 +391,11 @@ export default function AccountStatusBanner() {
       <style>{css}</style>
 
       {status === "warned" && !warnDismissed && (
-        <WarnedBanner reason={reason} onDismiss={dismissWarn} />
+        <WarnedBanner reason={reason} onDismiss={dismissWarn} layout={layout} />
       )}
 
       {status === "restricted" && (
-        <RestrictedBanner reason={reason} affectedFeatures={affectedFeatures} />
+        <RestrictedBanner reason={reason} affectedFeatures={affectedFeatures} layout={layout} />
       )}
 
       {status === "suspended" && !suspDismissed && (
@@ -432,6 +412,7 @@ export default function AccountStatusBanner() {
         <RestrictedBanner
           reason={reason ?? "Account is currently suspended"}
           affectedFeatures={affectedFeatures}
+          layout={layout}
         />
       )}
 
@@ -443,24 +424,8 @@ export default function AccountStatusBanner() {
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   6. FEATURE GATE — wraps any feature and locks it when restricted
+   6. FEATURE GATE
 ══════════════════════════════════════════════════════════════════════════ */
-
-/**
- * FeatureGate wraps any child content.
- * When the feature is disabled it renders a translucent locked overlay on top.
- *
- * Props:
- *   feature   — keyof FEATURE_PERMISSIONS  e.g. "canAddToCart"
- *   mode      — "overlay" | "hide" | "disable"   (default: "overlay")
- *   label     — override lock message
- *   children
- *
- * @example
- *   <FeatureGate feature="canAddToCart">
- *     <button onClick={addToCart}>Add to Cart</button>
- *   </FeatureGate>
- */
 export function FeatureGate({ feature, mode = "overlay", label, children }) {
   const { features, status } = useUserStatus();
   const allowed = features[feature] ?? true;
@@ -469,10 +434,8 @@ export function FeatureGate({ feature, mode = "overlay", label, children }) {
 
   if (allowed) return children;
 
-  // "hide" mode — render nothing
   if (mode === "hide") return null;
 
-  // "disable" mode — render children but pointer-events:none
   if (mode === "disable") {
     return (
       <div style={{ position: "relative", pointerEvents: "none", opacity: 0.45, userSelect: "none" }}>
@@ -481,7 +444,6 @@ export function FeatureGate({ feature, mode = "overlay", label, children }) {
     );
   }
 
-  // "overlay" mode — render children under a lock overlay
   const meta      = STATUS_META[status] ?? STATUS_META.active;
   const lockLabel = label ?? `${FEATURE_LABELS[feature] ?? "Feature"} · ${meta.label}`;
 
@@ -495,12 +457,9 @@ export function FeatureGate({ feature, mode = "overlay", label, children }) {
 
   return (
     <div className="kfg-wrap">
-      {/* Original children rendered but inert */}
       <div className="kfg-children-inert" aria-hidden="true">
         {children}
       </div>
-
-      {/* Lock overlay — intercepts all clicks */}
       <div
         className="kfg-overlay"
         style={{ "--fg-accent": meta.accent }}
@@ -513,8 +472,6 @@ export function FeatureGate({ feature, mode = "overlay", label, children }) {
         <div className="kfg-lock-icon">
           <Lock style={{ width: 14, height: 14, color: meta.accent }} />
         </div>
-
-        {/* Tooltip */}
         {showTip && (
           <div className="kfg-tooltip">
             <Lock style={{ width: 10, height: 10 }} />
@@ -527,47 +484,68 @@ export function FeatureGate({ feature, mode = "overlay", label, children }) {
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   STYLES
+   STYLES  —  Smart layout: in-flow banners, no fixed positioning
 ══════════════════════════════════════════════════════════════════════════ */
 const css = `
 @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Plus+Jakarta+Sans:wght@400;600;700;800;900&display=swap');
 
+/* ═══════════════════════════════════════════════════════════════════════
+   SMART LAYOUT  (default — banners sit in document flow)
+   ═══════════════════════════════════════════════════════════════════════ */
+.ksb-warned--smart,
+.ksb-restricted--smart {
+  position: relative;
+  width: 100%;
+  z-index: 100;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   FIXED LAYOUT  (legacy — overlays everything)
+   ═══════════════════════════════════════════════════════════════════════ */
+.ksb-warned--fixed {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 9100;
+  animation: ksbSlideDown 0.3s cubic-bezier(0.34,1.2,0.64,1);
+}
+.ksb-restricted--fixed {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 9100;
+  animation: ksbSlideDown 0.3s cubic-bezier(0.34,1.2,0.64,1);
+}
+
 /* ─── WARNED BANNER ─────────────────────────────────────────────────── */
 .ksb-warned {
-  position: fixed; top: 0; left: 0; right: 0; z-index: 9100;
   background: rgba(30,20,0,0.97);
   border-bottom: 1px solid rgba(251,191,36,0.35);
   display: flex; align-items: center; justify-content: space-between;
-  gap: 10px; padding: 9px 18px;
+  gap: 10px; padding: 10px 20px;
   font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
   backdrop-filter: blur(16px);
-  animation: ksbSlideDown 0.3s cubic-bezier(0.34,1.2,0.64,1);
   flex-wrap: wrap;
 }
 .ksb-warned-left {
   display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0;
 }
 .ksb-warned-icon {
-  width: 26px; height: 26px; border-radius: 8px; flex-shrink: 0;
+  width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0;
   background: rgba(251,191,36,0.15); border: 1px solid rgba(251,191,36,0.3);
   color: #fbbf24; display: flex; align-items: center; justify-content: center;
 }
 .ksb-warned-text {
-  display: flex; flex-direction: column; gap: 1px; min-width: 0;
+  display: flex; flex-direction: column; gap: 2px; min-width: 0;
 }
 .ksb-warned-label {
   font-size: 11px; font-weight: 900; color: #fbbf24;
   text-transform: uppercase; letter-spacing: 0.08em;
 }
 .ksb-warned-reason {
-  font-size: 11px; font-weight: 500; color: rgba(255,248,231,0.55);
+  font-size: 12px; font-weight: 500; color: rgba(255,248,231,0.55);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .ksb-expand-btn {
   background: none; border: none; cursor: pointer; padding: 3px;
   color: rgba(251,191,36,0.6); flex-shrink: 0; display: flex;
+  border-radius: 4px; transition: all 0.15s;
 }
-.ksb-expand-btn:hover { color: #fbbf24; }
+.ksb-expand-btn:hover { color: #fbbf24; background: rgba(251,191,36,0.1); }
 .ksb-warned-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .ksb-warned-policy-link {
   font-size: 11px; font-weight: 700;
@@ -576,7 +554,7 @@ const css = `
 }
 .ksb-warned-policy-link:hover { color: #fbbf24; }
 .ksb-dismiss-btn {
-  width: 24px; height: 24px; border-radius: 7px;
+  width: 26px; height: 26px; border-radius: 7px;
   background: rgba(255,248,231,0.05); border: 1px solid rgba(255,248,231,0.1);
   display: flex; align-items: center; justify-content: center;
   color: rgba(255,248,231,0.35); cursor: pointer; transition: all 0.15s;
@@ -588,19 +566,17 @@ const css = `
 
 /* ─── RESTRICTED BANNER ─────────────────────────────────────────────── */
 .ksb-restricted {
-  position: fixed; top: 0; left: 0; right: 0; z-index: 9100;
   background: rgba(25,10,0,0.97);
   border-bottom: 1px solid rgba(251,146,60,0.35);
   font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
   backdrop-filter: blur(16px);
-  animation: ksbSlideDown 0.3s cubic-bezier(0.34,1.2,0.64,1);
 }
 .ksb-restricted-left {
   display: flex; align-items: center; gap: 10px;
-  padding: 9px 18px; flex-wrap: wrap;
+  padding: 10px 20px; flex-wrap: wrap;
 }
 .ksb-restr-icon-wrap {
-  width: 26px; height: 26px; border-radius: 8px; flex-shrink: 0;
+  width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0;
   background: rgba(251,146,60,0.15); border: 1px solid rgba(251,146,60,0.3);
   color: #fb923c; display: flex; align-items: center; justify-content: center;
 }
@@ -608,22 +584,22 @@ const css = `
 .ksb-restr-label {
   font-size: 11px; font-weight: 800; color: #fb923c;
   text-transform: uppercase; letter-spacing: 0.06em; display: block;
-  margin-bottom: 5px;
+  margin-bottom: 6px;
 }
-.ksb-restr-chips { display: flex; gap: 5px; flex-wrap: wrap; }
+.ksb-restr-chips { display: flex; gap: 6px; flex-wrap: wrap; }
 .ksb-restr-chip {
   display: inline-flex; align-items: center; gap: 4px;
-  padding: 3px 8px; border-radius: 20px;
+  padding: 3px 9px; border-radius: 20px;
   background: rgba(251,146,60,0.1); border: 1px solid rgba(251,146,60,0.22);
   font-size: 10px; font-weight: 700; color: rgba(251,146,60,0.8);
 }
 .ksb-restr-actions {
   display: flex; align-items: center; gap: 8px;
-  padding: 0 18px 9px; padding-top: 0;
+  padding: 0 20px 10px;
 }
 .ksb-why-btn {
   font-size: 11px; font-weight: 800; color: rgba(251,146,60,0.7);
-  background: none; border: none; cursor: pointer; padding: 4px 8px;
+  background: none; border: none; cursor: pointer; padding: 4px 10px;
   border-radius: 6px; border: 1px solid rgba(251,146,60,0.2);
   transition: all 0.15s; font-family: 'Plus Jakarta Sans', sans-serif;
 }
@@ -632,16 +608,16 @@ const css = `
   display: inline-flex; align-items: center; gap: 5px;
   font-size: 11px; font-weight: 800; color: #0e0700;
   background: #fb923c; border: none; cursor: pointer;
-  padding: 5px 12px; border-radius: 6px; text-decoration: none;
+  padding: 5px 14px; border-radius: 6px; text-decoration: none;
   transition: all 0.15s;
 }
 .ksb-appeal-btn:hover { background: #ea7c2a; }
 .ksb-restr-reason-box {
   display: flex; align-items: flex-start; gap: 8px;
-  padding: 8px 18px 10px;
+  padding: 10px 20px 12px;
   background: rgba(251,146,60,0.06);
   border-top: 1px solid rgba(251,146,60,0.1);
-  font-size: 11px;
+  font-size: 12px;
   animation: ksbFadeIn 0.2s ease;
 }
 .ksb-restr-reason-label {
@@ -649,7 +625,7 @@ const css = `
   text-transform: uppercase; font-size: 10px; letter-spacing: 0.06em;
   margin-top: 1px;
 }
-.ksb-restr-reason-text { color: rgba(255,248,231,0.55); font-weight: 500; }
+.ksb-restr-reason-text { color: rgba(255,248,231,0.55); font-weight: 500; line-height: 1.5; }
 
 /* ─── SUSPENDED MODAL ───────────────────────────────────────────────── */
 .ksb-susp-backdrop {
