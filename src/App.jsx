@@ -35,6 +35,9 @@ const DeliverSignup    = lazy(() => import("./pages/DeliverSignup"));
 const Wallet           = lazy(() => import("./pages/Wallet"));
 const DeliverDashboard = lazy(() => import("./pages/DeliverDashboard"));
 const ClientWallet     = lazy(() => import("./pages/ClientWallet"));
+const Appeal = lazy(() => import("./pages/Appeal"));
+
+// inside <Routes>
 
 import GitHubCallback  from "./pages/GitHubCallback";
 import SpotifyCallback from "./pages/SpotifyCallback";
@@ -143,6 +146,8 @@ export default function App() {
                       <Route path="/terms"                 element={<TermsPage />} />
                       <Route path="/support"               element={<SupportPage />} />
                       <Route path="/success"               element={<Success />} />
+                      
+<Route path="/appeal" element={<RequireAuth><Appeal /></RequireAuth>} />
 
                       {/* ── Cart — gated: canAddToCart ──────────────────────── */}
                       <Route path="/cart" element={
