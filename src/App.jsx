@@ -113,8 +113,15 @@ export default function App() {
 
                 <BrowserRouter>
                   {/* ✅ Inside BrowserRouter — Link components work correctly */}
-                  <AccountStatusBanner />
+                  
+<div className="app-layout">
 
+    <main className="main-area">
+
+    <AccountStatusBanner layout="smart" />
+
+   </main>
+  </div>
                   <Suspense fallback={<PageLoader />}>
                     <Routes>
 
