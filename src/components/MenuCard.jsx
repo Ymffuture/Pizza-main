@@ -208,12 +208,7 @@ export default function MenuCard({ item, onSelect }) {
               <span className="mc-price">{formatCurrency(item.price)}</span>
             </div>
 <div className="mc-stars">
-              {[...Array(5)].map((_, i) => (
-                <Star
-                  key={i}
-                  className={`mc-star${i < (item.rating || 4) ? " mc-star-on" : ""}`}
-                />
-              ))}
+              <StarRating/>
             </div>
           </div>
 <FeatureGate feature="canAddToCart">
