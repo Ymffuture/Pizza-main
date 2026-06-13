@@ -260,7 +260,7 @@ function SuspendedModal({ reason, expiresAt, affectedFeatures, appealed, onBrows
             Contact Support
           </a>
           {!appealed && (
-            <Link to="/support" className="ksb-susp-appeal-link">
+            <Link to="/appeal" className="ksb-susp-appeal-link">
               Submit Appeal
               <ExternalLink style={{ width: 11, height: 11 }} />
             </Link>
@@ -336,7 +336,7 @@ function BannedOverlay({ reason, appealed }) {
             065 393 5339
           </a>
           {!appealed && (
-            <Link to="/support" className="ksb-banned-appeal-btn">
+            <Link to="/appeal" className="ksb-banned-appeal-btn">
               Submit Appeal
             </Link>
           )}
