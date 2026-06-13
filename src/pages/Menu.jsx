@@ -11,7 +11,7 @@ import NotificationBell from "../components/NotificationBell";
 // import AccountStatusBanner from "../components/AccountStatusBanner" 
 import {
   ShoppingBag, RefreshCw, UtensilsCrossed, Zap, PanelLeftClose, MessagesSquare, LayoutDashboard,
-  ChevronRight, Flame, Search, SlidersHorizontal, LogOut,
+  ChevronRight, Flame, Search,Scale, SlidersHorizontal, LogOut,
   PanelLeftOpen, X, Info, Home, Phone, Wallet, WalletCards, Bike,
   Settings, ChevronLeft, ChevronRight as ChevRight,
 } from "lucide-react";
@@ -35,8 +35,9 @@ const NAV_ITEMS = [
   { to: "/info",            label: "Policies",       Icon: Info,          section: "main" },
   { to: "/cart",            label: "Bag",            Icon: ShoppingBag,   section: "main", badge: "cart" },
   { to: "/rewards",         label: "Rewards",        Icon: WalletCards,   section: "main", badge: "new" },
-  { to: "/driver-dashboard",label: "Dashboard",      Icon: LayoutDashboard,section: "main", badge: "new" },
+  { to: "/driver-dashboard",label: "Dashboard",      Icon: LayoutDashboard,section: "main"},
   { to: "/wallet",          label: "Wallet",         Icon: Wallet,        section: "main" },
+  { to: "/appeal",          label: "Appeal",         Icon: Scale,         section: "main", badge:"new" },
 ];
 
 export default function Menu() {
