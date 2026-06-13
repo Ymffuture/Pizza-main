@@ -1,601 +1,598 @@
-// src/components/StarRating.jsx
+// src/components/SocialActions.jsx
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { 
+  Heart, MessageCircle, Share2, Send, MoreHorizontal, 
+  Bookmark, Flag, Link2, Twitter, Facebook, Copy, Check,
+  ChevronDown, ChevronUp, X
+} from 'lucide-react';
 
 /**
- * Premium StarRating Component
+ * SocialActions Component
+ * Like, Comment, Share interactions for reviews/posts
  * 
- * Features:
- * - Smooth hover animations with scale and glow effects
- * - Half-star precision support (optional)
- * - Accessibility: keyboard navigation, screen reader support
- * - Customizable size, colors, and read-only mode
- * - Animated fill with spring-like transitions
- * - Optional label and rating count display
- * 
- * @param {number} rating - Current rating value (1-5)
- * @param {function} onRating - Callback when rating changes
- * @param {number} hoverRating - Controlled hover state (optional)
- * @param {function} onHover - Callback on hover change (optional)
- * @param {string} size - 'sm' | 'md' | 'lg' | 'xl'
- * @param {boolean} readOnly - Disable interaction
- * @param {boolean} showValue - Show numeric rating
- * @param {number} totalReviews - Show review count
- * @param {boolean} allowHalf - Enable half-star ratings
+ * @param {string} itemId - Unique ID of the item being interacted with
+ * @param {number} initialLikes - Initial like count
+ * @param {boolean} userLiked - Whether current user liked
+ * @param {number} initialComments - Initial comment count
+ * @param {Array} commentsList - Array of comment objects
+ * @param {number} initialShares - Initial share count
+ * @param {function} onLike - (itemId, liked) => void
+ * @param {function} onComment - (itemId, content, parentId?) => void
+ * @param {function} onShare - (itemId, platform) => void
+ * @param {function} onBookmark - (itemId, bookmarked) => void
+ * @param {boolean} showComments - Default expand comments
+ * @param {string} size - 'sm' | 'md' | 'lg'
+ * @param {boolean} readOnly - Disable interactions
  * @param {string} className - Additional classes
  */
-export default function StarRating({
-  rating = 0,
-  onRating,
-  hoverRating: controlledHover,
-  onHover,
+export default function SocialActions({
+  itemId,
+  initialLikes = 0,
+  userLiked = false,
+  initialComments = 0,
+  commentsList = [],
+  initialShares = 0,
+  onLike,
+  onComment,
+  onShare,
+  onBookmark,
+  showComments = false,
   size = 'md',
   readOnly = false,
-  showValue = false,
-  totalReviews = null,
-  allowHalf = false,
   className = '',
 }) {
-  const [internalHover, setInternalHover] = useState(0);
-  const [animatingStar, setAnimatingStar] = useState(null);
-  const containerRef = useRef(null);
-  
-  const hover = controlledHover !== undefined ? controlledHover : internalHover;
-  
-  // Size configurations
-  const sizeConfig = {
-    sm: { star: 'w-4 h-4', gap: 'gap-0.5', text: 'text-xs' },
-    md: { star: 'w-6 h-6', gap: 'gap-1', text: 'text-sm' },
-    lg: { star: 'w-8 h-8', gap: 'gap-1.5', text: 'text-base' },
-    xl: { star: 'w-10 h-10', gap: 'gap-2', text: 'text-lg' },
-  };
-  
-  const config = sizeConfig[size] || sizeConfig.md;
-  
-  // Calculate fill percentage for each star
-  const getFillPercentage = (starIndex) => {
-    const value = hover || rating;
-    if (starIndex <= Math.floor(value)) return 100;
-    if (starIndex === Math.ceil(value) && allowHalf) {
-      return (value - Math.floor(value)) * 100;
-    }
-    return 0;
-  };
-  
-  const handleMouseEnter = useCallback((starValue) => {
-    if (readOnly) return;
-    setInternalHover(starValue);
-    onHover?.(starValue);
-  }, [readOnly, onHover]);
-  
-  const handleMouseLeave = useCallback(() => {
-    if (readOnly) return;
-    setInternalHover(0);
-    onHover?.(0);
-  }, [readOnly, onHover]);
-  
-  const handleClick = useCallback((starValue) => {
-    if (readOnly) return;
-    setAnimatingStar(starValue);
-    onRating?.(starValue);
-    
-    // Reset animation after it completes
-    setTimeout(() => setAnimatingStar(null), 400);
-  }, [readOnly, onRating]);
-  
-  // Keyboard navigation
-  const handleKeyDown = useCallback((e) => {
-    if (readOnly) return;
-    
-    const currentRating = rating || 0;
-    let newRating = currentRating;
-    
-    switch (e.key) {
-      case 'ArrowRight':
-      case 'ArrowUp':
-        newRating = Math.min(5, currentRating + (allowHalf ? 0.5 : 1));
-        e.preventDefault();
-        break;
-      case 'ArrowLeft':
-      case 'ArrowDown':
-        newRating = Math.max(0.5, currentRating - (allowHalf ? 0.5 : 1));
-        e.preventDefault();
-        break;
-      case '1': case '2': case '3': case '4': case '5':
-        newRating = parseInt(e.key);
-        break;
-      default:
-        return;
-    }
-    
-    onRating?.(newRating);
-  }, [readOnly, rating, allowHalf, onRating]);
-  
-  // Focus management
+  const [liked, setLiked] = useState(userLiked);
+  const [likeCount, setLikeCount] = useState(initialLikes);
+  const [bookmarked, setBookmarked] = useState(false);
+  const [commentsExpanded, setCommentsExpanded] = useState(showComments);
+  const [shareMenuOpen, setShareMenuOpen] = useState(false);
+  const [commentText, setCommentText] = useState('');
+  const [replyingTo, setReplyingTo] = useState(null);
+  const [animatingLike, setAnimatingLike] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
+  const [localComments, setLocalComments] = useState(commentsList);
+  const shareRef = useRef(null);
+  const commentInputRef = useRef(null);
+
+  // Close share menu on outside click
   useEffect(() => {
-    if (containerRef.current && !readOnly) {
-      containerRef.current.focus();
-    }
-  }, [readOnly]);
-  
-  const getStarColor = (starIndex) => {
-    const fill = getFillPercentage(starIndex);
-    if (fill === 100) return 'text-amber-400';
-    if (fill > 0) return 'text-amber-400/50';
-    return 'text-slate-600';
-  };
-  
-  const getStarLabel = (value) => {
-    const labels = {
-      1: 'Poor', 2: 'Fair', 3: 'Good', 4: 'Very Good', 5: 'Excellent'
+    const handleClickOutside = (e) => {
+      if (shareRef.current && !shareRef.current.contains(e.target)) {
+        setShareMenuOpen(false);
+      }
     };
-    return labels[value] || '';
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleLike = useCallback(() => {
+    if (readOnly) return;
+    
+    const newLiked = !liked;
+    setLiked(newLiked);
+    setLikeCount(prev => newLiked ? prev + 1 : prev - 1);
+    setAnimatingLike(true);
+    
+    setTimeout(() => setAnimatingLike(false), 600);
+    onLike?.(itemId, newLiked);
+  }, [liked, itemId, readOnly, onLike]);
+
+  const handleBookmark = useCallback(() => {
+    if (readOnly) return;
+    const newBookmarked = !bookmarked;
+    setBookmarked(newBookmarked);
+    onBookmark?.(itemId, newBookmarked);
+  }, [bookmarked, itemId, readOnly, onBookmark]);
+
+  const handleCommentSubmit = useCallback((e) => {
+    e.preventDefault();
+    if (!commentText.trim() || readOnly) return;
+    
+    const newComment = {
+      id: `temp_${Date.now()}`,
+      user_id: 'current_user',
+      user_name: 'You',
+      user_avatar: null,
+      content: commentText.trim(),
+      created_at: new Date().toISOString(),
+      likes: 0,
+      replies: [],
+      isNew: true
+    };
+    
+    if (replyingTo) {
+      // Add as reply
+      setLocalComments(prev => prev.map(c => 
+        c.id === replyingTo 
+          ? { ...c, replies: [...(c.replies || []), { ...newComment, parent_id: replyingTo }] }
+          : c
+      ));
+    } else {
+      setLocalComments(prev => [...prev, newComment]);
+    }
+    
+    onComment?.(itemId, commentText.trim(), replyingTo || null);
+    setCommentText('');
+    setReplyingTo(null);
+  }, [commentText, itemId, replyingTo, readOnly, onComment]);
+
+  const handleShare = useCallback((platform) => {
+    onShare?.(itemId, platform);
+    setShareMenuOpen(false);
+    
+    if (platform === 'copy') {
+      navigator.clipboard?.writeText(window.location.href);
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2000);
+    }
+  }, [itemId, onShare]);
+
+  const formatCount = (num) => {
+    if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+    if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+    return num.toString();
   };
-  
+
+  const formatTime = (dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diff = (now - date) / 1000;
+    
+    if (diff < 60) return 'Just now';
+    if (diff < 3600) return `${Math.floor(diff / 60)}m`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
+    if (diff < 604800) return `${Math.floor(diff / 86400)}d`;
+    return date.toLocaleDateString('en-ZA', { month: 'short', day: 'numeric' });
+  };
+
+  const sizeConfig = {
+    sm: { icon: 'w-4 h-4', text: 'text-xs', button: 'p-1.5', gap: 'gap-3' },
+    md: { icon: 'w-5 h-5', text: 'text-sm', button: 'p-2', gap: 'gap-4' },
+    lg: { icon: 'w-6 h-6', text: 'text-base', button: 'p-2.5', gap: 'gap-5' },
+  };
+
+  const cfg = sizeConfig[size] || sizeConfig.md;
+
   return (
-    <div className={`inline-flex flex-col items-start ${className}`}>
-      <div className="flex items-center gap-3">
-        {/* Star Container */}
-        <div
-          ref={containerRef}
-          className={`inline-flex ${config.gap} ${readOnly ? '' : 'cursor-pointer'} outline-none`}
-          onMouseLeave={handleMouseLeave}
-          onKeyDown={handleKeyDown}
-          role={readOnly ? 'img' : 'radiogroup'}
-          aria-label={readOnly ? `Rated ${rating} out of 5 stars` : 'Rate this item'}
-          aria-readonly={readOnly}
-          tabIndex={readOnly ? -1 : 0}
-        >
-          {[1, 2, 3, 4, 5].map((starValue) => {
-            const fillPercent = getFillPercentage(starValue);
-            const isAnimating = animatingStar === starValue;
-            const isHovered = hover === starValue;
-            
-            return (
-              <button
-                key={starValue}
-                type="button"
-                className={`
-                  relative ${config.star} transition-all duration-200 ease-out
-                  ${readOnly ? '' : 'hover:scale-110 active:scale-95'}
-                  ${isAnimating ? 'animate-star-bounce' : ''}
-                  ${isHovered && !readOnly ? 'drop-shadow-[0_0_8px_rgba(251,191,36,0.6)]' : ''}
-                  focus:outline-none focus:ring-2 focus:ring-amber-400/50 focus:ring-offset-2 focus:ring-offset-slate-900 rounded-sm
-                `}
-                onClick={() => handleClick(starValue)}
-                onMouseEnter={() => handleMouseEnter(starValue)}
-                onFocus={() => handleMouseEnter(starValue)}
-                role="radio"
-                aria-checked={rating === starValue}
-                aria-label={`${starValue} stars: ${getStarLabel(starValue)}`}
-                disabled={readOnly}
-                tabIndex={-1}
-              >
-                {/* Background star (empty) */}
-                <svg
-                  className={`absolute inset-0 ${config.star} ${readOnly ? 'text-slate-700' : 'text-slate-600'}`}
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                  aria-hidden="true"
-                >
-                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                </svg>
-                
-                {/* Filled star with clip */}
-                <div 
-                  className="absolute inset-0 overflow-hidden transition-all duration-300"
-                  style={{ width: `${fillPercent}%` }}
-                >
-                  <svg
-                    className={`${config.star} ${getStarColor(starValue)} drop-shadow-sm`}
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                    aria-hidden="true"
-                  >
-                    <defs>
-                      <linearGradient id={`starGradient-${starValue}`} x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stopColor="#fbbf24" />
-                        <stop offset="100%" stopColor="#f59e0b" />
-                      </linearGradient>
-                    </defs>
-                    <path 
-                      d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" 
-                      fill={`url(#starGradient-${starValue})`}
+    <div className={`flex flex-col ${className}`}>
+      {/* Main Action Bar */}
+      <div className={`flex items-center justify-between ${cfg.gap}`}>
+        <div className={`flex items-center ${cfg.gap}`}>
+          {/* Like Button */}
+          <button
+            onClick={handleLike}
+            disabled={readOnly}
+            className={`
+              group relative flex items-center ${cfg.gap} ${cfg.button} rounded-xl
+              transition-all duration-200 active:scale-90
+              ${liked 
+                ? 'text-rose-500' 
+                : 'text-slate-400 hover:text-rose-400 hover:bg-rose-500/5'
+              }
+              ${readOnly ? 'cursor-default' : 'cursor-pointer'}
+            `}
+            aria-label={liked ? 'Unlike' : 'Like'}
+            aria-pressed={liked}
+          >
+            <div className="relative">
+              <Heart 
+                className={`${cfg.icon} transition-all duration-300 ${
+                  liked ? 'fill-current scale-110' : 'group-hover:scale-110'
+                } ${animatingLike ? 'animate-heart-burst' : ''}`}
+              />
+              {/* Particle burst effect */}
+              {animatingLike && (
+                <div className="absolute inset-0 pointer-events-none">
+                  {[...Array(6)].map((_, i) => (
+                    <div
+                      key={i}
+                      className="absolute w-1 h-1 bg-rose-400 rounded-full animate-particle"
+                      style={{
+                        left: '50%',
+                        top: '50%',
+                        transform: `rotate(${i * 60}deg)`,
+                        animationDelay: `${i * 0.05}s`
+                      }}
                     />
-                  </svg>
+                  ))}
                 </div>
-                
-                {/* Hover glow overlay */}
-                {!readOnly && hover >= starValue && (
-                  <div className="absolute inset-0 rounded-full bg-amber-400/10 animate-pulse" />
-                )}
-              </button>
-            );
-          })}
-        </div>
-        
-        {/* Rating Value Display */}
-        {showValue && (
-          <div className="flex items-baseline gap-1.5">
-            <span className={`${config.text} font-bold text-amber-400 tabular-nums`}>
-              {rating.toFixed(1)}
+              )}
+            </div>
+            <span className={`${cfg.text} font-semibold tabular-nums`}>
+              {formatCount(likeCount)}
             </span>
-            <span className={`${config.text} text-slate-500`}>/ 5</span>
+          </button>
+
+          {/* Comment Button */}
+          <button
+            onClick={() => setCommentsExpanded(!commentsExpanded)}
+            disabled={readOnly}
+            className={`
+              group flex items-center ${cfg.gap} ${cfg.button} rounded-xl
+              transition-all duration-200 active:scale-90
+              ${commentsExpanded 
+                ? 'text-sky-400 bg-sky-400/5' 
+                : 'text-slate-400 hover:text-sky-400 hover:bg-sky-400/5'
+              }
+              ${readOnly ? 'cursor-default' : 'cursor-pointer'}
+            `}
+            aria-label="Comments"
+            aria-expanded={commentsExpanded}
+          >
+            <MessageCircle className={`${cfg.icon} transition-transform group-hover:scale-110`} />
+            <span className={`${cfg.text} font-semibold tabular-nums`}>
+              {formatCount(initialComments + localComments.length)}
+            </span>
+          </button>
+
+          {/* Share Button */}
+          <div className="relative" ref={shareRef}>
+            <button
+              onClick={() => setShareMenuOpen(!shareMenuOpen)}
+              disabled={readOnly}
+              className={`
+                group flex items-center ${cfg.gap} ${cfg.button} rounded-xl
+                transition-all duration-200 active:scale-90
+                ${shareMenuOpen 
+                  ? 'text-emerald-400 bg-emerald-400/5' 
+                  : 'text-slate-400 hover:text-emerald-400 hover:bg-emerald-400/5'
+                }
+                ${readOnly ? 'cursor-default' : 'cursor-pointer'}
+              `}
+              aria-label="Share"
+              aria-expanded={shareMenuOpen}
+            >
+              <Share2 className={`${cfg.icon} transition-transform group-hover:scale-110 ${shareMenuOpen ? 'animate-bounce-subtle' : ''}`} />
+              <span className={`${cfg.text} font-semibold tabular-nums`}>
+                {formatCount(initialShares)}
+              </span>
+            </button>
+
+            {/* Share Menu Dropdown */}
+            {shareMenuOpen && (
+              <div className="absolute bottom-full left-0 mb-2 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl shadow-black/50 p-2 min-w-[200px] z-50 animate-slide-up">
+                <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-3 py-2">
+                  Share to
+                </div>
+                <button
+                  onClick={() => handleShare('copy')}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-300 hover:bg-slate-800 transition-colors"
+                >
+                  {copiedLink ? (
+                    <Check className="w-4 h-4 text-emerald-400" />
+                  ) : (
+                    <Link2 className="w-4 h-4" />
+                  )}
+                  {copiedLink ? 'Link copied!' : 'Copy link'}
+                </button>
+                <button
+                  onClick={() => handleShare('twitter')}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-300 hover:bg-slate-800 transition-colors"
+                >
+                  <Twitter className="w-4 h-4 text-sky-400" />
+                  Twitter / X
+                </button>
+                <button
+                  onClick={() => handleShare('facebook')}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-300 hover:bg-slate-800 transition-colors"
+                >
+                  <Facebook className="w-4 h-4 text-blue-500" />
+                  Facebook
+                </button>
+                <button
+                  onClick={() => handleShare('native')}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-300 hover:bg-slate-800 transition-colors"
+                >
+                  <Share2 className="w-4 h-4 text-emerald-400" />
+                  More options
+                </button>
+              </div>
+            )}
           </div>
-        )}
+        </div>
+
+        {/* Right side actions */}
+        <div className="flex items-center gap-1">
+          <button
+            onClick={handleBookmark}
+            disabled={readOnly}
+            className={`
+              ${cfg.button} rounded-xl transition-all duration-200 active:scale-90
+              ${bookmarked 
+                ? 'text-amber-400 bg-amber-400/5' 
+                : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/50'
+              }
+            `}
+            aria-label={bookmarked ? 'Remove bookmark' : 'Bookmark'}
+          >
+            <Bookmark className={`${cfg.icon} ${bookmarked ? 'fill-current' : ''}`} />
+          </button>
+        </div>
       </div>
-      
-      {/* Review Count & Label */}
-      {(totalReviews !== null || hover > 0) && (
-        <div className="mt-1.5 flex items-center gap-2">
-          {hover > 0 && !readOnly && (
-            <span className="text-xs font-medium text-amber-400 animate-fade-in">
-              {getStarLabel(hover)}
-            </span>
+
+      {/* Comments Section */}
+      {commentsExpanded && (
+        <div className="mt-4 border-t border-slate-800/50 pt-4 animate-fade-in">
+          {/* Comment Input */}
+          {!readOnly && (
+            <form onSubmit={handleCommentSubmit} className="flex items-start gap-3 mb-4">
+              <div className="w-8 h-8 rounded-full bg-slate-800 flex-shrink-0 flex items-center justify-center text-xs font-semibold text-slate-400">
+                Y
+              </div>
+              <div className="flex-1 relative">
+                {replyingTo && (
+                  <div className="flex items-center gap-2 mb-2 text-xs text-sky-400 bg-sky-400/5 px-2 py-1 rounded-lg">
+                    <span>Replying to comment</span>
+                    <button 
+                      onClick={() => setReplyingTo(null)}
+                      className="hover:text-white transition-colors"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                )}
+                <div className="relative">
+                  <input
+                    ref={commentInputRef}
+                    type="text"
+                    value={commentText}
+                    onChange={(e) => setCommentText(e.target.value)}
+                    placeholder={replyingTo ? "Write a reply..." : "Add a comment..."}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-4 pr-12 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-sky-400/30 focus:border-sky-400/50 transition-all"
+                    maxLength={1000}
+                  />
+                  <button
+                    type="submit"
+                    disabled={!commentText.trim()}
+                    className={`
+                      absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg transition-all
+                      ${commentText.trim() 
+                        ? 'text-sky-400 hover:bg-sky-400/10' 
+                        : 'text-slate-700'
+                      }
+                    `}
+                  >
+                    <Send className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            </form>
           )}
-          {totalReviews !== null && (
-            <span className="text-xs text-slate-500">
-              {totalReviews.toLocaleString()} {totalReviews === 1 ? 'review' : 'reviews'}
-            </span>
-          )}
+
+          {/* Comments List */}
+          <div className="space-y-3">
+            {localComments.length === 0 ? (
+              <p className="text-sm text-slate-600 text-center py-4">
+                No comments yet. Be the first to share your thoughts!
+              </p>
+            ) : (
+              localComments.map((comment) => (
+                <CommentItem
+                  key={comment.id}
+                  comment={comment}
+                  onReply={(id) => {
+                    setReplyingTo(id);
+                    commentInputRef.current?.focus();
+                  }}
+                  onLike={(id) => onLike?.(id, true)}
+                  formatTime={formatTime}
+                  size={size}
+                />
+              ))
+            )}
+          </div>
         </div>
       )}
-      
-      {/* Custom styles for animations */}
+
+      {/* Custom Animations */}
       <style>{`
-        @keyframes star-bounce {
-          0%, 100% { transform: scale(1); }
-          25% { transform: scale(1.35) rotate(-5deg); }
-          50% { transform: scale(0.9) rotate(3deg); }
-          75% { transform: scale(1.15) rotate(-2deg); }
+        @keyframes heart-burst {
+          0% { transform: scale(1); }
+          25% { transform: scale(1.4) rotate(-10deg); }
+          50% { transform: scale(0.9) rotate(5deg); }
+          75% { transform: scale(1.2) rotate(-5deg); }
+          100% { transform: scale(1) rotate(0); }
         }
-        .animate-star-bounce {
-          animation: star-bounce 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        .animate-heart-burst {
+          animation: heart-burst 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
-        @keyframes fade-in {
-          from { opacity: 0; transform: translateY(-2px); }
-          to { opacity: 1; transform: translateY(0); }
+        @keyframes particle {
+          0% { opacity: 1; transform: translate(-50%, -50%) scale(0); }
+          50% { opacity: 1; }
+          100% { opacity: 0; transform: translate(-50%, -50%) scale(1) translateY(-20px); }
         }
-        .animate-fade-in {
-          animation: fade-in 0.2s ease-out;
+        .animate-particle {
+          animation: particle 0.6s ease-out forwards;
+        }
+        @keyframes slide-up {
+          from { opacity: 0; transform: translateY(8px) scale(0.95); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .animate-slide-up {
+          animation: slide-up 0.2s cubic-bezier(0.34, 1.2, 0.64, 1);
+        }
+        @keyframes bounce-subtle {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-3px); }
+        }
+        .animate-bounce-subtle {
+          animation: bounce-subtle 0.3s ease;
         }
       `}</style>
     </div>
   );
 }
 
-// ─── Interactive Review Input Component ─────────────────────────────────────
+// ─── Comment Item Component ─────────────────────────────────────────────
 
-export function ReviewInput({ 
-  onSubmit, 
-  maxPhotos = 5,
-  productName = 'this product',
-  className = '' 
-}) {
-  const [rating, setRating] = useState(0);
-  const [hoverRating, setHoverRating] = useState(0);
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
-  const [photos, setPhotos] = useState([]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [focused, setFocused] = useState(false);
-  
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (rating === 0) return;
-    
-    setIsSubmitting(true);
-    try {
-      await onSubmit({ rating, title, content, photos });
-      // Reset form
-      setRating(0);
-      setTitle('');
-      setContent('');
-      setPhotos([]);
-    } finally {
-      setIsSubmitting(false);
-    }
+function CommentItem({ comment, onReply, onLike, formatTime, size }) {
+  const [liked, setLiked] = useState(false);
+  const [likeCount, setLikeCount] = useState(comment.likes || 0);
+  const [showReplies, setShowReplies] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const handleLike = () => {
+    const newLiked = !liked;
+    setLiked(newLiked);
+    setLikeCount(prev => newLiked ? prev + 1 : prev - 1);
+    onLike?.(comment.id);
   };
-  
-  const isValid = rating > 0 && content.length >= 10;
-  
+
+  const cfg = size === 'sm' 
+    ? { avatar: 'w-6 h-6', text: 'text-xs', gap: 'gap-2' }
+    : { avatar: 'w-8 h-8', text: 'text-sm', gap: 'gap-3' };
+
   return (
-    <form 
-      onSubmit={handleSubmit}
-      className={`bg-slate-900/50 border border-slate-800 rounded-2xl p-6 ${className}`}
-    >
-      <h3 className="text-lg font-semibold text-white mb-4">
-        Write a review for {productName}
-      </h3>
-      
-      {/* Rating Section */}
-      <div className="mb-5">
-        <label className="block text-sm font-medium text-slate-400 mb-2">
-          Overall Rating <span className="text-red-400">*</span>
-        </label>
-        <div className="flex items-center gap-4">
-          <StarRating
-            rating={rating}
-            onRating={setRating}
-            hoverRating={hoverRating}
-            onHover={setHoverRating}
-            size="lg"
-            showValue
-          />
-          {hoverRating > 0 && (
-            <span className="text-sm font-medium text-amber-400 animate-fade-in">
-              {['', 'Poor', 'Fair', 'Good', 'Very Good', 'Excellent'][hoverRating]}
-            </span>
+    <div className="group">
+      <div className="flex gap-3">
+        {/* Avatar */}
+        <div className={`${cfg.avatar} rounded-full bg-slate-800 flex-shrink-0 flex items-center justify-center text-xs font-semibold text-slate-400 overflow-hidden`}>
+          {comment.user_avatar ? (
+            <img src={comment.user_avatar} alt="" className="w-full h-full object-cover" />
+          ) : (
+            comment.user_name?.[0]?.toUpperCase() || 'U'
           )}
         </div>
-        {rating === 0 && focused && (
-          <p className="text-xs text-red-400 mt-1">Please select a rating</p>
-        )}
-      </div>
-      
-      {/* Title */}
-      <div className="mb-4">
-        <label className="block text-sm font-medium text-slate-400 mb-2">
-          Review Title <span className="text-slate-600">(optional)</span>
-        </label>
-        <input
-          type="text"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="Summarize your experience"
-          className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-amber-400/30 focus:border-amber-400/50 transition-all"
-          maxLength={200}
-        />
-      </div>
-      
-      {/* Content */}
-      <div className="mb-4">
-        <label className="block text-sm font-medium text-slate-400 mb-2">
-          Your Review <span className="text-red-400">*</span>
-        </label>
-        <textarea
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          onFocus={() => setFocused(true)}
-          placeholder="What did you like or dislike? How was the quality?"
-          rows={4}
-          className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-amber-400/30 focus:border-amber-400/50 transition-all resize-none"
-          minLength={10}
-          maxLength={5000}
-        />
-        <div className="flex justify-between mt-1">
-          <span className={`text-xs ${content.length < 10 ? 'text-red-400' : 'text-slate-600'}`}>
-            Minimum 10 characters
-          </span>
-          <span className="text-xs text-slate-600">
-            {content.length}/5000
-          </span>
-        </div>
-      </div>
-      
-      {/* Photo Upload Placeholder */}
-      {maxPhotos > 0 && (
-        <div className="mb-5">
-          <label className="block text-sm font-medium text-slate-400 mb-2">
-            Photos <span className="text-slate-600">(optional, max {maxPhotos})</span>
-          </label>
-          <div className="flex gap-2 flex-wrap">
-            {photos.map((photo, i) => (
-              <div key={i} className="relative w-20 h-20 rounded-xl overflow-hidden border border-slate-700 group">
-                <img src={photo} alt="" className="w-full h-full object-cover" />
-                <button
-                  type="button"
-                  onClick={() => setPhotos(p => p.filter((_, idx) => idx !== i))}
-                  className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"
-                >
-                  <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-            ))}
-            {photos.length < maxPhotos && (
-              <button
-                type="button"
-                className="w-20 h-20 rounded-xl border-2 border-dashed border-slate-700 flex flex-col items-center justify-center gap-1 text-slate-500 hover:text-amber-400 hover:border-amber-400/50 transition-colors"
-              >
-                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                <span className="text-xs">Add</span>
-              </button>
-            )}
+
+        {/* Content */}
+        <div className="flex-1 min-w-0">
+          <div className="bg-slate-950/50 rounded-2xl rounded-tl-sm px-3.5 py-2.5">
+            <div className="flex items-center gap-2 mb-0.5">
+              <span className={`${cfg.text} font-semibold text-white`}>{comment.user_name}</span>
+              <span className="text-xs text-slate-600">{formatTime(comment.created_at)}</span>
+              {comment.isNew && (
+                <span className="text-[10px] font-bold text-sky-400 bg-sky-400/10 px-1.5 py-0.5 rounded-full">
+                  NEW
+                </span>
+              )}
+            </div>
+            <p className={`${cfg.text} text-slate-300 leading-relaxed`}>{comment.content}</p>
+          </div>
+
+          {/* Comment Actions */}
+          <div className={`flex items-center ${cfg.gap} mt-1 ml-1`}>
+            <button
+              onClick={handleLike}
+              className={`
+                text-xs font-semibold transition-colors
+                ${liked ? 'text-rose-500' : 'text-slate-500 hover:text-slate-300'}
+              `}
+            >
+              {liked ? 'Liked' : 'Like'}
+            </button>
+            <button
+              onClick={() => onReply?.(comment.id)}
+              className="text-xs font-semibold text-slate-500 hover:text-slate-300 transition-colors"
+            >
+              Reply
+            </button>
+            <span className="text-xs text-slate-600 tabular-nums">
+              {likeCount > 0 && `${likeCount} likes`}
+            </span>
           </div>
         </div>
-      )}
-      
-      {/* Submit */}
-      <div className="flex items-center justify-between">
-        <p className="text-xs text-slate-500">
-          Your review will be visible after moderation
-        </p>
-        <button
-          type="submit"
-          disabled={!isValid || isSubmitting}
-          className={`
-            px-6 py-2.5 rounded-xl font-semibold text-sm transition-all duration-200
-            ${isValid && !isSubmitting
-              ? 'bg-amber-400 text-slate-950 hover:bg-amber-300 hover:shadow-lg hover:shadow-amber-400/20 active:scale-95'
-              : 'bg-slate-800 text-slate-500 cursor-not-allowed'
-            }
-          `}
-        >
-          {isSubmitting ? (
-            <span className="flex items-center gap-2">
-              <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-              </svg>
-              Submitting...
-            </span>
-          ) : (
-            'Submit Review'
-          )}
-        </button>
-      </div>
-    </form>
-  );
-}
 
-// ─── Rating Distribution Bar ────────────────────────────────────────────────
-
-export function RatingDistribution({ distribution = {}, total = 0, onFilter }) {
-  const maxCount = Math.max(...Object.values(distribution), 1);
-  
-  return (
-    <div className="space-y-2">
-      {[5, 4, 3, 2, 1].map((stars) => {
-        const count = distribution[stars] || 0;
-        const percentage = total > 0 ? (count / total) * 100 : 0;
-        const barWidth = maxCount > 0 ? (count / maxCount) * 100 : 0;
-        
-        return (
+        {/* Menu */}
+        <div className="relative opacity-0 group-hover:opacity-100 transition-opacity">
           <button
-            key={stars}
-            onClick={() => onFilter?.(stars)}
-            className="w-full flex items-center gap-3 group hover:bg-slate-800/50 rounded-lg px-2 py-1.5 transition-colors text-left"
+            onClick={() => setMenuOpen(!menuOpen)}
+            className="p-1 text-slate-600 hover:text-slate-300 transition-colors"
           >
-            <span className="text-sm font-medium text-slate-400 w-8">{stars}★</span>
-            <div className="flex-1 h-2 bg-slate-800 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-amber-400 rounded-full transition-all duration-500 ease-out group-hover:bg-amber-300"
-                style={{ width: `${barWidth}%` }}
-              />
-            </div>
-            <span className="text-sm text-slate-500 w-12 text-right tabular-nums">
-              {count}
-            </span>
+            <MoreHorizontal className="w-4 h-4" />
           </button>
-        );
-      })}
+          {menuOpen && (
+            <div className="absolute right-0 top-full mt-1 bg-slate-900 border border-slate-700 rounded-xl shadow-xl p-1 min-w-[140px] z-50">
+              <button className="w-full flex items-center gap-2 px-3 py-2 text-xs text-slate-300 hover:bg-slate-800 rounded-lg transition-colors">
+                <Flag className="w-3.5 h-3.5" />
+                Report
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Nested Replies */}
+      {comment.replies?.length > 0 && (
+        <div className="ml-4 mt-2 pl-4 border-l-2 border-slate-800">
+          <button
+            onClick={() => setShowReplies(!showReplies)}
+            className="text-xs text-sky-400 hover:text-sky-300 font-medium mb-2 flex items-center gap-1 transition-colors"
+          >
+            {showReplies ? (
+              <><ChevronUp className="w-3 h-3" /> Hide replies</>
+            ) : (
+              <><ChevronDown className="w-3 h-3" /> {comment.replies.length} replies</>
+            )}
+          </button>
+          {showReplies && (
+            <div className="space-y-2">
+              {comment.replies.map(reply => (
+                <CommentItem
+                  key={reply.id}
+                  comment={reply}
+                  onReply={onReply}
+                  onLike={onLike}
+                  formatTime={formatTime}
+                  size="sm"
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
 
-// ─── Review Card Component ─────────────────────────────────────────────────
+// ─── Social Stats Bar (for product cards) ─────────────────────────────────
 
-export function ReviewCard({ review, onHelpful, onReport, currentUserId }) {
-  const [expanded, setExpanded] = useState(false);
-  const [showReactionTip, setShowReactionTip] = useState(false);
-  const [hasReacted, setHasReacted] = useState(
-    review.reactions?.some(r => r.user_id === currentUserId)
+export function SocialStatsBar({ likes, comments, shares, className = '' }) {
+  return (
+    <div className={`flex items-center gap-4 text-xs text-slate-500 ${className}`}>
+      {likes > 0 && (
+        <span className="flex items-center gap-1">
+          <Heart className="w-3 h-3 fill-rose-500 text-rose-500" />
+          {likes >= 1000 ? `${(likes/1000).toFixed(1)}K` : likes}
+        </span>
+      )}
+      {comments > 0 && (
+        <span>{comments} comments</span>
+      )}
+      {shares > 0 && (
+        <span>{shares} shares</span>
+      )}
+    </div>
   );
-  
-  const isLong = review.content?.length > 300;
-  const displayContent = expanded || !isLong 
-    ? review.content 
-    : review.content?.slice(0, 300) + '...';
-  
-  const handleHelpful = async () => {
-    if (hasReacted) return;
-    await onHelpful?.(review._id);
-    setHasReacted(true);
-  };
+}
+
+// ─── Engagement Summary (for analytics) ─────────────────────────────────
+
+export function EngagementSummary({ data, className = '' }) {
+  const { totalLikes, totalComments, totalShares, engagementRate } = data;
   
   return (
-    <div className="bg-slate-900/30 border border-slate-800/50 rounded-2xl p-5 hover:border-slate-700/50 transition-colors">
-      {/* Header */}
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 font-semibold">
-            {review.user_name?.[0]?.toUpperCase() || 'U'}
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-white">{review.user_name}</p>
-            <div className="flex items-center gap-2 mt-0.5">
-              <StarRating rating={review.rating} size="sm" readOnly />
-              {review.is_verified_purchase && (
-                <span className="text-xs text-emerald-400 font-medium bg-emerald-400/10 px-2 py-0.5 rounded-full">
-                  ✓ Verified
-                </span>
-              )}
-            </div>
-          </div>
+    <div className={`grid grid-cols-3 gap-4 ${className}`}>
+      <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4 text-center">
+        <div className="flex items-center justify-center gap-2 mb-1">
+          <Heart className="w-5 h-5 text-rose-500" />
+          <span className="text-2xl font-bold text-white">{totalLikes?.toLocaleString()}</span>
         </div>
-        <span className="text-xs text-slate-500">
-          {new Date(review.created_at).toLocaleDateString('en-ZA', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric'
-          })}
-        </span>
+        <p className="text-xs text-slate-500">Total Likes</p>
       </div>
-      
-      {/* Title */}
-      {review.title && (
-        <h4 className="text-base font-semibold text-white mb-2">{review.title}</h4>
-      )}
-      
-      {/* Content */}
-      <p className="text-sm text-slate-300 leading-relaxed mb-3">
-        {displayContent}
-        {isLong && (
-          <button
-            onClick={() => setExpanded(!expanded)}
-            className="text-amber-400 hover:text-amber-300 font-medium ml-1 transition-colors"
-          >
-            {expanded ? 'Show less' : 'Read more'}
-          </button>
-        )}
-      </p>
-      
-      {/* Photos */}
-      {review.photos?.length > 0 && (
-        <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
-          {review.photos.map((photo, i) => (
-            <img
-              key={i}
-              src={photo.url}
-              alt={photo.caption || `Review photo ${i + 1}`}
-              className="w-24 h-24 rounded-xl object-cover border border-slate-700 hover:border-amber-400/50 transition-colors cursor-pointer"
-            />
-          ))}
+      <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4 text-center">
+        <div className="flex items-center justify-center gap-2 mb-1">
+          <MessageCircle className="w-5 h-5 text-sky-400" />
+          <span className="text-2xl font-bold text-white">{totalComments?.toLocaleString()}</span>
         </div>
-      )}
-      
-      {/* Actions */}
-      <div className="flex items-center gap-4 pt-3 border-t border-slate-800/50">
-        <button
-          onClick={handleHelpful}
-          disabled={hasReacted}
-          className={`
-            flex items-center gap-1.5 text-sm transition-colors
-            ${hasReacted 
-              ? 'text-amber-400 font-medium' 
-              : 'text-slate-500 hover:text-slate-300'
-            }
-          `}
-        >
-          <svg className="w-4 h-4" fill={hasReacted ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
-          </svg>
-          Helpful ({review.helpful_count || 0})
-        </button>
-        
-        <button
-          onClick={() => onReport?.(review._id)}
-          className="text-sm text-slate-500 hover:text-red-400 transition-colors"
-        >
-          Report
-        </button>
+        <p className="text-xs text-slate-500">Comments</p>
       </div>
-      
-      {/* Merchant Reply */}
-      {review.replies?.filter(r => r.is_visible).map(reply => (
-        <div key={reply.id} className="mt-4 ml-4 pl-4 border-l-2 border-amber-400/30">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs font-semibold text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-full">
-              {reply.author_role === 'merchant' ? 'Merchant' : 'Support'}
-            </span>
-            <span className="text-xs text-slate-500">{reply.author_name}</span>
-          </div>
-          <p className="text-sm text-slate-400">{reply.content}</p>
+      <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4 text-center">
+        <div className="flex items-center justify-center gap-2 mb-1">
+          <Share2 className="w-5 h-5 text-emerald-400" />
+          <span className="text-2xl font-bold text-white">{totalShares?.toLocaleString()}</span>
         </div>
-      ))}
+        <p className="text-xs text-slate-500">Shares</p>
+      </div>
     </div>
   );
 }
