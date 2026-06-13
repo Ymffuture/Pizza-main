@@ -1,28 +1,30 @@
-// src/components/SocialActions.jsx
-import { useState, useCallback, useRef, useEffect } from 'react';
-import { Heart, MessageCircle, Send, MoreHorizontal, Trash2, Edit2, X, Check } from 'lucide-react';
+// src/components/CommentWithAvatar.jsx
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { Heart, MessageCircle, Send, X, Trash2, Edit2, Check } from 'lucide-react';
+import Avatar from './Avatar'; // Your existing Avatar component
 
 /**
- * SocialActions Component
- * Like, Comment, Delete + Like comments
- * No replies, no shares, no bookmarks
+ * CommentWithAvatar Component
+ * Uses existing Avatar component for profile pictures in comments
+ * Auto-closes comments section after like or comment (with timer)
+ * User can also manually close
  */
-export default function SocialActions({
+export default function CommentWithAvatar({
   itemId,
   itemType = 'review',
   initialLikes = 0,
   userLiked = false,
   initialComments = 0,
   commentsList = [],
+  currentUser = null, // { id, name, email, picture }
   onLike,
   onComment,
   onDeleteComment,
   onEditComment,
   onLikeComment,
-  currentUserId,
-  currentUserName = 'You',
   size = 'md',
   readOnly = false,
+  autoCloseDelay = 3000, // ms to auto-close after interaction
   className = '',
 }) {
   const [liked, setLiked] = useState(userLiked);
@@ -33,7 +35,36 @@ export default function SocialActions({
   const [animatingLike, setAnimatingLike] = useState(false);
   const [editingComment, setEditingComment] = useState(null);
   const [editText, setEditText] = useState('');
+  const [justInteracted, setJustInteracted] = useState(false);
+  
+  const autoCloseTimer = useRef(null);
   const commentInputRef = useRef(null);
+
+  // Clear timer on unmount
+  useEffect(() => {
+    return () => {
+      if (autoCloseTimer.current) clearTimeout(autoCloseTimer.current);
+    };
+  }, []);
+
+  // Start auto-close timer
+  const startAutoClose = useCallback(() => {
+    setJustInteracted(true);
+    if (autoCloseTimer.current) clearTimeout(autoCloseTimer.current);
+    
+    autoCloseTimer.current = setTimeout(() => {
+      setCommentsExpanded(false);
+      setJustInteracted(false);
+    }, autoCloseDelay);
+  }, [autoCloseDelay]);
+
+  // Cancel auto-close if user is typing
+  const handleTyping = () => {
+    if (autoCloseTimer.current) {
+      clearTimeout(autoCloseTimer.current);
+      setJustInteracted(false);
+    }
+  };
 
   const handleLike = useCallback(() => {
     if (readOnly) return;
@@ -43,7 +74,12 @@ export default function SocialActions({
     setAnimatingLike(true);
     setTimeout(() => setAnimatingLike(false), 500);
     onLike?.(itemId, newLiked);
-  }, [liked, itemId, readOnly, onLike]);
+    
+    // Auto-close comments if they're open
+    if (commentsExpanded) {
+      startAutoClose();
+    }
+  }, [liked, itemId, readOnly, commentsExpanded, startAutoClose, onLike]);
 
   const handleCommentSubmit = useCallback((e) => {
     e.preventDefault();
@@ -51,9 +87,9 @@ export default function SocialActions({
 
     const newComment = {
       id: `temp_${Date.now()}`,
-      user_id: currentUserId || 'current_user',
-      user_name: currentUserName,
-      user_avatar_url: null,
+      user_id: currentUser?.id || 'current_user',
+      user_name: currentUser?.name || 'You',
+      user_avatar_url: currentUser?.picture || null,
       content: commentText.trim(),
       likes: 0,
       liked_by: [],
@@ -64,16 +100,22 @@ export default function SocialActions({
     setLocalComments(prev => [newComment, ...prev]);
     onComment?.(itemId, commentText.trim());
     setCommentText('');
-  }, [commentText, itemId, currentUserId, currentUserName, readOnly, onComment]);
+    
+    // Auto-close after comment
+    startAutoClose();
+  }, [commentText, itemId, currentUser, readOnly, startAutoClose, onComment]);
 
   const handleDeleteComment = useCallback((commentId) => {
     setLocalComments(prev => prev.filter(c => c.id !== commentId));
     onDeleteComment?.(itemId, commentId);
-  }, [itemId, onDeleteComment]);
+    startAutoClose();
+  }, [itemId, startAutoClose, onDeleteComment]);
 
   const handleEditComment = useCallback((comment) => {
     setEditingComment(comment.id);
     setEditText(comment.content);
+    // Cancel auto-close while editing
+    if (autoCloseTimer.current) clearTimeout(autoCloseTimer.current);
   }, []);
 
   const handleSaveEdit = useCallback((commentId) => {
@@ -86,24 +128,25 @@ export default function SocialActions({
     onEditComment?.(itemId, commentId, editText.trim());
     setEditingComment(null);
     setEditText('');
-  }, [editText, itemId, onEditComment]);
+    startAutoClose();
+  }, [editText, itemId, startAutoClose, onEditComment]);
 
   const handleLikeComment = useCallback((commentId) => {
     setLocalComments(prev => prev.map(c => {
       if (c.id !== commentId) return c;
-      const userLikedIt = c.liked_by?.includes(currentUserId);
+      const userLikedIt = c.liked_by?.includes(currentUser?.id);
       const newLikedBy = userLikedIt
-        ? c.liked_by.filter(id => id !== currentUserId)
-        : [...(c.liked_by || []), currentUserId];
+        ? c.liked_by.filter(id => id !== currentUser?.id)
+        : [...(c.liked_by || []), currentUser?.id];
       return {
         ...c,
         likes: userLikedIt ? c.likes - 1 : c.likes + 1,
         liked_by: newLikedBy,
-        user_liked: !userLikedIt
       };
     }));
     onLikeComment?.(itemId, commentId);
-  }, [itemId, currentUserId, onLikeComment]);
+    startAutoClose();
+  }, [itemId, currentUser?.id, startAutoClose, onLikeComment]);
 
   const formatCount = (num) => {
     if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
@@ -122,13 +165,13 @@ export default function SocialActions({
     return date.toLocaleDateString('en-ZA', { month: 'short', day: 'numeric' });
   };
 
-  const isOwnComment = (comment) => comment.user_id === currentUserId;
+  const isOwnComment = (comment) => comment.user_id === currentUser?.id;
 
   const cfg = {
-    sm: { icon: 'w-4 h-4', text: 'text-xs', button: 'p-1.5', gap: 'gap-3' },
-    md: { icon: 'w-5 h-5', text: 'text-sm', button: 'p-2', gap: 'gap-4' },
-    lg: { icon: 'w-6 h-6', text: 'text-base', button: 'p-2.5', gap: 'gap-5' },
-  }[size] || { icon: 'w-5 h-5', text: 'text-sm', button: 'p-2', gap: 'gap-4' };
+    sm: { icon: 'w-4 h-4', text: 'text-xs', button: 'p-1.5', gap: 'gap-3', avatar: 28 },
+    md: { icon: 'w-5 h-5', text: 'text-sm', button: 'p-2', gap: 'gap-4', avatar: 32 },
+    lg: { icon: 'w-6 h-6', text: 'text-base', button: 'p-2.5', gap: 'gap-5', avatar: 40 },
+  }[size] || { icon: 'w-5 h-5', text: 'text-sm', button: 'p-2', gap: 'gap-4', avatar: 32 };
 
   return (
     <div className={`flex flex-col ${className}`}>
@@ -183,19 +226,52 @@ export default function SocialActions({
 
       {/* Comments Section */}
       {commentsExpanded && (
-        <div className="mt-4 border-t border-slate-800/50 pt-4 animate-fade-in">
+        <div className="mt-4 border-t border-slate-800/50 pt-4 animate-fade-in relative">
+          {/* Auto-close indicator + manual close */}
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                Comments
+              </span>
+              {justInteracted && (
+                <span className="text-[10px] text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-full animate-pulse">
+                  Auto-closing...
+                </span>
+              )}
+            </div>
+            <button
+              onClick={() => {
+                setCommentsExpanded(false);
+                setJustInteracted(false);
+                if (autoCloseTimer.current) clearTimeout(autoCloseTimer.current);
+              }}
+              className="p-1 text-slate-500 hover:text-white hover:bg-slate-800 rounded-lg transition-all"
+              title="Close comments"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
           {/* Comment Input */}
           {!readOnly && (
             <form onSubmit={handleCommentSubmit} className="flex items-start gap-3 mb-4">
-              <div className="w-8 h-8 rounded-full bg-slate-800 flex-shrink-0 flex items-center justify-center text-xs font-semibold text-slate-400">
-                {currentUserName[0]?.toUpperCase() || 'U'}
-              </div>
+              {/* Current user avatar */}
+              <Avatar
+                picture={currentUser?.picture}
+                email={currentUser?.email}
+                name={currentUser?.name}
+                size={cfg.avatar}
+              />
               <div className="flex-1 relative">
                 <input
                   ref={commentInputRef}
                   type="text"
                   value={commentText}
-                  onChange={(e) => setCommentText(e.target.value)}
+                  onChange={(e) => {
+                    setCommentText(e.target.value);
+                    handleTyping();
+                  }}
+                  onFocus={handleTyping}
                   placeholder="Add a comment..."
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-4 pr-12 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-sky-400/30 focus:border-sky-400/50 transition-all"
                   maxLength={2000}
@@ -219,13 +295,13 @@ export default function SocialActions({
               localComments.map((comment) => (
                 <div key={comment.id} className="group">
                   <div className="flex gap-3">
-                    <div className="w-8 h-8 rounded-full bg-slate-800 flex-shrink-0 flex items-center justify-center text-xs font-semibold text-slate-400 overflow-hidden">
-                      {comment.user_avatar_url ? (
-                        <img src={comment.user_avatar_url} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        comment.user_name?.[0]?.toUpperCase() || 'U'
-                      )}
-                    </div>
+                    {/* Commenter avatar using YOUR Avatar component */}
+                    <Avatar
+                      picture={comment.user_avatar_url}
+                      email={comment.user_id?.includes('@') ? comment.user_id : null}
+                      name={comment.user_name}
+                      size={cfg.avatar}
+                    />
 
                     <div className="flex-1 min-w-0">
                       {editingComment === comment.id ? (
@@ -234,6 +310,7 @@ export default function SocialActions({
                             type="text"
                             value={editText}
                             onChange={(e) => setEditText(e.target.value)}
+                            onFocus={handleTyping}
                             className="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-sky-400/30"
                             autoFocus
                           />
@@ -265,9 +342,9 @@ export default function SocialActions({
                           <div className="flex items-center gap-4 mt-1 ml-1">
                             <button
                               onClick={() => handleLikeComment(comment.id)}
-                              className={`text-xs font-semibold transition-colors ${comment.liked_by?.includes(currentUserId) ? 'text-rose-500' : 'text-slate-500 hover:text-slate-300'}`}
+                              className={`text-xs font-semibold transition-colors ${comment.liked_by?.includes(currentUser?.id) ? 'text-rose-500' : 'text-slate-500 hover:text-slate-300'}`}
                             >
-                              {comment.liked_by?.includes(currentUserId) ? 'Liked' : 'Like'}
+                              {comment.liked_by?.includes(currentUser?.id) ? 'Liked' : 'Like'}
                               {comment.likes > 0 && ` (${formatCount(comment.likes)})`}
                             </button>
 
