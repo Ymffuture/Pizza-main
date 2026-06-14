@@ -256,12 +256,12 @@ export default function CommentWithAvatar({
           {!readOnly && (
             <form onSubmit={handleCommentSubmit} className="flex items-start gap-3 mb-4">
               {/* Current user avatar */}
-               <Avatar
-                      picture={comment.user_avatar_url}
-                      email={comment.user_id?.includes('@') ? comment.user_id : null}
-                      name={comment.user_name}
-                      size={cfg.avatar}
-                    />
+              <Avatar
+                picture={currentUser?.picture}
+                email={currentUser?.email}
+                name={currentUser?.name}
+                size={cfg.avatar}
+              />
               <div className="flex-1 relative">
                 <input
                   ref={commentInputRef}
