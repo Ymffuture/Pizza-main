@@ -33,6 +33,7 @@ export default function CommentWithAvatar({
 
   useEffect(() => () => { if (autoCloseTimer.current) clearTimeout(autoCloseTimer.current); }, []);
 
+  // ── FIXED: Only auto-close on true idle, not after every action ───────────
   const startAutoClose = useCallback(() => {
     setJustInteracted(true);
     if (autoCloseTimer.current) clearTimeout(autoCloseTimer.current);
@@ -56,7 +57,7 @@ export default function CommentWithAvatar({
     setLikeCount(prev => newLiked ? prev + 1 : Math.max(0, prev - 1));
     setAnimatingLike(true);
     setTimeout(() => setAnimatingLike(false), 500);
-    if (commentsExpanded) startAutoClose();
+    // FIXED: Removed startAutoClose() — liking should NOT collapse the panel
 
     try {
       const { data } = await axiosClient.post('/social/like', {
@@ -71,7 +72,7 @@ export default function CommentWithAvatar({
       setLiked(!newLiked);
       setLikeCount(prev => newLiked ? Math.max(0, prev - 1) : prev + 1);
     }
-  }, [liked, itemId, itemType, readOnly, commentsExpanded, startAutoClose]);
+  }, [liked, itemId, itemType, readOnly]);
 
   // ── Comment submit ────────────────────────────────────────────────────────
   const handleCommentSubmit = useCallback(async (e) => {
@@ -94,7 +95,9 @@ export default function CommentWithAvatar({
     setLocalComments(prev => [optimistic, ...prev]);
     setCommentText('');
     setLoading(true);
-    startAutoClose();
+    // FIXED: Removed startAutoClose() — commenting should NOT collapse the panel
+    // Instead, reset idle timer so user can keep interacting
+    cancelAutoClose();
 
     try {
       const { data } = await axiosClient.post('/social/comment', {
@@ -112,18 +115,18 @@ export default function CommentWithAvatar({
     } finally {
       setLoading(false);
     }
-  }, [commentText, itemId, itemType, currentUser, readOnly, loading, startAutoClose]);
+  }, [commentText, itemId, itemType, currentUser, readOnly, loading]);
 
   // ── Delete comment ────────────────────────────────────────────────────────
   const handleDeleteComment = useCallback(async (commentId) => {
     setLocalComments(prev => prev.filter(c => c.id !== commentId));
-    startAutoClose();
+    // FIXED: Removed startAutoClose() — deleting should NOT collapse the panel
     try {
       await axiosClient.delete(`/social/comment/${commentId}`);
     } catch {
       // In practice the backend soft-deletes, so not critical to rollback
     }
-  }, [startAutoClose]);
+  }, []);
 
   // ── Edit comment ──────────────────────────────────────────────────────────
   const handleEditComment = useCallback((comment) => {
@@ -142,7 +145,7 @@ export default function CommentWithAvatar({
     ));
     setEditingComment(null);
     setEditText('');
-    startAutoClose();
+    // FIXED: Removed startAutoClose() — saving edit should NOT collapse the panel
 
     try {
       await axiosClient.patch(`/social/comment/${commentId}`, { content: editText.trim() });
@@ -150,7 +153,7 @@ export default function CommentWithAvatar({
       // Rollback
       if (prev) setLocalComments(comments => comments.map(c => c.id === commentId ? prev : c));
     }
-  }, [editText, localComments, startAutoClose]);
+  }, [editText, localComments]);
 
   // ── Like a comment ────────────────────────────────────────────────────────
   const handleLikeComment = useCallback(async (commentId) => {
@@ -165,7 +168,7 @@ export default function CommentWithAvatar({
           : [...(c.liked_by || []), currentUser?.id],
       };
     }));
-    startAutoClose();
+    // FIXED: Removed startAutoClose() — liking a comment should NOT collapse the panel
 
     try {
       await axiosClient.post(`/social/comment/${commentId}/like`);
@@ -183,7 +186,7 @@ export default function CommentWithAvatar({
         };
       }));
     }
-  }, [currentUser?.id, startAutoClose]);
+  }, [currentUser?.id]);
 
   // ── Helpers ───────────────────────────────────────────────────────────────
   const formatCount = (num) => {
@@ -250,7 +253,7 @@ export default function CommentWithAvatar({
         >
           <MessageCircle className={`${cfg.icon} transition-transform group-hover:scale-110`} />
           <span className={`${cfg.text} font-semibold tabular-nums`}>
-            {/* ✅ Fixed: was initialComments + localComments.length (double-count) */}
+            {/* Fixed: was initialComments + localComments.length (double-count) */}
             {formatCount(localComments.length || initialCommentCount)}
           </span>
         </button>
