@@ -1,395 +1,562 @@
-// src/components/CommentWithAvatar.jsx
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { Heart, MessageCircle, Send, X, Check } from 'lucide-react';
-import Avatar from './Avatar';
-import axiosClient from '../api/axiosClient'; // adjust to your axios instance path
+// src/components/SocialActions.jsx
+// Twitter/X-style likes, comments, bookmarks & shares.
+// Drop-in replacement for CommentWithAvatar.jsx
+//
+// Required props:
+//   itemId      string  — MongoDB _id of the item being reacted to (MUST be defined)
+//   itemType    string  — e.g. "menu_item" | "order" | "post"
+//   currentUser object  — { id, full_name, email, picture } from AuthContext
 
-export default function CommentWithAvatar({
+import { useState, useEffect, useCallback, useRef } from 'react';
+import {
+  Heart, MessageCircle, Bookmark,
+  Share2, Send, X, Trash2,
+  Pencil, Check, MoreHorizontal,
+} from 'lucide-react';
+import Avatar from './Avatar';
+import axiosClient from '../api/axiosClient';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Main component
+// ─────────────────────────────────────────────────────────────────────────────
+
+export default function SocialActions({
   itemId,
-  itemType = 'review',
-  initialLikes = 0,
-  userLiked = false,
-  initialCommentCount = 0,
-  commentsList = [],
-  currentUser = null, // { id, name, email, picture }
-  size = 'md',
-  readOnly = false,
-  autoCloseDelay = 3000,
+  itemType = 'post',
+  initialStats = {},
+  currentUser = null,
   className = '',
 }) {
-  const [liked, setLiked] = useState(userLiked);
-  const [likeCount, setLikeCount] = useState(initialLikes);
-  const [commentsExpanded, setCommentsExpanded] = useState(false);
+  // ── State ─────────────────────────────────────────────────────────────────
+  const [stats, setStats] = useState({
+    likes: initialStats.likes ?? 0,
+    comments: initialStats.comments ?? 0,
+    shares: initialStats.shares ?? 0,
+    bookmarks: initialStats.bookmarks ?? 0,
+    user_liked: initialStats.user_liked ?? false,
+    user_bookmarked: initialStats.user_bookmarked ?? false,
+  });
+  const [showThread, setShowThread] = useState(false);
+  const [comments, setComments] = useState([]);
   const [commentText, setCommentText] = useState('');
-  const [localComments, setLocalComments] = useState(commentsList);
-  const [animatingLike, setAnimatingLike] = useState(false);
-  const [editingComment, setEditingComment] = useState(null);
-  const [editText, setEditText] = useState('');
-  const [justInteracted, setJustInteracted] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [loadingComments, setLoadingComments] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [editing, setEditing] = useState(null); // { id, text }
+  const inputRef = useRef(null);
 
-  const autoCloseTimer = useRef(null);
-  const commentInputRef = useRef(null);
+  // ── Guard: never make API calls without a valid itemId ───────────────────
+  const ready = Boolean(itemId);
 
-  useEffect(() => () => { if (autoCloseTimer.current) clearTimeout(autoCloseTimer.current); }, []);
+  // ── Fetch live stats on mount ─────────────────────────────────────────────
+  useEffect(() => {
+    if (!ready) return;
+    axiosClient
+      .get(`/social/stats/${itemId}`, { params: { item_type: itemType } })
+      .then(({ data }) => setStats(s => ({ ...s, ...data })))
+      .catch(() => {}); // silently keep initialStats on failure
+  }, [itemId, itemType, ready]);
 
-  // ── FIXED: Only auto-close on true idle, not after every action ───────────
-  const startAutoClose = useCallback(() => {
-    setJustInteracted(true);
-    if (autoCloseTimer.current) clearTimeout(autoCloseTimer.current);
-    autoCloseTimer.current = setTimeout(() => {
-      setCommentsExpanded(false);
-      setJustInteracted(false);
-    }, autoCloseDelay);
-  }, [autoCloseDelay]);
+  // ── Fetch comments when thread opens ──────────────────────────────────────
+  useEffect(() => {
+    if (!showThread || !ready) return;
+    setLoadingComments(true);
+    axiosClient
+      .get(`/social/comments/${itemId}`, {
+        params: { item_type: itemType, limit: 50 },
+      })
+      .then(({ data }) => setComments(data.comments ?? []))
+      .catch(() => {})
+      .finally(() => setLoadingComments(false));
+  }, [showThread, itemId, itemType, ready]);
 
-  const cancelAutoClose = () => {
-    if (autoCloseTimer.current) clearTimeout(autoCloseTimer.current);
-    setJustInteracted(false);
-  };
+  // ── Auto-focus reply input when thread opens ──────────────────────────────
+  useEffect(() => {
+    if (showThread) setTimeout(() => inputRef.current?.focus(), 80);
+  }, [showThread]);
 
   // ── Like ──────────────────────────────────────────────────────────────────
   const handleLike = useCallback(async () => {
-    if (readOnly) return;
-    // Optimistic update
-    const newLiked = !liked;
-    setLiked(newLiked);
-    setLikeCount(prev => newLiked ? prev + 1 : Math.max(0, prev - 1));
-    setAnimatingLike(true);
-    setTimeout(() => setAnimatingLike(false), 500);
-    // FIXED: Removed startAutoClose() — liking should NOT collapse the panel
-
+    if (!ready || !currentUser) return;
+    const prev = stats;
+    // Optimistic
+    setStats(s => ({
+      ...s,
+      user_liked: !s.user_liked,
+      likes: s.user_liked ? Math.max(0, s.likes - 1) : s.likes + 1,
+    }));
     try {
       const { data } = await axiosClient.post('/social/like', {
         item_id: itemId,
         item_type: itemType,
       });
-      // Sync with server truth
-      setLiked(data.liked);
-      setLikeCount(data.like_count);
+      setStats(s => ({ ...s, user_liked: data.liked, likes: data.like_count }));
     } catch {
-      // Rollback on failure
-      setLiked(!newLiked);
-      setLikeCount(prev => newLiked ? Math.max(0, prev - 1) : prev + 1);
+      setStats(prev); // rollback
     }
-  }, [liked, itemId, itemType, readOnly]);
+  }, [ready, currentUser, itemId, itemType, stats]);
 
-  // ── Comment submit ────────────────────────────────────────────────────────
-  const handleCommentSubmit = useCallback(async (e) => {
-    e.preventDefault();
-    if (!commentText.trim() || readOnly || loading) return;
+  // ── Bookmark ──────────────────────────────────────────────────────────────
+  const handleBookmark = useCallback(async () => {
+    if (!ready || !currentUser) return;
+    const prev = stats;
+    setStats(s => ({
+      ...s,
+      user_bookmarked: !s.user_bookmarked,
+      bookmarks: s.user_bookmarked ? Math.max(0, s.bookmarks - 1) : s.bookmarks + 1,
+    }));
+    try {
+      const { data } = await axiosClient.post('/social/bookmark', {
+        item_id: itemId,
+        item_type: itemType,
+      });
+      setStats(s => ({
+        ...s,
+        user_bookmarked: data.bookmarked,
+        bookmarks: data.bookmark_count,
+      }));
+    } catch {
+      setStats(prev);
+    }
+  }, [ready, currentUser, itemId, itemType, stats]);
+
+  // ── Share ─────────────────────────────────────────────────────────────────
+  const handleShare = useCallback(async () => {
+    if (!ready) return;
+    const url = window.location.href;
+    try {
+      if (navigator.share) {
+        await navigator.share({ url });
+      } else {
+        await navigator.clipboard.writeText(url);
+      }
+    } catch {}
+    try {
+      await axiosClient.post('/social/share', {
+        item_id: itemId,
+        item_type: itemType,
+        platform: 'web',
+      });
+      setStats(s => ({ ...s, shares: s.shares + 1 }));
+    } catch {}
+  }, [ready, itemId, itemType]);
+
+  // ── Submit comment ────────────────────────────────────────────────────────
+  const handleSubmit = useCallback(async (e) => {
+    e?.preventDefault();
+    const text = commentText.trim();
+    if (!text || !ready || !currentUser || submitting) return;
 
     const tempId = `temp_${Date.now()}`;
     const optimistic = {
       id: tempId,
-      user_id: currentUser?.id || '',
-      user_name: currentUser?.name || 'You',
-      user_avatar_url: currentUser?.picture || null,
-      content: commentText.trim(),
+      user_id: currentUser.id ?? '',
+      user_name: currentUser.full_name ?? currentUser.name ?? 'You',
+      user_avatar_url: currentUser.picture ?? null,
+      content: text,
       likes: 0,
       liked_by: [],
       created_at: new Date().toISOString(),
       is_edited: false,
     };
 
-    setLocalComments(prev => [optimistic, ...prev]);
+    setComments(prev => [optimistic, ...prev]);
+    setStats(s => ({ ...s, comments: s.comments + 1 }));
     setCommentText('');
-    setLoading(true);
-    // FIXED: Removed startAutoClose() — commenting should NOT collapse the panel
-    // Instead, reset idle timer so user can keep interacting
-    cancelAutoClose();
+    setSubmitting(true);
 
     try {
       const { data } = await axiosClient.post('/social/comment', {
         item_id: itemId,
         item_type: itemType,
-        content: optimistic.content,
+        content: text,
       });
-      // Replace temp entry with real server comment
-      setLocalComments(prev =>
-        prev.map(c => c.id === tempId ? { ...data.comment } : c)
-      );
+      // Replace temp with real server document
+      setComments(prev => prev.map(c => (c.id === tempId ? data.comment : c)));
     } catch {
       // Rollback
-      setLocalComments(prev => prev.filter(c => c.id !== tempId));
+      setComments(prev => prev.filter(c => c.id !== tempId));
+      setStats(s => ({ ...s, comments: Math.max(0, s.comments - 1) }));
+      setCommentText(text);
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
-  }, [commentText, itemId, itemType, currentUser, readOnly, loading]);
+  }, [commentText, ready, currentUser, itemId, itemType, submitting]);
 
   // ── Delete comment ────────────────────────────────────────────────────────
-  const handleDeleteComment = useCallback(async (commentId) => {
-    setLocalComments(prev => prev.filter(c => c.id !== commentId));
-    // FIXED: Removed startAutoClose() — deleting should NOT collapse the panel
+  const handleDelete = useCallback(async (commentId) => {
+    setComments(prev => prev.filter(c => c.id !== commentId));
+    setStats(s => ({ ...s, comments: Math.max(0, s.comments - 1) }));
     try {
       await axiosClient.delete(`/social/comment/${commentId}`);
-    } catch {
-      // In practice the backend soft-deletes, so not critical to rollback
-    }
+    } catch {}
   }, []);
 
-  // ── Edit comment ──────────────────────────────────────────────────────────
-  const handleEditComment = useCallback((comment) => {
-    setEditingComment(comment.id);
-    setEditText(comment.content);
-    cancelAutoClose();
-  }, []);
-
-  const handleSaveEdit = useCallback(async (commentId) => {
-    if (!editText.trim()) return;
-    const prev = localComments.find(c => c.id === commentId);
-    setLocalComments(comments => comments.map(c =>
-      c.id === commentId
-        ? { ...c, content: editText.trim(), is_edited: true, edited_at: new Date().toISOString() }
-        : c
-    ));
-    setEditingComment(null);
-    setEditText('');
-    // FIXED: Removed startAutoClose() — saving edit should NOT collapse the panel
-
-    try {
-      await axiosClient.patch(`/social/comment/${commentId}`, { content: editText.trim() });
-    } catch {
-      // Rollback
-      if (prev) setLocalComments(comments => comments.map(c => c.id === commentId ? prev : c));
-    }
-  }, [editText, localComments]);
-
-  // ── Like a comment ────────────────────────────────────────────────────────
+  // ── Like comment ──────────────────────────────────────────────────────────
   const handleLikeComment = useCallback(async (commentId) => {
-    setLocalComments(prev => prev.map(c => {
-      if (c.id !== commentId) return c;
-      const alreadyLiked = c.liked_by?.includes(currentUser?.id);
-      return {
-        ...c,
-        likes: alreadyLiked ? Math.max(0, c.likes - 1) : c.likes + 1,
-        liked_by: alreadyLiked
-          ? c.liked_by.filter(id => id !== currentUser?.id)
-          : [...(c.liked_by || []), currentUser?.id],
-      };
-    }));
-    // FIXED: Removed startAutoClose() — liking a comment should NOT collapse the panel
+    if (!currentUser?.id) return;
+    const uid = currentUser.id;
+
+    const toggle = (arr) =>
+      arr?.includes(uid) ? arr.filter(id => id !== uid) : [...(arr ?? []), uid];
+
+    setComments(prev =>
+      prev.map(c => {
+        if (c.id !== commentId) return c;
+        const liked = c.liked_by?.includes(uid);
+        return {
+          ...c,
+          likes: liked ? Math.max(0, c.likes - 1) : c.likes + 1,
+          liked_by: toggle(c.liked_by),
+        };
+      })
+    );
 
     try {
       await axiosClient.post(`/social/comment/${commentId}/like`);
     } catch {
-      // Rollback
-      setLocalComments(prev => prev.map(c => {
-        if (c.id !== commentId) return c;
-        const nowLiked = c.liked_by?.includes(currentUser?.id);
-        return {
-          ...c,
-          likes: nowLiked ? Math.max(0, c.likes - 1) : c.likes + 1,
-          liked_by: nowLiked
-            ? c.liked_by.filter(id => id !== currentUser?.id)
-            : [...(c.liked_by || []), currentUser?.id],
-        };
-      }));
+      // Rollback — re-toggle
+      setComments(prev =>
+        prev.map(c => {
+          if (c.id !== commentId) return c;
+          const liked = c.liked_by?.includes(uid);
+          return {
+            ...c,
+            likes: liked ? Math.max(0, c.likes - 1) : c.likes + 1,
+            liked_by: toggle(c.liked_by),
+          };
+        })
+      );
     }
   }, [currentUser?.id]);
 
-  // ── Helpers ───────────────────────────────────────────────────────────────
-  const formatCount = (num) => {
-    if (num >= 1_000_000) return (num / 1_000_000).toFixed(1) + 'M';
-    if (num >= 1_000) return (num / 1_000).toFixed(1) + 'K';
-    return num.toString();
+  // ── Edit comment ──────────────────────────────────────────────────────────
+  const handleSaveEdit = useCallback(async () => {
+    if (!editing?.text.trim()) return;
+    const { id, text } = editing;
+    setComments(prev =>
+      prev.map(c => (c.id === id ? { ...c, content: text, is_edited: true } : c))
+    );
+    setEditing(null);
+    try {
+      await axiosClient.patch(`/social/comment/${id}`, { content: text });
+    } catch {}
+  }, [editing]);
+
+  // ── Formatters ────────────────────────────────────────────────────────────
+  const fmt = (n) =>
+    n >= 1e6 ? `${(n / 1e6).toFixed(1)}M`
+    : n >= 1e3 ? `${(n / 1e3).toFixed(1)}K`
+    : n > 0 ? String(n) : '';
+
+  const fmtTime = (iso) => {
+    const d = (Date.now() - new Date(iso)) / 1000;
+    if (d < 60) return 'now';
+    if (d < 3600) return `${Math.floor(d / 60)}m`;
+    if (d < 86400) return `${Math.floor(d / 3600)}h`;
+    if (d < 604800) return `${Math.floor(d / 86400)}d`;
+    return new Date(iso).toLocaleDateString('en-ZA', { month: 'short', day: 'numeric' });
   };
 
-  const formatTime = (dateString) => {
-    const diff = (Date.now() - new Date(dateString)) / 1000;
-    if (diff < 60) return 'Just now';
-    if (diff < 3600) return `${Math.floor(diff / 60)}m`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
-    if (diff < 604800) return `${Math.floor(diff / 86400)}d`;
-    return new Date(dateString).toLocaleDateString('en-ZA', { month: 'short', day: 'numeric' });
-  };
-
-  const isOwnComment = (c) => c.user_id === currentUser?.id;
-
-  const cfg = {
-    sm: { icon: 'w-4 h-4', text: 'text-xs', button: 'p-1.5', gap: 'gap-3', avatar: 28 },
-    md: { icon: 'w-5 h-5', text: 'text-sm', button: 'p-2',   gap: 'gap-4', avatar: 32 },
-    lg: { icon: 'w-6 h-6', text: 'text-base', button: 'p-2.5', gap: 'gap-5', avatar: 40 },
-  }[size] ?? { icon: 'w-5 h-5', text: 'text-sm', button: 'p-2', gap: 'gap-4', avatar: 32 };
-
+  // ─────────────────────────────────────────────────────────────────────────
   return (
-    <div className={`flex flex-col ${className}`}>
-      {/* Action Bar */}
-      <div className={`flex items-center ${cfg.gap}`}>
-        {/* Like */}
-        <button
-          onClick={handleLike}
-          disabled={readOnly}
-          className={`
-            group relative flex items-center gap-1.5 ${cfg.button} rounded-xl
-            transition-all duration-200 active:scale-90
-            ${liked ? 'text-rose-500' : 'text-slate-400 hover:text-rose-400 hover:bg-rose-500/5'}
-            ${readOnly ? 'cursor-default' : 'cursor-pointer'}
-          `}
-        >
-          <div className="relative">
-            <Heart className={`${cfg.icon} transition-all duration-300 ${liked ? 'fill-current scale-110' : 'group-hover:scale-110'} ${animatingLike ? 'animate-heart-pop' : ''}`} />
-            {animatingLike && (
-              <div className="absolute inset-0 pointer-events-none">
-                {[...Array(5)].map((_, i) => (
-                  <div key={i} className="absolute w-1 h-1 bg-rose-400 rounded-full animate-spark"
-                    style={{ left: '50%', top: '50%', transform: `rotate(${i * 72}deg)` }} />
-                ))}
-              </div>
-            )}
-          </div>
-          <span className={`${cfg.text} font-semibold tabular-nums`}>{formatCount(likeCount)}</span>
-        </button>
+    <div className={className}>
 
-        {/* Comment toggle — count comes from localComments only (server-loaded) */}
-        <button
-          onClick={() => setCommentsExpanded(p => !p)}
-          disabled={readOnly}
-          className={`
-            group flex items-center gap-1.5 ${cfg.button} rounded-xl
-            transition-all duration-200 active:scale-90
-            ${commentsExpanded ? 'text-sky-400 bg-sky-400/5' : 'text-slate-400 hover:text-sky-400 hover:bg-sky-400/5'}
-          `}
-        >
-          <MessageCircle className={`${cfg.icon} transition-transform group-hover:scale-110`} />
-          <span className={`${cfg.text} font-semibold tabular-nums`}>
-            {/* Fixed: was initialComments + localComments.length (double-count) */}
-            {formatCount(localComments.length || initialCommentCount)}
-          </span>
-        </button>
+      {/* ── Action bar ──────────────────────────────────────────────────── */}
+      <div className="flex items-center gap-1">
+        <ActionBtn
+          onClick={() => setShowThread(t => !t)}
+          active={showThread}
+          hoverColor="sky"
+          activeColor="text-sky-400"
+          icon={<MessageCircle className="w-[18px] h-[18px]" />}
+          label={fmt(stats.comments)}
+          title="Reply"
+        />
+        <ActionBtn
+          onClick={handleLike}
+          active={stats.user_liked}
+          hoverColor="rose"
+          activeColor="text-rose-500"
+          icon={
+            <Heart
+              className={`w-[18px] h-[18px] transition-all duration-200 ${
+                stats.user_liked ? 'fill-rose-500 scale-110' : ''
+              }`}
+            />
+          }
+          label={fmt(stats.likes)}
+          title="Like"
+        />
+        <ActionBtn
+          onClick={handleBookmark}
+          active={stats.user_bookmarked}
+          hoverColor="amber"
+          activeColor="text-amber-400"
+          icon={
+            <Bookmark
+              className={`w-[18px] h-[18px] ${stats.user_bookmarked ? 'fill-amber-400' : ''}`}
+            />
+          }
+          label={fmt(stats.bookmarks)}
+          title="Save"
+        />
+        <ActionBtn
+          onClick={handleShare}
+          active={false}
+          hoverColor="green"
+          activeColor="text-green-400"
+          icon={<Share2 className="w-[18px] h-[18px]" />}
+          label={fmt(stats.shares)}
+          title="Share"
+        />
       </div>
 
-      {/* Comments Section */}
-      {commentsExpanded && (
-        <div className="mt-4 border-t border-slate-800/50 pt-4 animate-fade-in relative">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Comments</span>
-              {justInteracted && (
-                <span className="text-[10px] text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-full animate-pulse">
-                  Auto-closing…
-                </span>
+      {/* ── Reply thread ─────────────────────────────────────────────────── */}
+      {showThread && (
+        <div className="mt-3 pt-3 border-t border-white/5">
+
+          {/* Compose box */}
+          {currentUser ? (
+            <form
+              onSubmit={handleSubmit}
+              className="flex items-center gap-3 mb-4 pb-4 border-b border-white/5"
+            >
+              <Avatar
+                picture={currentUser.picture}
+                name={currentUser.full_name ?? currentUser.name}
+                email={currentUser.email}
+                size={36}
+              />
+              <div className="flex-1 flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-full px-4 py-2 focus-within:border-sky-500/60 transition-colors">
+                <input
+                  ref={inputRef}
+                  value={commentText}
+                  onChange={e => setCommentText(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && !e.shiftKey) handleSubmit(e);
+                  }}
+                  placeholder="Post your reply…"
+                  className="flex-1 bg-transparent text-sm text-white placeholder-slate-600 outline-none"
+                  maxLength={2000}
+                  disabled={submitting}
+                />
+                <button
+                  type="submit"
+                  disabled={!commentText.trim() || submitting}
+                  className="shrink-0 px-3 py-0.5 text-xs font-bold bg-sky-500 hover:bg-sky-400 disabled:opacity-40 text-white rounded-full transition-colors"
+                >
+                  {submitting ? (
+                    <span className="inline-block w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : 'Reply'}
+                </button>
+              </div>
+            </form>
+          ) : (
+            <p className="text-sm text-slate-500 mb-4 text-center">Sign in to reply.</p>
+          )}
+
+          {/* List */}
+          {loadingComments ? (
+            <div className="flex justify-center py-8">
+              <div className="w-5 h-5 border-2 border-slate-800 border-t-sky-500 rounded-full animate-spin" />
+            </div>
+          ) : comments.length === 0 ? (
+            <div className="text-center py-8">
+              <MessageCircle className="w-8 h-8 text-slate-700 mx-auto mb-2" />
+              <p className="text-sm text-slate-600">No replies yet. Start the conversation!</p>
+            </div>
+          ) : (
+            <div>
+              {comments.map((comment, idx) => (
+                <CommentRow
+                  key={comment.id}
+                  comment={comment}
+                  currentUserId={currentUser?.id}
+                  isLast={idx === comments.length - 1}
+                  editing={editing?.id === comment.id ? editing : null}
+                  onLike={() => handleLikeComment(comment.id)}
+                  onDelete={() => handleDelete(comment.id)}
+                  onEdit={() => setEditing({ id: comment.id, text: comment.content })}
+                  onEditChange={text => setEditing(e => ({ ...e, text }))}
+                  onEditSave={handleSaveEdit}
+                  onEditCancel={() => setEditing(null)}
+                  fmtTime={fmtTime}
+                  fmt={fmt}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ActionBtn
+// ─────────────────────────────────────────────────────────────────────────────
+
+function ActionBtn({ onClick, active, hoverColor, activeColor, icon, label, title }) {
+  const hoverMap = {
+    sky:   'hover:bg-sky-400/10   hover:text-sky-400',
+    rose:  'hover:bg-rose-500/10  hover:text-rose-400',
+    amber: 'hover:bg-amber-400/10 hover:text-amber-400',
+    green: 'hover:bg-green-400/10 hover:text-green-400',
+  };
+
+  return (
+    <button
+      onClick={onClick}
+      title={title}
+      className={`
+        group flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-slate-500
+        transition-all duration-150 active:scale-90
+        ${hoverMap[hoverColor]}
+        ${active ? activeColor : ''}
+      `}
+    >
+      {icon}
+      {label && (
+        <span className="text-xs font-medium tabular-nums leading-none">{label}</span>
+      )}
+    </button>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CommentRow
+// ─────────────────────────────────────────────────────────────────────────────
+
+function CommentRow({
+  comment,
+  currentUserId,
+  isLast,
+  editing,
+  onLike,
+  onDelete,
+  onEdit,
+  onEditChange,
+  onEditSave,
+  onEditCancel,
+  fmtTime,
+  fmt,
+}) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef(null);
+  const isOwn = comment.user_id === currentUserId;
+  const userLiked = comment.liked_by?.includes(currentUserId);
+
+  // Close menu on outside click
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handler = (e) => {
+      if (!menuRef.current?.contains(e.target)) setMenuOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [menuOpen]);
+
+  return (
+    <div className={`flex gap-3 py-3 ${!isLast ? 'border-b border-white/5' : ''}`}>
+
+      {/* Avatar + thread connector */}
+      <div className="flex flex-col items-center shrink-0" style={{ width: 36 }}>
+        <Avatar
+          picture={comment.user_avatar_url}
+          name={comment.user_name}
+          email={comment.user_id?.includes('@') ? comment.user_id : null}
+          size={36}
+        />
+        {!isLast && <div className="w-px flex-1 mt-2 bg-slate-800/80" />}
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 min-w-0 pb-1">
+
+        {/* Header row */}
+        <div className="flex items-center gap-1.5 mb-1">
+          <span className="text-sm font-bold text-white truncate">{comment.user_name}</span>
+          <span className="text-slate-600 text-xs shrink-0">·</span>
+          <span className="text-xs text-slate-500 shrink-0">{fmtTime(comment.created_at)}</span>
+          {comment.is_edited && (
+            <span className="text-[10px] text-slate-600 shrink-0">(edited)</span>
+          )}
+
+          {/* Owner menu */}
+          {isOwn && (
+            <div className="relative ml-auto shrink-0" ref={menuRef}>
+              <button
+                onClick={() => setMenuOpen(m => !m)}
+                className="p-1 text-slate-700 hover:text-slate-300 hover:bg-slate-800 rounded-full transition-all"
+              >
+                <MoreHorizontal className="w-4 h-4" />
+              </button>
+
+              {menuOpen && (
+                <div className="absolute right-0 top-7 z-20 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl w-36 py-1 overflow-hidden">
+                  <button
+                    onClick={() => { onEdit(); setMenuOpen(false); }}
+                    className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 transition-colors"
+                  >
+                    <Pencil className="w-3.5 h-3.5" /> Edit
+                  </button>
+                  <button
+                    onClick={() => { onDelete(); setMenuOpen(false); }}
+                    className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-red-400 hover:bg-slate-800 transition-colors"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" /> Delete
+                  </button>
+                </div>
               )}
             </div>
+          )}
+        </div>
+
+        {/* Body — edit mode or read mode */}
+        {editing ? (
+          <div className="flex gap-2 mt-1">
+            <input
+              autoFocus
+              value={editing.text}
+              onChange={e => onEditChange(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') onEditSave();
+                if (e.key === 'Escape') onEditCancel();
+              }}
+              className="flex-1 bg-slate-950 border border-slate-700 focus:border-sky-500/50 rounded-xl px-3 py-1.5 text-sm text-white outline-none transition-colors"
+            />
             <button
-              onClick={() => { setCommentsExpanded(false); cancelAutoClose(); }}
-              className="p-1 text-slate-500 hover:text-white hover:bg-slate-800 rounded-lg transition-all"
+              onClick={onEditSave}
+              className="p-1.5 text-emerald-400 hover:bg-emerald-400/10 rounded-lg transition-colors"
+            >
+              <Check className="w-4 h-4" />
+            </button>
+            <button
+              onClick={onEditCancel}
+              className="p-1.5 text-slate-500 hover:bg-slate-800 rounded-lg transition-colors"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
+        ) : (
+          <>
+            <p className="text-sm text-slate-300 leading-relaxed break-words">{comment.content}</p>
 
-          {/* Input */}
-          {!readOnly && (
-            <form onSubmit={handleCommentSubmit} className="flex items-start gap-3 mb-4">
-              <Avatar picture={currentUser?.picture} email={currentUser?.email} name={currentUser?.name} size={cfg.avatar} />
-              <div className="flex-1 relative">
-                <input
-                  ref={commentInputRef}
-                  type="text"
-                  value={commentText}
-                  onChange={e => { setCommentText(e.target.value); cancelAutoClose(); }}
-                  onFocus={cancelAutoClose}
-                  placeholder="Add a comment…"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-4 pr-12 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-sky-400/30 focus:border-sky-400/50 transition-all"
-                  maxLength={2000}
-                />
-                <button
-                  type="submit"
-                  disabled={!commentText.trim() || loading}
-                  className={`absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg transition-all ${commentText.trim() && !loading ? 'text-sky-400 hover:bg-sky-400/10' : 'text-slate-700'}`}
-                >
-                  <Send className="w-4 h-4" />
-                </button>
-              </div>
-            </form>
-          )}
-
-          {/* List */}
-          <div className="space-y-3">
-            {localComments.length === 0 ? (
-              <p className="text-sm text-slate-600 text-center py-4">No comments yet.</p>
-            ) : localComments.map(comment => (
-              <div key={comment.id} className="group">
-                <div className="flex gap-3">
-                  <Avatar
-                    picture={comment.user_avatar_url}
-                    email={comment.user_id?.includes('@') ? comment.user_id : null}
-                    name={comment.user_name}
-                    size={cfg.avatar}
-                  />
-                  <div className="flex-1 min-w-0">
-                    {editingComment === comment.id ? (
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          value={editText}
-                          onChange={e => setEditText(e.target.value)}
-                          onFocus={cancelAutoClose}
-                          className="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-sky-400/30"
-                          autoFocus
-                        />
-                        <button onClick={() => handleSaveEdit(comment.id)} className="p-2 text-emerald-400 hover:bg-emerald-400/10 rounded-xl transition-colors">
-                          <Check className="w-4 h-4" />
-                        </button>
-                        <button onClick={() => { setEditingComment(null); setEditText(''); }} className="p-2 text-slate-500 hover:bg-slate-800 rounded-xl transition-colors">
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                    ) : (
-                      <>
-                        <div className="bg-slate-950/50 rounded-2xl rounded-tl-sm px-3.5 py-2.5">
-                          <div className="flex items-center gap-2 mb-0.5">
-                            <span className="text-sm font-semibold text-white">{comment.user_name}</span>
-                            <span className="text-xs text-slate-600">{formatTime(comment.created_at)}</span>
-                            {comment.is_edited && <span className="text-[10px] text-slate-600">(edited)</span>}
-                          </div>
-                          <p className="text-sm text-slate-300 leading-relaxed">{comment.content}</p>
-                        </div>
-                        <div className="flex items-center gap-4 mt-1 ml-1">
-                          <button
-                            onClick={() => handleLikeComment(comment.id)}
-                            className={`text-xs font-semibold transition-colors ${comment.liked_by?.includes(currentUser?.id) ? 'text-rose-500' : 'text-slate-500 hover:text-slate-300'}`}
-                          >
-                            {comment.liked_by?.includes(currentUser?.id) ? 'Liked' : 'Like'}
-                            {comment.likes > 0 && ` (${formatCount(comment.likes)})`}
-                          </button>
-                          {isOwnComment(comment) && (
-                            <>
-                              <button onClick={() => handleEditComment(comment)} className="text-xs font-semibold text-slate-500 hover:text-slate-300 transition-colors">Edit</button>
-                              <button onClick={() => handleDeleteComment(comment.id)} className="text-xs font-semibold text-slate-500 hover:text-red-400 transition-colors">Delete</button>
-                            </>
-                          )}
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <style>{`
-        @keyframes heart-pop {
-          0%   { transform: scale(1); }
-          30%  { transform: scale(1.35) rotate(-8deg); }
-          60%  { transform: scale(0.9) rotate(4deg); }
-          100% { transform: scale(1) rotate(0); }
-        }
-        .animate-heart-pop { animation: heart-pop 0.5s cubic-bezier(0.34,1.56,0.64,1); }
-        @keyframes spark {
-          0%   { opacity:1; transform:translate(-50%,-50%) scale(0); }
-          100% { opacity:0; transform:translate(-50%,-50%) scale(1) translateY(-18px); }
-        }
-        .animate-spark { animation: spark 0.5s ease-out forwards; }
-        @keyframes fade-in {
-          from { opacity:0; transform:translateY(-4px); }
-          to   { opacity:1; transform:translateY(0); }
-        }
-        .animate-fade-in { animation: fade-in 0.2s ease-out; }
-      `}</style>
+            {/* Like button */}
+            <button
+              onClick={onLike}
+              className={`mt-2 flex items-center gap-1 transition-colors ${
+                userLiked ? 'text-rose-500' : 'text-slate-600 hover:text-rose-400'
+              }`}
+            >
+              <Heart className={`w-3.5 h-3.5 ${userLiked ? 'fill-current' : ''}`} />
+              {comment.likes > 0 && (
+                <span className="text-xs tabular-nums">{fmt(comment.likes)}</span>
+              )}
+            </button>
+          </>
+        )}
+      </div>
     </div>
   );
 }
