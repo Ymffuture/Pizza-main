@@ -1,10 +1,9 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useContext } from "react";
 import { formatCurrency } from "../utils/formatCurrency";
 import { ShoppingBag, ZoomIn, X,Star, Tags } from "lucide-react";
 import StarRating from "./StarRating";
 import { FeatureGate } from "./AccountStatusBanner";
-// ── ADD these two imports at the top ──────────────────────────────────────
-import { useState, useRef, useCallback, useEffect, useContext } from "react";
+// ── ADD these two imports at the top ─────────────────────────────────────
 import { AuthContext } from "../context/AuthContext"; // adjust path if different
 /* ─────────────────────────────────────────────
    3-D Lightbox — full-screen image viewer with
