@@ -12,7 +12,11 @@ import {
   Heart, MessageCircle, Bookmark,
   Share2, Send, X, Trash2,
   Pencil, Check, MoreHorizontal,
+  Sparkles, Bell, Zap, Flame,
+  MessageSquarePlus, MessageSquareDot,
 } from 'lucide-react';
+import { FaHeart, FaRegHeart, FaBookmark, FaRegBookmark, FaCommentDots, FaRegCommentDots, FaShare, FaFire, FaBolt } from 'react-icons/fa6';
+import { motion, AnimatePresence } from 'framer-motion';
 import Avatar from './Avatar';
 import axiosClient from '../api/axiosClient';
 
@@ -42,13 +46,18 @@ export default function SocialActions({
   const [loadingComments, setLoadingComments] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [editing, setEditing] = useState(null); // { id, text }
+  const [newCommentIds, setNewCommentIds] = useState(new Set());
+  const [prevCommentCount, setPrevCommentCount] = useState(initialStats.comments ?? 0);
   const inputRef = useRef(null);
-// ── inside SocialActions, after the existing state declarations ──────────
-const [, setTick] = useState(0);
-useEffect(() => {
+  const scrollBoxRef = useRef(null);
+
+  // ── inside SocialActions, after the existing state declarations ──────────
+  const [, setTick] = useState(0);
+  useEffect(() => {
     const id = setInterval(() => setTick(t => t + 1), 30_000); // re-render every 30s
     return () => clearInterval(id);
-}, []);
+  }, []);
+
   // ── Guard: never make API calls without a valid itemId ───────────────────
   const ready = Boolean(itemId);
 
@@ -69,7 +78,26 @@ useEffect(() => {
       .get(`/social/comments/${itemId}`, {
         params: { item_type: itemType, limit: 50 },
       })
-      .then(({ data }) => setComments(data.comments ?? []))
+      .then(({ data }) => {
+        const newComments = data.comments ?? [];
+        // Track new comments for dot animation
+        if (prevCommentCount > 0 && newComments.length > prevCommentCount) {
+          const newOnes = newComments.slice(0, newComments.length - prevCommentCount);
+          newOnes.forEach(c => {
+            setNewCommentIds(prev => new Set(prev).add(c.id));
+            // Remove dot after 5 seconds
+            setTimeout(() => {
+              setNewCommentIds(prev => {
+                const next = new Set(prev);
+                next.delete(c.id);
+                return next;
+              });
+            }, 5000);
+          });
+        }
+        setComments(newComments);
+        setPrevCommentCount(newComments.length);
+      })
       .catch(() => {})
       .finally(() => setLoadingComments(false));
   }, [showThread, itemId, itemType, ready]);
@@ -79,10 +107,7 @@ useEffect(() => {
     if (showThread) setTimeout(() => inputRef.current?.focus(), 80);
   }, [showThread]);
 
-  // ── Like ──────────────────────────────────────────────────────────────────
-  // ── REPLACE handleLikeComment ─────────────────────────────────────────────
-
-      // ── Like (item-level, not comment-level) ─────────────────────────────────
+  // ── Like (item-level) ───────────────────────────────────────────────────
   const handleLike = useCallback(async () => {
     if (!ready || !currentUser) return;
     const prev = stats;
@@ -101,7 +126,7 @@ useEffect(() => {
       setStats(prev);
     }
   }, [ready, currentUser, itemId, itemType, stats]);
-  
+
   // ── Bookmark ──────────────────────────────────────────────────────────────
   const handleBookmark = useCallback(async () => {
     if (!ready || !currentUser) return;
@@ -170,6 +195,20 @@ useEffect(() => {
     setStats(s => ({ ...s, comments: s.comments + 1 }));
     setCommentText('');
     setSubmitting(true);
+    // Mark as new for dot animation
+    setNewCommentIds(prev => new Set(prev).add(tempId));
+    setTimeout(() => {
+      setNewCommentIds(prev => {
+        const next = new Set(prev);
+        next.delete(tempId);
+        return next;
+      });
+    }, 5000);
+
+    // Scroll to top after adding
+    setTimeout(() => {
+      scrollBoxRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 50);
 
     try {
       const { data } = await axiosClient.post('/social/comment', {
@@ -177,11 +216,9 @@ useEffect(() => {
         item_type: itemType,
         content: text,
       });
-      // Replace temp with real server document
-      // Frontend StarRating.jsx line ~180
-setComments(prev => prev.map(c => (c.id === tempId ? data.comment : c)));
+      setComments(prev => prev.map(c => (c.id === tempId ? data.comment : c)));
+      setPrevCommentCount(prev => prev + 1);
     } catch {
-      // Rollback
       setComments(prev => prev.filter(c => c.id !== tempId));
       setStats(s => ({ ...s, comments: Math.max(0, s.comments - 1) }));
       setCommentText(text);
@@ -194,8 +231,14 @@ setComments(prev => prev.map(c => (c.id === tempId ? data.comment : c)));
   const handleDelete = useCallback(async (commentId) => {
     setComments(prev => prev.filter(c => c.id !== commentId));
     setStats(s => ({ ...s, comments: Math.max(0, s.comments - 1) }));
+    setNewCommentIds(prev => {
+      const next = new Set(prev);
+      next.delete(commentId);
+      return next;
+    });
     try {
       await axiosClient.delete(`/social/comment/${commentId}`);
+      setPrevCommentCount(prev => Math.max(0, prev - 1));
     } catch {}
   }, []);
 
@@ -222,7 +265,6 @@ setComments(prev => prev.map(c => (c.id === tempId ? data.comment : c)));
     try {
       await axiosClient.post(`/social/comment/${commentId}/like`);
     } catch {
-      // Rollback — re-toggle
       setComments(prev =>
         prev.map(c => {
           if (c.id !== commentId) return c;
@@ -265,6 +307,8 @@ setComments(prev => prev.map(c => (c.id === tempId ? data.comment : c)));
     return new Date(iso).toLocaleDateString('en-ZA', { month: 'short', day: 'numeric' });
   };
 
+  const hasNewComments = newCommentIds.size > 0;
+
   // ─────────────────────────────────────────────────────────────────────────
   return (
     <div className={className}>
@@ -276,7 +320,20 @@ setComments(prev => prev.map(c => (c.id === tempId ? data.comment : c)));
           active={showThread}
           hoverColor="sky"
           activeColor="text-sky-400"
-          icon={<MessageCircle className="w-[18px] h-[18px]" />}
+          icon={
+            hasNewComments ? (
+              <div className="relative">
+                <MessageSquareDot className="w-[18px] h-[18px]" />
+                <motion.span
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  className="absolute -top-1 -right-1 w-2 h-2 bg-sky-400 rounded-full"
+                />
+              </div>
+            ) : (
+              <MessageCircle className="w-[18px] h-[18px]" />
+            )
+          }
           label={fmt(stats.comments)}
           title="Reply"
         />
@@ -286,11 +343,17 @@ setComments(prev => prev.map(c => (c.id === tempId ? data.comment : c)));
           hoverColor="rose"
           activeColor="text-rose-500"
           icon={
-            <Heart
-              className={`w-[18px] h-[18px] transition-all duration-200 ${
-                stats.user_liked ? 'fill-rose-500 scale-110' : ''
-              }`}
-            />
+            stats.user_liked ? (
+              <motion.div
+                initial={{ scale: 0.5 }}
+                animate={{ scale: 1 }}
+                transition={{ type: 'spring', stiffness: 500, damping: 15 }}
+              >
+                <FaHeart className="w-[16px] h-[16px] text-rose-500" />
+              </motion.div>
+            ) : (
+              <FaRegHeart className="w-[16px] h-[16px]" />
+            )
           }
           label={fmt(stats.likes)}
           title="Like"
@@ -301,9 +364,17 @@ setComments(prev => prev.map(c => (c.id === tempId ? data.comment : c)));
           hoverColor="amber"
           activeColor="text-amber-400"
           icon={
-            <Bookmark
-              className={`w-[18px] h-[18px] ${stats.user_bookmarked ? 'fill-amber-400' : ''}`}
-            />
+            stats.user_bookmarked ? (
+              <motion.div
+                initial={{ scale: 0.5 }}
+                animate={{ scale: 1 }}
+                transition={{ type: 'spring', stiffness: 500, damping: 15 }}
+              >
+                <FaBookmark className="w-[16px] h-[16px] text-amber-400" />
+              </motion.div>
+            ) : (
+              <FaRegBookmark className="w-[16px] h-[16px]" />
+            )
           }
           label={fmt(stats.bookmarks)}
           title="Save"
@@ -313,89 +384,103 @@ setComments(prev => prev.map(c => (c.id === tempId ? data.comment : c)));
           active={false}
           hoverColor="green"
           activeColor="text-green-400"
-          icon={<Share2 className="w-[18px] h-[18px]" />}
+          icon={<FaShare className="w-[16px] h-[16px]" />}
           label={fmt(stats.shares)}
           title="Share"
         />
       </div>
 
       {/* ── Reply thread ─────────────────────────────────────────────────── */}
-      {showThread && (
-        <div className="mt-3 pt-3 border-t border-white/5">
+      <AnimatePresence>
+        {showThread && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.25, ease: 'easeInOut' }}
+            className="mt-3 pt-3 border-t border-white/5 overflow-hidden"
+          >
+            {/* Compose box */}
+            {currentUser ? (
+              <form
+                onSubmit={handleSubmit}
+                className="flex items-center gap-3 mb-4 pb-4 border-b border-white/5"
+              >
+                <Avatar
+                  picture={currentUser.picture}
+                  name={currentUser.full_name ?? currentUser.name}
+                  email={currentUser.email}
+                  size={36}
+                />
+                <div className="flex-1 flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-full px-4 py-2 focus-within:border-sky-500/60 transition-colors">
+                  <input
+                    ref={inputRef}
+                    value={commentText}
+                    onChange={e => setCommentText(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' && !e.shiftKey) handleSubmit(e);
+                    }}
+                    placeholder="Post your reply…"
+                    className="flex-1 bg-transparent text-sm text-white placeholder-slate-600 outline-none"
+                    maxLength={2000}
+                    disabled={submitting}
+                  />
+                  <button
+                    type="submit"
+                    disabled={!commentText.trim() || submitting}
+                    className="shrink-0 px-3 py-0.5 text-xs font-bold bg-sky-500 hover:bg-sky-400 disabled:opacity-40 text-white rounded-full transition-colors"
+                  >
+                    {submitting ? (
+                      <span className="inline-block w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : 'Reply'}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <p className="text-sm text-slate-500 mb-4 text-center">Sign in to reply.</p>
+            )}
 
-          {/* Compose box */}
-          {currentUser ? (
-            <form
-              onSubmit={handleSubmit}
-              className="flex items-center gap-3 mb-4 pb-4 border-b border-white/5"
+            {/* Scrollable comment list */}
+            <div
+              ref={scrollBoxRef}
+              className="max-h-[420px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent"
+              style={{ scrollbarWidth: 'thin' }}
             >
-              <Avatar
-                picture={currentUser.picture}
-                name={currentUser.full_name ?? currentUser.name}
-                email={currentUser.email}
-                size={36}
-              />
-              <div className="flex-1 flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-full px-4 py-2 focus-within:border-sky-500/60 transition-colors">
-                <input
-                  ref={inputRef}
-                  value={commentText}
-                  onChange={e => setCommentText(e.target.value)}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter' && !e.shiftKey) handleSubmit(e);
-                  }}
-                  placeholder="Post your reply…"
-                  className="flex-1 bg-transparent text-sm text-white placeholder-slate-600 outline-none"
-                  maxLength={2000}
-                  disabled={submitting}
-                />
-                <button
-                  type="submit"
-                  disabled={!commentText.trim() || submitting}
-                  className="shrink-0 px-3 py-0.5 text-xs font-bold bg-sky-500 hover:bg-sky-400 disabled:opacity-40 text-white rounded-full transition-colors"
-                >
-                  {submitting ? (
-                    <span className="inline-block w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  ) : 'Reply'}
-                </button>
-              </div>
-            </form>
-          ) : (
-            <p className="text-sm text-slate-500 mb-4 text-center">Sign in to reply.</p>
-          )}
-
-          {/* List */}
-          {loadingComments ? (
-            <div className="flex justify-center py-8">
-              <div className="w-5 h-5 border-2 border-slate-800 border-t-sky-500 rounded-full animate-spin" />
+              {loadingComments ? (
+                <div className="flex justify-center py-8">
+                  <div className="w-5 h-5 border-2 border-slate-800 border-t-sky-500 rounded-full animate-spin" />
+                </div>
+              ) : comments.length === 0 ? (
+                <div className="text-center py-8">
+                  <MessageCircle className="w-8 h-8 text-slate-700 mx-auto mb-2" />
+                  <p className="text-sm text-slate-600">No replies yet. Start the conversation!</p>
+                </div>
+              ) : (
+                <div>
+                  {comments.map((comment, idx) => (
+                    <CommentRow
+                      key={comment.id}
+                      comment={comment}
+                      currentUserId={currentUser?.id}
+                      isLast={idx === comments.length - 1}
+                      isNew={newCommentIds.has(comment.id)}
+                      editing={editing?.id === comment.id ? editing : null}
+                      onLike={() => handleLikeComment(comment.id)}
+                      onDelete={() => handleDelete(comment.id)}
+                      onEdit={() => setEditing({ id: comment.id, text: comment.content })}
+                      onEditChange={text => setEditing(e => ({ ...e, text }))}
+                      onEditSave={handleSaveEdit}
+                      onEditCancel={() => setEditing(null)}
+                      fmtTime={fmtTime}
+                      fmt={fmt}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
-          ) : comments.length === 0 ? (
-            <div className="text-center py-8">
-              <MessageCircle className="w-8 h-8 text-slate-700 mx-auto mb-2" />
-              <p className="text-sm text-slate-600">No replies yet. Start the conversation!</p>
-            </div>
-          ) : (
-            <div>
-              {comments.map((comment, idx) => (
-                <CommentRow
-                  key={comment.id}
-                  comment={comment}
-                  currentUserId={currentUser?.id}
-                  isLast={idx === comments.length - 1}
-                  editing={editing?.id === comment.id ? editing : null}
-                  onLike={() => handleLikeComment(comment.id)}
-                  onDelete={() => handleDelete(comment.id)}
-                  onEdit={() => setEditing({ id: comment.id, text: comment.content })}
-                  onEditChange={text => setEditing(e => ({ ...e, text }))}
-                  onEditSave={handleSaveEdit}
-                  onEditCancel={() => setEditing(null)}
-                  fmtTime={fmtTime}
-                  fmt={fmt}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -413,12 +498,13 @@ function ActionBtn({ onClick, active, hoverColor, activeColor, icon, label, titl
   };
 
   return (
-    <button
+    <motion.button
+      whileTap={{ scale: 0.88 }}
       onClick={onClick}
       title={title}
       className={`
         group flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-slate-500
-        transition-all duration-150 active:scale-90
+        transition-colors duration-150
         ${hoverMap[hoverColor]}
         ${active ? activeColor : ''}
       `}
@@ -427,7 +513,7 @@ function ActionBtn({ onClick, active, hoverColor, activeColor, icon, label, titl
       {label && (
         <span className="text-xs font-medium tabular-nums leading-none">{label}</span>
       )}
-    </button>
+    </motion.button>
   );
 }
 
@@ -439,6 +525,7 @@ function CommentRow({
   comment,
   currentUserId,
   isLast,
+  isNew,
   editing,
   onLike,
   onDelete,
@@ -465,16 +552,30 @@ function CommentRow({
   }, [menuOpen]);
 
   return (
-    <div className={`flex gap-3 py-3 ${!isLast ? 'border-b border-white/5' : ''}`}>
-
+    <motion.div
+      initial={isNew ? { opacity: 0, x: -20, scale: 0.98 } : false}
+      animate={{ opacity: 1, x: 0, scale: 1 }}
+      transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+      className={`flex gap-3 py-3 ${!isLast ? 'border-b border-white/5' : ''} ${isNew ? 'bg-sky-400/5 rounded-xl px-2 -mx-2' : ''}`}
+    >
       {/* Avatar + thread connector */}
       <div className="flex flex-col items-center shrink-0" style={{ width: 36 }}>
-        <Avatar
-          picture={comment.user_avatar_url}
-          name={comment.user_name}
-          email={comment.user_id?.includes('@') ? comment.user_id : null}
-          size={36}
-        />
+        <div className="relative">
+          <Avatar
+            picture={comment.user_avatar_url}
+            name={comment.user_name}
+            email={comment.user_id?.includes('@') ? comment.user_id : null}
+            size={36}
+          />
+          {isNew && (
+            <motion.span
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-sky-400 rounded-full border-2 border-slate-900"
+              title="New"
+            />
+          )}
+        </div>
         {!isLast && <div className="w-px flex-1 mt-2 bg-slate-800/80" />}
       </div>
 
@@ -489,6 +590,16 @@ function CommentRow({
           {comment.is_edited && (
             <span className="text-[10px] text-slate-600 shrink-0">(edited)</span>
           )}
+          {isNew && (
+            <motion.span
+              initial={{ opacity: 0, scale: 0 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="ml-1.5 flex items-center gap-0.5 text-[10px] font-bold text-sky-400 bg-sky-400/10 px-1.5 py-0.5 rounded-full"
+            >
+              <Sparkles className="w-2.5 h-2.5" />
+              NEW
+            </motion.span>
+          )}
 
           {/* Owner menu */}
           {isOwn && (
@@ -500,22 +611,30 @@ function CommentRow({
                 <MoreHorizontal className="w-4 h-4" />
               </button>
 
-              {menuOpen && (
-                <div className="absolute right-0 top-7 z-20 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl w-36 py-1 overflow-hidden">
-                  <button
-                    onClick={() => { onEdit(); setMenuOpen(false); }}
-                    className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 transition-colors"
+              <AnimatePresence>
+                {menuOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.9, y: -4 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.9, y: -4 }}
+                    transition={{ duration: 0.12 }}
+                    className="absolute right-0 top-7 z-20 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl w-36 py-1 overflow-hidden"
                   >
-                    <Pencil className="w-3.5 h-3.5" /> Edit
-                  </button>
-                  <button
-                    onClick={() => { onDelete(); setMenuOpen(false); }}
-                    className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-red-400 hover:bg-slate-800 transition-colors"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" /> Delete
-                  </button>
-                </div>
-              )}
+                    <button
+                      onClick={() => { onEdit(); setMenuOpen(false); }}
+                      className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 transition-colors"
+                    >
+                      <Pencil className="w-3.5 h-3.5" /> Edit
+                    </button>
+                    <button
+                      onClick={() => { onDelete(); setMenuOpen(false); }}
+                      className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-red-400 hover:bg-slate-800 transition-colors"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" /> Delete
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           )}
         </div>
@@ -551,20 +670,31 @@ function CommentRow({
             <p className="text-sm text-slate-300 leading-relaxed break-words">{comment.content}</p>
 
             {/* Like button */}
-            <button
+            <motion.button
+              whileTap={{ scale: 0.85 }}
               onClick={onLike}
               className={`mt-2 flex items-center gap-1 transition-colors ${
                 userLiked ? 'text-rose-500' : 'text-slate-600 hover:text-rose-400'
               }`}
             >
-              <Heart className={`w-3.5 h-3.5 ${userLiked ? 'fill-current' : ''}`} />
+              {userLiked ? (
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: 'spring', stiffness: 500, damping: 15 }}
+                >
+                  <FaHeart className="w-3.5 h-3.5 fill-current" />
+                </motion.div>
+              ) : (
+                <FaRegHeart className="w-3.5 h-3.5" />
+              )}
               {comment.likes > 0 && (
                 <span className="text-xs tabular-nums">{fmt(comment.likes)}</span>
               )}
-            </button>
+            </motion.button>
           </>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 }
