@@ -81,65 +81,27 @@ useEffect(() => {
 
   // ── Like ──────────────────────────────────────────────────────────────────
   // ── REPLACE handleLikeComment ─────────────────────────────────────────────
-const handleLikeComment = useCallback(async (commentId) => {
-    if (!currentUser?.id) return;
-    const uid = currentUser.id;
 
-    // Optimistic toggle
-    const toggle = (arr) =>
-        arr?.includes(uid) ? arr.filter(id => id !== uid) : [...(arr ?? []), uid];
-
-    setComments(prev =>
-        prev.map(c => {
-            if (c.id !== commentId) return c;
-            const wasLiked = c.liked_by?.includes(uid);
-            return {
-                ...c,
-                likes   : wasLiked ? Math.max(0, c.likes - 1) : c.likes + 1,
-                liked_by: toggle(c.liked_by),
-            };
-        })
-    );
-
+      // ── Like (item-level, not comment-level) ─────────────────────────────────
+  const handleLike = useCallback(async () => {
+    if (!ready || !currentUser) return;
+    const prev = stats;
+    setStats(s => ({
+      ...s,
+      user_liked: !s.user_liked,
+      likes: s.user_liked ? Math.max(0, s.likes - 1) : s.likes + 1,
+    }));
     try {
-        const { data } = await axiosClient.post(`/social/comment/${commentId}/like`);
-
-        // Reconcile with server truth (handles race conditions)
-        setComments(prev =>
-            prev.map(c => {
-                if (c.id !== commentId) return c;
-                const liked_by = data.liked
-                    ? [...new Set([...(c.liked_by ?? []), uid])]
-                    : (c.liked_by ?? []).filter(id => id !== uid);
-                return {
-                    ...c,
-                    likes   : liked_by.length,
-                    liked_by,
-                };
-            })
-        );
-
-        // Tell the notification bell to re-fetch its unread count immediately
-        if (data.liked) {
-            window.dispatchEvent(new CustomEvent("notification:new"));
-        }
-
+      const { data } = await axiosClient.post('/social/like', {
+        item_id: itemId,
+        item_type: itemType,
+      });
+      setStats(s => ({ ...s, user_liked: data.liked, likes: data.like_count }));
     } catch {
-        // Rollback optimistic update on error
-        setComments(prev =>
-            prev.map(c => {
-                if (c.id !== commentId) return c;
-                return {
-                    ...c,
-                    likes   : c.liked_by?.includes(uid)
-                        ? Math.max(0, c.likes - 1)
-                        : c.likes + 1,
-                    liked_by: toggle(c.liked_by),
-                };
-            })
-        );
+      setStats(prev);
     }
-}, [currentUser?.id]);
+  }, [ready, currentUser, itemId, itemType, stats]);
+  
   // ── Bookmark ──────────────────────────────────────────────────────────────
   const handleBookmark = useCallback(async () => {
     if (!ready || !currentUser) return;
