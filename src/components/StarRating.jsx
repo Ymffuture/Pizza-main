@@ -200,6 +200,7 @@ setComments(prev => prev.map(c => (c.id === tempId ? data.comment : c)));
   }, []);
 
   // ── Like comment ──────────────────────────────────────────────────────────
+  // ── Like comment ─────────────────────────────────────────────────────────
   const handleLikeComment = useCallback(async (commentId) => {
     if (!currentUser?.id) return;
     const uid = currentUser.id;
@@ -207,29 +208,46 @@ setComments(prev => prev.map(c => (c.id === tempId ? data.comment : c)));
     const toggle = (arr) =>
       arr?.includes(uid) ? arr.filter(id => id !== uid) : [...(arr ?? []), uid];
 
+    // Optimistic update
     setComments(prev =>
       prev.map(c => {
         if (c.id !== commentId) return c;
-        const liked = c.liked_by?.includes(uid);
+        const wasLiked = c.liked_by?.includes(uid);
         return {
           ...c,
-          likes: liked ? Math.max(0, c.likes - 1) : c.likes + 1,
+          likes:    wasLiked ? Math.max(0, c.likes - 1) : c.likes + 1,
           liked_by: toggle(c.liked_by),
         };
       })
     );
 
     try {
-      await axiosClient.post(`/social/comment/${commentId}/like`);
-    } catch {
-      // Rollback — re-toggle
+      const { data } = await axiosClient.post(`/social/comment/${commentId}/like`);
+
+      // Reconcile with server truth (handles race conditions)
       setComments(prev =>
         prev.map(c => {
           if (c.id !== commentId) return c;
-          const liked = c.liked_by?.includes(uid);
+          const liked_by = data.liked
+            ? [...new Set([...(c.liked_by ?? []), uid])]
+            : (c.liked_by ?? []).filter(id => id !== uid);
+          return { ...c, likes: liked_by.length, liked_by };
+        })
+      );
+
+      // Instantly refresh notification bell when a like was added
+      if (data.liked) {
+        window.dispatchEvent(new CustomEvent("notification:new"));
+      }
+
+    } catch {
+      // Rollback optimistic update
+      setComments(prev =>
+        prev.map(c => {
+          if (c.id !== commentId) return c;
           return {
             ...c,
-            likes: liked ? Math.max(0, c.likes - 1) : c.likes + 1,
+            likes:    c.liked_by?.includes(uid) ? Math.max(0, c.likes - 1) : c.likes + 1,
             liked_by: toggle(c.liked_by),
           };
         })
