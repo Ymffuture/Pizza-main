@@ -3,6 +3,9 @@ import { formatCurrency } from "../utils/formatCurrency";
 import { ShoppingBag, ZoomIn, X,Star, Tags } from "lucide-react";
 import StarRating from "./StarRating";
 import { FeatureGate } from "./AccountStatusBanner";
+// ── ADD these two imports at the top ──────────────────────────────────────
+import { useState, useRef, useCallback, useEffect, useContext } from "react";
+import { AuthContext } from "../context/AuthContext"; // adjust path if different
 /* ─────────────────────────────────────────────
    3-D Lightbox — full-screen image viewer with
    mouse-drag orbit + touch drag orbit
@@ -111,6 +114,7 @@ function ImageViewer({ item, onClose }) {
    MenuCard
 ───────────────────────────────────────────── */
 export default function MenuCard({ item, onSelect }) {
+   const { currentUser } = useContext(AuthContext);
   const cardRef = useRef(null);
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const [hovering, setHovering] = useState(false);
@@ -208,8 +212,12 @@ export default function MenuCard({ item, onSelect }) {
               <span className="mc-price">{formatCurrency(item.price)}</span>
             </div>
 <div className="mc-stars">
-              <StarRating/>
-            </div>
+  <StarRating
+    itemId={item.id}
+    itemType="menu_item"
+    currentUser={currentUser}
+  />
+</div>
           </div>
 <FeatureGate feature="canAddToCart">
           <button
