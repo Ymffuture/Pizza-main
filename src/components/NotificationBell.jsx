@@ -53,6 +53,12 @@ export default function NotificationBell() {
   }, [load]);
 
   useEffect(() => {
+    const handler = () => load();
+    window.addEventListener("notification:new", handler);
+    return () => window.removeEventListener("notification:new", handler);
+}, [load]);
+
+  useEffect(() => {
     if (!open) return;
     const fn = (e) => {
       if (!sheetRef.current?.contains(e.target) && !btnRef.current?.contains(e.target))
