@@ -99,7 +99,7 @@ export default function NotificationBell() {
 
   const deleteNotification = async (id) => {
     try {
-      await axiosClient.delete(`/notifications/${id}`);
+      await axiosClient.patch(`/notifications/${id}/read`);
       setNotifications(prev => prev.filter(n => n.id !== id));
     } catch { /* silent */ }
   };
