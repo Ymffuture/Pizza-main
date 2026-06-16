@@ -43,7 +43,12 @@ export default function SocialActions({
   const [submitting, setSubmitting] = useState(false);
   const [editing, setEditing] = useState(null); // { id, text }
   const inputRef = useRef(null);
-
+// ── inside SocialActions, after the existing state declarations ──────────
+const [, setTick] = useState(0);
+useEffect(() => {
+    const id = setInterval(() => setTick(t => t + 1), 30_000); // re-render every 30s
+    return () => clearInterval(id);
+}, []);
   // ── Guard: never make API calls without a valid itemId ───────────────────
   const ready = Boolean(itemId);
 
