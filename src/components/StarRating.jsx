@@ -12,7 +12,7 @@ import {
   Heart, MessageCircle, Bookmark,
   Share2, Send, X, Trash2,
   Pencil, Check, MoreHorizontal,
-  Sparkles, Bell, HeartHandshake, Flame,
+  Sparkles, Bell, HeartHandshake, Flame,BookmarkCheck, 
   MessageSquarePlus, MessageSquareDot,
 } from 'lucide-react';
 import { FaHeart, FaRegHeart, FaBookmark, FaRegBookmark, FaCommentDots, FaRegCommentDots, FaShare, FaFire, FaBolt } from 'react-icons/fa6';
@@ -373,7 +373,7 @@ export default function SocialActions({
                 <FaBookmark className="w-[16px] h-[16px] text-amber-400" />
               </motion.div>
             ) : (
-              <FaRegBookmark className="w-[16px] h-[16px]" />
+              <BookmarkCheck className="w-[16px] h-[16px]" />
             )
           }
           label={fmt(stats.bookmarks)}
