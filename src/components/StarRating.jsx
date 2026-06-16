@@ -12,7 +12,7 @@ import {
   Heart, MessageCircle, Bookmark,
   Share2, Send, X, Trash2,
   Pencil, Check, MoreHorizontal,
-  Sparkles, Bell, Zap, Flame,
+  Sparkles, Bell, Zap,heartHandshake, Flame,
   MessageSquarePlus, MessageSquareDot,
 } from 'lucide-react';
 import { FaHeart, FaRegHeart, FaBookmark, FaRegBookmark, FaCommentDots, FaRegCommentDots, FaShare, FaFire, FaBolt } from 'react-icons/fa6';
@@ -349,7 +349,7 @@ export default function SocialActions({
                 animate={{ scale: 1 }}
                 transition={{ type: 'spring', stiffness: 500, damping: 15 }}
               >
-                <FaHeart className="w-[16px] h-[16px] text-rose-500" />
+                <heartHandshake className="w-[16px] h-[16px] text-rose-500" />
               </motion.div>
             ) : (
               <FaRegHeart className="w-[16px] h-[16px]" />
