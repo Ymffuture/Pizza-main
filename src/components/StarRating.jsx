@@ -10,7 +10,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Heart, MessageCircle, Bookmark,
-  Share2, Send, X, Trash2,
+  Share2, Send, X, Trash2, MessageCircleHeart,
   Pencil, Check, MoreHorizontal,
   Sparkles, Bell, HeartHandshake, Flame,BookmarkCheck, 
   MessageSquarePlus, MessageSquareDot,
@@ -331,7 +331,7 @@ export default function SocialActions({
                 />
               </div>
             ) : (
-              <MessageCircle className="w-[18px] h-[18px]" />
+              <MessageCircleHeart className="w-[18px] h-[18px]" />
             )
           }
           label={fmt(stats.comments)}
