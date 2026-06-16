@@ -32,6 +32,7 @@ export function AuthProvider({ children }) {
 
     saveSession(res.data.access_token, {
       email,
+      id:             res.data.id,
       email_verified: res.data.email_verified,
       full_name: res.data.full_name,
       picture: res.data.picture,
@@ -44,6 +45,7 @@ export function AuthProvider({ children }) {
     const { access_token: jwt, user: googleUser } = res.data;
     saveSession(jwt, {
       email:          googleUser.email,
+      id:             googleUser.id,
       full_name:      googleUser.full_name,
       picture:        googleUser.picture || "",
       email_verified: true,
@@ -59,6 +61,7 @@ export function AuthProvider({ children }) {
   const loginWithOAuth = useCallback(async (accessToken, userData) => {
     saveSession(accessToken, {
       email:          userData.email,
+      id:             userData.id,
       full_name:      userData.full_name,
       picture:        userData.picture || "",
       email_verified: userData.email_verified ?? true,
