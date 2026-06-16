@@ -171,7 +171,8 @@ export default function SocialActions({
         content: text,
       });
       // Replace temp with real server document
-      setComments(prev => prev.map(c => (c.id === tempId ? data.comment : c)));
+      // Frontend StarRating.jsx line ~180
+setComments(prev => prev.map(c => (c.id === tempId ? data.comment : c)));
     } catch {
       // Rollback
       setComments(prev => prev.filter(c => c.id !== tempId));
