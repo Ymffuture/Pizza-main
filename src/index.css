@@ -10,8 +10,8 @@
 /* ── Global CSS variables ── */
 :root {
   /* PRIMARY — was #DA291C red, now orange */
-  --primary:      #F97316;
-  --primary-dark: #EA6B0A;
+  --primary:      gray;
+  --primary-dark: black;
 
   /* ACCENT — was #FFC72C gold, now cyan */
   --accent:       #06B6D4;
