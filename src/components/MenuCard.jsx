@@ -390,7 +390,7 @@ const cardStyles = `
     position: relative; overflow: hidden;
     display: flex; align-items: center; justify-content: center; gap: 8px;
     width: 100%; padding: 13px;
-    background: var(--red); color: white; border: none; cursor: pointer;
+    background: gray; color: white; border: none; cursor: pointer;
     font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 900; font-size: 13px;
     border-radius: 12px; letter-spacing: 0.04em;
     box-shadow: 0 4px 16px rgba(218,41,28,0.35);
