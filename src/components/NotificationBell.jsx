@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import {
   Bell, X, OctagonX, CheckCheck, Info, AlertTriangle,
-  Star, Zap,BellCheck, Megaphone, RefreshCw, BellOff,
+  Star, Zap,BellRing, Megaphone, RefreshCw, BellOff,
 } from "lucide-react";
 import axiosClient from "../api/axiosClient";
 import { useAuth } from "../context/AuthContext";
@@ -330,7 +330,7 @@ export default function NotificationBell() {
           aria-haspopup="dialog"
         >
           <div className="fb-btn-inner">
-            <BellCheck 
+            <BellRing
               style={{ width: 20, height: 20 }} 
               className={unread > 0 ? "fb-bell-shake" : ""} 
             />
