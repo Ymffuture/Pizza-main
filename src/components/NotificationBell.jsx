@@ -1,8 +1,8 @@
 // src/components/NotificationBell.jsx
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import {
-  Bell, X, CheckCheck, Info, AlertTriangle,
-  Star, Zap, Megaphone, RefreshCw, BellOff,
+  Bell, X, OctagonX, CheckCheck, Info, AlertTriangle,
+  Star, Zap,BellCheck, Megaphone, RefreshCw, BellOff,
 } from "lucide-react";
 import axiosClient from "../api/axiosClient";
 import { useAuth } from "../context/AuthContext";
@@ -330,7 +330,7 @@ export default function NotificationBell() {
           aria-haspopup="dialog"
         >
           <div className="fb-btn-inner">
-            <Bell 
+            <BellCheck 
               style={{ width: 20, height: 20 }} 
               className={unread > 0 ? "fb-bell-shake" : ""} 
             />
@@ -502,7 +502,7 @@ export default function NotificationBell() {
                             title="Remove notification"
                             aria-label="Remove notification"
                           >
-                            <X style={{ width: 14, height: 14 }} />
+                            <OctagonX style={{ width: 14, height: 14 }} />
                           </button>
                         </div>
                       </div>
@@ -572,7 +572,7 @@ const css = `
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   flex-shrink: 0;
-  right:34px;
+  right:40px;
 }
 .fb-btn:hover {
   background: ${THEME.bgHover};
