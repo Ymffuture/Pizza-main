@@ -559,7 +559,7 @@ const css = `
    BELL BUTTON
    ═══════════════════════════════════════════════════════════════════════════ */
 .fb-btn {
-  position: relative;
+  position: absolute;
   width: 40px;
   height: 40px;
   border-radius: 50%;
@@ -573,7 +573,7 @@ const css = `
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   flex-shrink: 0;
   left:50px;
-  top:50px;
+  top:56px;
 }
 .fb-btn:hover {
   background: ${THEME.bgHover};
