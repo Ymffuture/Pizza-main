@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect, useContext } from "react";
-import { formatCurrency } from "../utils/formatCurrency";
+// import { formatCurrency } from "../utils/formatCurrency";
 import { ShoppingBag, ZoomIn, X,Star, Tags } from "lucide-react";
 import StarRating from "./StarRating";
 import { FeatureGate } from "./AccountStatusBanner";
@@ -9,7 +9,23 @@ import { useAuth } from "../context/AuthContext"; // adjust path if different
    3-D Lightbox — full-screen image viewer with
    mouse-drag orbit + touch drag orbit
 ───────────────────────────────────────────── */
-function ImageViewer({ item, onClose }) {
+// remove: import { formatCurrency } from "../utils/formatCurrency";
+
+const CURRENCIES = ["ZAR", "SZL", "USD"];
+
+// SZL is pegged 1:1 to ZAR. Replace USD with a live rate when you have one.
+const RATES = { ZAR: 1, SZL: 1, USD: 1 / 16.2 };
+const SYMBOLS = { ZAR: "R", SZL: "E", USD: "$" };
+
+function formatPrice(amount, currency) {
+  const value = amount * RATES[currency];
+  return `${SYMBOLS[currency]}${value.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+}
+
+function ImageViewer({ item, onClose, currency }) {
   const [rotX, setRotX] = useState(-8);
   const [rotY, setRotY] = useState(10);
   const [zoom, setZoom] = useState(1);
@@ -99,7 +115,7 @@ function ImageViewer({ item, onClose }) {
           {/* Info overlay */}
           <div className="iv-info-bar">
             <span className="iv-info-name">{item.name}</span>
-            <span className="iv-info-price">{formatCurrency(item.price)}</span>
+            <span className="iv-info-price">{formatPrice(item.price, currency)}</span>
           </div>
         </div>
 
@@ -114,6 +130,7 @@ function ImageViewer({ item, onClose }) {
 ───────────────────────────────────────────── */
 export default function MenuCard({ item, onSelect }) {
    const { user: currentUser } = useAuth();
+   const [currency, setCurrency] = useState("ZAR");
   const cardRef = useRef(null);
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const [hovering, setHovering] = useState(false);
@@ -130,13 +147,18 @@ export default function MenuCard({ item, onSelect }) {
   }, []);
 
   const resetTilt = () => { setTilt({ x: 0, y: 0 }); setHovering(false); };
-
+   
+const cycleCurrency = (e) => {
+    e.stopPropagation();
+    setCurrency((c) => CURRENCIES[(CURRENCIES.indexOf(c) + 1) % CURRENCIES.length]);
+  };
+   
   return (
     <>
       <style>{cardStyles}</style>
 
       {showViewer && (
-        <ImageViewer item={item} onClose={() => setShowViewer(false)} />
+        <ImageViewer item={item} currency={currency} onClose={() => setShowViewer(false)} />
       )}
 
       <div
@@ -208,7 +230,10 @@ export default function MenuCard({ item, onSelect }) {
           <div className="mc-meta">
             <div>
               <span className="mc-price-label">Price</span>
-              <span className="mc-price">{formatCurrency(item.price)}</span>
+              <span className="mc-price mc-price-clickable" onClick={cycleCurrency} title="Click to switch currency">
+                {formatPrice(item.price, currency)}
+              </span>
+              <span className="mc-currency-tag">{currency}</span>
             </div>
 <div className="mc-stars">
   <StarRating
@@ -517,5 +542,11 @@ const viewerStyles = `
     color: rgba(255,248,231,0.3); text-transform: uppercase;
     position: absolute; top: 22px; left: 50%; transform: translateX(-50%);
     white-space: nowrap;
+  }
+  .mc-price-clickable { cursor: pointer; user-select: none; transition: opacity 0.15s; }
+  .mc-price-clickable:active { opacity: 0.6; }
+  .mc-currency-tag {
+    display: block; font-size: 9px; font-weight: 700;
+    color: rgba(255,199,44,0.6); letter-spacing: 0.08em;
   }
 `;
