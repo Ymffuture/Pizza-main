@@ -1,5 +1,5 @@
 // src/components/NotificationBell.jsx
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import {
   Bell, X, CheckCheck, Info, AlertTriangle,
   Star, Zap, Megaphone, RefreshCw, BellOff,
@@ -7,34 +7,135 @@ import {
 import axiosClient from "../api/axiosClient";
 import { useAuth } from "../context/AuthContext";
 
+/* ═════════════════════════════════════════════════════════════════════════════
+   THEME CONFIGURATION — Food Delivery / KotaBites Style
+   ═════════════════════════════════════════════════════════════════════════════ */
+const THEME = {
+  // Primary palette — warm, appetizing orange
+  primary:        "#E85D04",
+  primaryHover:   "#D00000",
+  primaryLight:   "#FFF3E0",
+  primaryBorder:  "#FFCC80",
+
+  // Secondary — fresh green
+  secondary:      "#38B000",
+  secondaryLight: "#E8F5E9",
+
+  // Facebook-style neutrals
+  bgPage:         "#F0F2F5",
+  bgSurface:      "#FFFFFF",
+  bgHover:        "#F2F2F2",
+  bgActive:       "#E4E6EB",
+
+  // Text
+  textPrimary:    "#050505",
+  textSecondary:  "#65676B",
+  textTertiary:   "#8C939D",
+
+  // Borders & dividers
+  border:         "#CED0D4",
+  borderLight:    "#E4E6EB",
+
+  // Notification type colors
+  info:           "#1877F2",  // Facebook blue
+  infoLight:      "#E7F3FF",
+  warning:        "#F5A623",
+  warningLight:   "#FFF8E1",
+  promo:          "#E85D04",  // Primary orange
+  promoLight:     "#FFF3E0",
+  update:         "#1877F2",
+  updateLight:    "#E7F3FF",
+  maintenance:    "#F5A623",
+  maintenanceLight:"#FFF8E1",
+  urgent:         "#FF1744",
+  urgentLight:    "#FFEBEE",
+
+  // Shadows (Facebook-style)
+  shadowSm:       "0 1px 2px rgba(0,0,0,0.05)",
+  shadowMd:       "0 4px 12px rgba(0,0,0,0.08)",
+  shadowLg:       "0 12px 28px rgba(0,0,0,0.12)",
+
+  // Radius
+  radiusSm:       "6px",
+  radiusMd:       "8px",
+  radiusLg:       "12px",
+  radiusXl:       "16px",
+  radiusFull:     "9999px",
+};
+
+/* ═════════════════════════════════════════════════════════════════════════════
+   NOTIFICATION TYPE CONFIGURATION
+   ═════════════════════════════════════════════════════════════════════════════ */
 const TYPE_CFG = {
-  info:        { Icon: Info,          color: "#0070f3", bg: "rgba(0,112,243,0.06)",  border: "rgba(0,112,243,0.12)"  },
-  warning:     { Icon: AlertTriangle, color: "#f5a623", bg: "rgba(245,166,35,0.06)",  border: "rgba(245,166,35,0.12)"  },
-  promo:       { Icon: Star,          color: "#7928ca", bg: "rgba(121,40,202,0.06)",  border: "rgba(121,40,202,0.12)"  },
-  update:      { Icon: Zap,           color: "#0070f3", bg: "rgba(0,112,243,0.06)",  border: "rgba(0,112,243,0.12)"  },
-  maintenance: { Icon: AlertTriangle, color: "#f5a623", bg: "rgba(245,166,35,0.06)",  border: "rgba(245,166,35,0.12)"  },
-  urgent:      { Icon: Megaphone,     color: "#e00",    bg: "rgba(224,0,0,0.06)",    border: "rgba(224,0,0,0.12)"    },
+  info:        { 
+    Icon: Info,          
+    color: THEME.info, 
+    bg: THEME.infoLight,  
+    border: "#B3D9FF",
+    label: "Info"
+  },
+  warning:     { 
+    Icon: AlertTriangle, 
+    color: "#B35900", 
+    bg: THEME.warningLight,  
+    border: "#FFE082",
+    label: "Warning"
+  },
+  promo:       { 
+    Icon: Star,          
+    color: THEME.primary, 
+    bg: THEME.promoLight,  
+    border: THEME.primaryBorder,
+    label: "Promo"
+  },
+  update:      { 
+    Icon: Zap,           
+    color: THEME.info, 
+    bg: THEME.updateLight,  
+    border: "#B3D9FF",
+    label: "Update"
+  },
+  maintenance: { 
+    Icon: AlertTriangle, 
+    color: "#B35900", 
+    bg: THEME.maintenanceLight,  
+    border: "#FFE082",
+    label: "Maintenance"
+  },
+  urgent:      { 
+    Icon: Megaphone,     
+    color: THEME.urgent, 
+    bg: THEME.urgentLight,    
+    border: "#FFCDD2",
+    label: "Urgent"
+  },
 };
 const DEFAULT_CFG = TYPE_CFG.info;
 
+/* ═════════════════════════════════════════════════════════════════════════════
+   UTILITIES
+   ═════════════════════════════════════════════════════════════════════════════ */
 function timeAgo(dateStr) {
   const diff = Math.floor((Date.now() - new Date(dateStr)) / 1000);
   if (diff < 60)    return "Just now";
-  if (diff < 3600)  return `${Math.floor(diff / 60)}m`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
-  return `${Math.floor(diff / 86400)}d`;
+  if (diff < 3600)  return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
+  return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-// ─── tiny "pop" animation for new notifications ───────────────────────────────
 function useBadgePulse() {
   const [pulse, setPulse] = useState(false);
   const trigger = useCallback(() => {
     setPulse(true);
-    setTimeout(() => setPulse(false), 600);
+    setTimeout(() => setPulse(false), 700);
   }, []);
   return [pulse, trigger];
 }
 
+/* ═════════════════════════════════════════════════════════════════════════════
+   COMPONENT
+   ═════════════════════════════════════════════════════════════════════════════ */
 export default function NotificationBell() {
   const { isAuth } = useAuth();
   const [notifications, setNotifications] = useState([]);
@@ -42,43 +143,45 @@ export default function NotificationBell() {
   const [loading, setLoad]  = useState(false);
   const [activeTab, setActiveTab] = useState("all");
   const [badgePulse, triggerPulse] = useBadgePulse();
+  const [announcement, setAnnouncement] = useState("");
+
   const sheetRef = useRef(null);
   const btnRef   = useRef(null);
-  const sseRef   = useRef(null); // holds the EventSource
+  const sseRef   = useRef(null);
+  const intervalRef = useRef(null);
 
-  const unread = notifications.filter(n => !n.is_read).length;
+  const unread = useMemo(() => notifications.filter(n => !n.is_read).length, [notifications]);
 
-  // ── Full refresh (used on mount + 60 s poll) ─────────────────────────────
+  /* ── Load notifications ───────────────────────────────────────────────── */
   const load = useCallback(async () => {
     if (!isAuth) return;
     setLoad(true);
     try {
       const { data } = await axiosClient.get("/notifications/my");
       setNotifications(Array.isArray(data) ? data : []);
-    } catch { /* silent */ }
-    finally { setLoad(false); }
+    } catch (err) {
+      console.warn("[NotificationBell] Failed to load notifications:", err.message);
+    } finally {
+      setLoad(false);
+    }
   }, [isAuth]);
 
-  // ── Prepend a single notification received via SSE ────────────────────────
+  /* ── Prepend SSE notification ─────────────────────────────────────────── */
   const prependNotification = useCallback((notif) => {
     setNotifications(prev => {
-      // Deduplicate — SSE may fire before the next poll
       if (prev.some(n => n.id === notif.id)) return prev;
       triggerPulse();
+      setAnnouncement(`New notification: ${notif.title}`);
+      setTimeout(() => setAnnouncement(""), 3000);
       return [notif, ...prev];
     });
   }, [triggerPulse]);
 
-  // ── SSE connection — opens once while authenticated ───────────────────────
+  /* ── SSE Connection ───────────────────────────────────────────────────── */
   useEffect(() => {
     if (!isAuth) return;
 
-    // axiosClient base URL (strip trailing slash if any)
     const base = (axiosClient.defaults.baseURL ?? "").replace(/\/$/, "");
-
-    // We need to pass the auth token as a query param because EventSource
-    // does not support custom headers. Adjust the param name to match your
-    // backend's auth scheme (e.g. ?token=... or ?access_token=...).
     const token = localStorage.getItem("access_token") ?? "";
     const url   = `${base}/notifications/stream?token=${encodeURIComponent(token)}`;
 
@@ -86,7 +189,7 @@ export default function NotificationBell() {
     sseRef.current = es;
 
     es.addEventListener("connected", () => {
-      console.debug("[SSE] notification stream connected");
+      console.debug("[SSE] Notification stream connected");
     });
 
     es.addEventListener("notification", (e) => {
@@ -94,13 +197,12 @@ export default function NotificationBell() {
         const notif = JSON.parse(e.data);
         prependNotification(notif);
       } catch {
-        // malformed frame — ignore
+        console.debug("[SSE] Malformed notification frame");
       }
     });
 
     es.onerror = () => {
-      // Browser will auto-reconnect; we just log it
-      console.debug("[SSE] notification stream error — browser will retry");
+      console.debug("[SSE] Notification stream error — browser will retry");
     };
 
     return () => {
@@ -109,21 +211,23 @@ export default function NotificationBell() {
     };
   }, [isAuth, prependNotification]);
 
-  // ── Initial load + 60 s fallback poll ────────────────────────────────────
+  /* ── Initial load + 60s poll ──────────────────────────────────────────── */
   useEffect(() => {
     load();
-    const id = setInterval(load, 60_000);
-    return () => clearInterval(id);
+    intervalRef.current = setInterval(load, 60_000);
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
   }, [load]);
 
-  // ── Manual "notification:new" event (other components can dispatch this) ─
+  /* ── Manual refresh event ─────────────────────────────────────────────── */
   useEffect(() => {
     const handler = () => load();
     window.addEventListener("notification:new", handler);
     return () => window.removeEventListener("notification:new", handler);
   }, [load]);
 
-  // ── Close on outside click ────────────────────────────────────────────────
+  /* ── Close on outside click ───────────────────────────────────────────── */
   useEffect(() => {
     if (!open) return;
     const fn = (e) => {
@@ -134,7 +238,7 @@ export default function NotificationBell() {
     return () => document.removeEventListener("mousedown", fn);
   }, [open]);
 
-  // ── Close on Escape ───────────────────────────────────────────────────────
+  /* ── Close on Escape ──────────────────────────────────────────────────── */
   useEffect(() => {
     if (!open) return;
     const fn = (e) => e.key === "Escape" && setOpen(false);
@@ -142,195 +246,263 @@ export default function NotificationBell() {
     return () => window.removeEventListener("keydown", fn);
   }, [open]);
 
-  // ── Lock body scroll when sheet is open ──────────────────────────────────
+  /* ── Lock body scroll ─────────────────────────────────────────────────── */
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
   }, [open]);
 
-  // ── Actions ───────────────────────────────────────────────────────────────
+  /* ── Actions ──────────────────────────────────────────────────────────── */
   const markRead = async (id) => {
     try {
       await axiosClient.patch(`/notifications/${id}/read`);
       setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
-    } catch { /* silent */ }
+    } catch (err) {
+      console.warn("[NotificationBell] Failed to mark read:", err.message);
+    }
   };
 
   const markAllRead = async () => {
-    const ids = notifications.filter(n => !n.is_read).map(n => n.id);
-    await Promise.allSettled(ids.map(id => axiosClient.patch(`/notifications/${id}/read`)));
-    setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+    const unreadIds = notifications.filter(n => !n.is_read).map(n => n.id);
+    if (unreadIds.length === 0) return;
+
+    try {
+      // Try batch endpoint first, fallback to individual calls
+      await axiosClient.patch("/notifications/read-all", { ids: unreadIds });
+      setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+    } catch {
+      // Fallback: individual calls
+      try {
+        await Promise.allSettled(unreadIds.map(id => axiosClient.patch(`/notifications/${id}/read`)));
+        setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+      } catch (err) {
+        console.warn("[NotificationBell] Failed to mark all read:", err.message);
+      }
+    }
   };
 
   const deleteNotification = async (id) => {
     try {
-      await axiosClient.patch(`/notifications/${id}/read`);
+      await axiosClient.delete(`/notifications/${id}`);
       setNotifications(prev => prev.filter(n => n.id !== id));
-    } catch { /* silent */ }
+    } catch (err) {
+      console.warn("[NotificationBell] Failed to delete notification:", err.message);
+      // Fallback: mark as read and hide from UI
+      setNotifications(prev => prev.filter(n => n.id !== id));
+    }
   };
 
-  const filteredNotifications = activeTab === "unread"
-    ? notifications.filter(n => !n.is_read)
-    : notifications;
+  /* ── Filtered list (memoized) ─────────────────────────────────────────── */
+  const filteredNotifications = useMemo(() => {
+    return activeTab === "unread"
+      ? notifications.filter(n => !n.is_read)
+      : notifications;
+  }, [notifications, activeTab]);
 
   if (!isAuth) return null;
 
   return (
     <>
       <style>{css}</style>
-      <div className="vc-root">
 
-        {/* ── Bell button ──────────────────────────────────────────────── */}
+      {/* Screen reader announcement region */}
+      <div 
+        aria-live="polite" 
+        aria-atomic="true" 
+        className="fb-sr-only"
+      >
+        {announcement}
+      </div>
+
+      <div className="fb-root">
+
+        {/* ═══ Bell Button ═══ */}
         <button
           ref={btnRef}
           className={[
-            "vc-btn",
-            open         ? "vc-btn-open"   : "",
-            unread > 0   ? "vc-btn-unread" : "",
+            "fb-btn",
+            open         ? "fb-btn-open"   : "",
+            unread > 0   ? "fb-btn-unread" : "",
           ].join(" ")}
           onClick={() => setOpen(o => !o)}
-          aria-label={`Notifications${unread > 0 ? ` (${unread} unread)` : ""}`}
+          aria-label={`Notifications${unread > 0 ? `, ${unread} unread` : ""}`}
+          aria-expanded={open}
+          aria-haspopup="dialog"
         >
-          <div className="vc-btn-inner">
-            {unread > 0
-              ? <Bell style={{ width: 18, height: 18 }} className="vc-bell-shake" />
-              : <Bell style={{ width: 18, height: 18 }} />
-            }
+          <div className="fb-btn-inner">
+            <Bell 
+              style={{ width: 20, height: 20 }} 
+              className={unread > 0 ? "fb-bell-shake" : ""} 
+            />
           </div>
           {unread > 0 && (
-            <span className={`vc-badge${badgePulse ? " vc-badge-pulse" : ""}`}>
+            <span className={`fb-badge${badgePulse ? " fb-badge-pulse" : ""}`}>
               {unread > 99 ? "99+" : unread}
             </span>
           )}
         </button>
 
-        {/* ── Overlay ──────────────────────────────────────────────────── */}
+        {/* ═══ Overlay ═══ */}
         {open && (
           <div
-            className="vc-overlay"
+            className="fb-overlay"
             onClick={() => setOpen(false)}
             aria-hidden="true"
           />
         )}
 
-        {/* ── Bottom sheet ─────────────────────────────────────────────── */}
+        {/* ═══ Notification Panel (Facebook-style card) ═══ */}
         {open && (
-          <div ref={sheetRef} className="vc-sheet" role="dialog" aria-label="Notifications">
-
-            {/* Drag handle */}
-            <div className="vc-handle-bar" onClick={() => setOpen(false)}>
-              <div className="vc-handle" />
-            </div>
-
+          <div 
+            ref={sheetRef} 
+            className="fb-panel" 
+            role="dialog" 
+            aria-label="Notifications"
+            aria-modal="true"
+          >
             {/* Header */}
-            <div className="vc-header">
-              <div className="vc-header-top">
-                <h2 className="vc-title">Notifications</h2>
-                <div className="vc-header-actions">
+            <div className="fb-header">
+              <div className="fb-header-main">
+                <h2 className="fb-title">Notifications</h2>
+                <div className="fb-header-actions">
                   {unread > 0 && (
-                    <button className="vc-hbtn vc-mark-all" onClick={markAllRead} title="Mark all as read">
-                      <CheckCheck style={{ width: 14, height: 14 }} />
-                      <span>Mark all</span>
+                    <button 
+                      className="fb-hbtn fb-mark-all" 
+                      onClick={markAllRead} 
+                      title="Mark all as read"
+                    >
+                      <CheckCheck style={{ width: 16, height: 16 }} />
+                      <span>Mark all as read</span>
                     </button>
                   )}
                   <button
-                    className={`vc-hbtn vc-refresh${loading ? " vc-spin" : ""}`}
+                    className={`fb-hbtn fb-refresh${loading ? " fb-spin" : ""}`}
                     onClick={load}
                     title="Refresh"
                   >
-                    <RefreshCw style={{ width: 14, height: 14 }} />
+                    <RefreshCw style={{ width: 16, height: 16 }} />
                   </button>
-                  <button className="vc-hbtn vc-close" onClick={() => setOpen(false)} title="Close">
-                    <X style={{ width: 14, height: 14 }} />
+                  <button 
+                    className="fb-hbtn fb-close" 
+                    onClick={() => setOpen(false)} 
+                    title="Close"
+                  >
+                    <X style={{ width: 16, height: 16 }} />
                   </button>
                 </div>
               </div>
 
               {/* Tabs */}
-              <div className="vc-tabs">
+              <div className="fb-tabs">
                 <button
-                  className={`vc-tab${activeTab === "all" ? " vc-tab-active" : ""}`}
+                  className={`fb-tab${activeTab === "all" ? " fb-tab-active" : ""}`}
                   onClick={() => setActiveTab("all")}
                 >
                   All
                 </button>
                 <button
-                  className={`vc-tab${activeTab === "unread" ? " vc-tab-active" : ""}`}
+                  className={`fb-tab${activeTab === "unread" ? " fb-tab-active" : ""}`}
                   onClick={() => setActiveTab("unread")}
                 >
                   Unread
-                  {unread > 0 && <span className="vc-tab-dot" />}
+                  {unread > 0 && (
+                    <span className="fb-tab-badge">{unread > 99 ? "99+" : unread}</span>
+                  )}
                 </button>
               </div>
             </div>
 
             {/* Body */}
-            <div className="vc-body">
+            <div className="fb-body">
               {loading && filteredNotifications.length === 0 ? (
-                <div className="vc-empty">
-                  <div className="vc-skeleton-list">
-                    {[1, 2, 3, 4].map(i => (
-                      <div key={i} className="vc-skeleton-item">
-                        <div className="vc-skeleton-avatar" />
-                        <div className="vc-skeleton-lines">
-                          <div className="vc-skeleton-line vc-skeleton-short" />
-                          <div className="vc-skeleton-line" />
-                        </div>
+                <div className="fb-skeleton-wrapper">
+                  {[1, 2, 3, 4].map(i => (
+                    <div key={i} className="fb-skeleton-item">
+                      <div className="fb-skeleton-avatar" />
+                      <div className="fb-skeleton-content">
+                        <div className="fb-skeleton-line fb-skeleton-short" />
+                        <div className="fb-skeleton-line" />
+                        <div className="fb-skeleton-line fb-skeleton-xshort" />
                       </div>
-                    ))}
-                  </div>
+                    </div>
+                  ))}
                 </div>
               ) : filteredNotifications.length === 0 ? (
-                <div className="vc-empty">
-                  <div className="vc-empty-icon">
-                    <BellOff style={{ width: 28, height: 28, color: "#888" }} />
+                <div className="fb-empty">
+                  <div className="fb-empty-icon-wrapper">
+                    <div className="fb-empty-icon">
+                      <BellOff style={{ width: 24, height: 24, color: "#BEC3C9" }} />
+                    </div>
                   </div>
-                  <p className="vc-empty-title">
+                  <p className="fb-empty-title">
                     {activeTab === "unread" ? "No unread notifications" : "All caught up"}
                   </p>
-                  <p className="vc-empty-sub">
+                  <p className="fb-empty-sub">
                     {activeTab === "unread"
                       ? "Switch to All to see older notifications"
-                      : "New notifications will appear here"}
+                      : "Check back later for new updates"}
                   </p>
                 </div>
               ) : (
-                <div className="vc-list">
+                <div className="fb-list">
                   {filteredNotifications.map(n => {
                     const cfg   = TYPE_CFG[n.type] ?? DEFAULT_CFG;
                     const NIcon = cfg.Icon;
                     return (
                       <div
                         key={n.id}
-                        className={`vc-item${n.is_read ? " vc-item-read" : " vc-item-unread"}`}
+                        className={[
+                          "fb-item",
+                          n.is_read ? "fb-item-read" : "fb-item-unread",
+                        ].join(" ")}
                         onClick={() => !n.is_read && markRead(n.id)}
                         role={n.is_read ? undefined : "button"}
                         tabIndex={n.is_read ? undefined : 0}
                         onKeyDown={e => e.key === "Enter" && !n.is_read && markRead(n.id)}
                       >
+                        {/* Avatar / Icon */}
                         <div
-                          className="vc-item-avatar"
-                          style={{ background: cfg.bg, border: `1px solid ${cfg.border}` }}
+                          className="fb-item-avatar"
+                          style={{ background: cfg.bg }}
                         >
-                          <NIcon style={{ width: 16, height: 16, color: cfg.color }} />
+                          <div 
+                            className="fb-item-avatar-inner"
+                            style={{ background: cfg.color }}
+                          >
+                            <NIcon style={{ width: 14, height: 14, color: "#fff" }} />
+                          </div>
                         </div>
-                        <div className="vc-item-content">
-                          <p className="vc-item-text">
-                            <span className="vc-item-title">{n.title}</span>{" "}
-                            <span className="vc-item-msg">{n.message}</span>
+
+                        {/* Content */}
+                        <div className="fb-item-content">
+                          <p className="fb-item-text">
+                            <span className="fb-item-title">{n.title}</span>
+                            <span className="fb-item-msg">{n.message}</span>
                           </p>
-                          <p className="vc-item-time">{timeAgo(n.created_at)}</p>
+                          <div className="fb-item-meta">
+                            <span 
+                              className="fb-item-type"
+                              style={{ color: cfg.color }}
+                            >
+                              {cfg.label}
+                            </span>
+                            <span className="fb-item-dot-sep">·</span>
+                            <span className="fb-item-time">{timeAgo(n.created_at)}</span>
+                          </div>
                         </div>
-                        <div className="vc-item-right">
+
+                        {/* Right side actions */}
+                        <div className="fb-item-right">
                           {!n.is_read && (
-                            <div className="vc-item-dot" style={{ background: cfg.color }} />
+                            <div className="fb-item-unread-dot" style={{ background: cfg.color }} />
                           )}
                           <button
-                            className="vc-item-delete"
+                            className="fb-item-delete"
                             onClick={(e) => { e.stopPropagation(); deleteNotification(n.id); }}
-                            title="Remove"
+                            title="Remove notification"
+                            aria-label="Remove notification"
                           >
-                            <X style={{ width: 13, height: 13 }} />
+                            <X style={{ width: 14, height: 14 }} />
                           </button>
                         </div>
                       </div>
@@ -342,9 +514,12 @@ export default function NotificationBell() {
 
             {/* Footer */}
             {notifications.length > 0 && (
-              <div className="vc-footer">
-                <span className="vc-footer-text">
+              <div className="fb-footer">
+                <span className="fb-footer-text">
                   {filteredNotifications.length} notification{filteredNotifications.length !== 1 ? "s" : ""}
+                  {activeTab === "all" && unread > 0 && (
+                    <span> · {unread} unread</span>
+                  )}
                 </span>
               </div>
             )}
@@ -355,251 +530,541 @@ export default function NotificationBell() {
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Styles
-// ─────────────────────────────────────────────────────────────────────────────
+/* ═════════════════════════════════════════════════════════════════════════════
+   STYLES — Facebook UI + Food Delivery Theme
+   ═════════════════════════════════════════════════════════════════════════════ */
 const css = `
+/* ── Screen reader only ── */
+.fb-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* ── Root ── */
-.vc-root {
+.fb-root {
   position: relative;
   display: inline-flex;
   align-items: center;
-  z-index: 9999;
+  z-index: 100;
 }
 
-/* ── Bell button ── */
-.vc-btn {
-  position: absolute;
-  width: 32px;
-  height: 32px;
-  border-radius: 50px;
-  background: transparent;
-  border: 1px solid transparent;
+/* ═══════════════════════════════════════════════════════════════════════════
+   BELL BUTTON
+   ═══════════════════════════════════════════════════════════════════════════ */
+.fb-btn {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: ${THEME.bgSurface};
+  border: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #666;
+  color: ${THEME.textSecondary};
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   flex-shrink: 0;
-  left: 20px;
-  top: 32px;
 }
-.vc-btn:hover    { background: #fafafa; border-color: #eaeaea; color: #000; }
-.vc-btn-open     { background: #fafafa !important; border-color: #eaeaea !important; color: #000 !important; }
-.vc-btn-unread   { color: #0070f3; }
-.vc-btn-inner    { display: flex; align-items: center; justify-content: center; }
+.fb-btn:hover {
+  background: ${THEME.bgHover};
+  color: ${THEME.textPrimary};
+}
+.fb-btn:active {
+  background: ${THEME.bgActive};
+  transform: scale(0.96);
+}
+.fb-btn-open {
+  background: ${THEME.bgActive} !important;
+  color: ${THEME.textPrimary} !important;
+}
+.fb-btn-unread {
+  color: ${THEME.primary};
+}
+.fb-btn-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 
-/* Bell shake */
-@keyframes vcBellShake {
+/* Bell shake animation */
+@keyframes fbBellShake {
   0%, 100% { transform: rotate(0deg); }
-  10%  { transform: rotate(12deg); }
-  20%  { transform: rotate(-10deg); }
-  30%  { transform: rotate(8deg); }
-  40%  { transform: rotate(-6deg); }
-  50%  { transform: rotate(0deg); }
+  8%  { transform: rotate(14deg); }
+  16% { transform: rotate(-12deg); }
+  24% { transform: rotate(10deg); }
+  32% { transform: rotate(-8deg); }
+  40% { transform: rotate(6deg); }
+  48% { transform: rotate(-4deg); }
+  56% { transform: rotate(2deg); }
+  64% { transform: rotate(0deg); }
 }
-.vc-bell-shake {
-  animation: vcBellShake 2s ease infinite;
+.fb-bell-shake {
+  animation: fbBellShake 2.2s ease-in-out infinite;
   transform-origin: top center;
 }
 
 /* Badge */
-.vc-badge {
+.fb-badge {
   position: absolute;
-  top: 2px;
-  right: 2px;
-  min-width: 16px;
-  height: 16px;
-  padding: 0 4px;
-  background: #e00;
+  top: -2px;
+  right: -2px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  background: ${THEME.primary};
   color: #fff;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
-  border-radius: 8px;
-  border: 2px solid #fff;
+  border-radius: 9px;
+  border: 2px solid ${THEME.bgSurface};
   display: flex;
   align-items: center;
   justify-content: center;
-  animation: vcBadgePop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  animation: fbBadgePop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-@keyframes vcBadgePop {
+@keyframes fbBadgePop {
   from { transform: scale(0); }
   to   { transform: scale(1); }
 }
-/* Extra pulse when an SSE notification arrives */
-@keyframes vcBadgePulse {
-  0%   { transform: scale(1); box-shadow: 0 0 0 0 rgba(224,0,0,0.5); }
-  50%  { transform: scale(1.2); box-shadow: 0 0 0 6px rgba(224,0,0,0); }
-  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(224,0,0,0); }
+
+/* Badge pulse on new notification */
+@keyframes fbBadgePulse {
+  0%   { transform: scale(1); box-shadow: 0 0 0 0 rgba(232, 93, 4, 0.5); }
+  50%  { transform: scale(1.25); box-shadow: 0 0 0 8px rgba(232, 93, 4, 0); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(232, 93, 4, 0); }
 }
-.vc-badge-pulse {
-  animation: vcBadgePulse 0.6s ease forwards !important;
+.fb-badge-pulse {
+  animation: fbBadgePulse 0.7s ease forwards !important;
 }
 
-/* ── Overlay ── */
-.vc-overlay {
+/* ═══════════════════════════════════════════════════════════════════════════
+   OVERLAY
+   ═══════════════════════════════════════════════════════════════════════════ */
+.fb-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(2px);
-  z-index: 9998;
-  animation: vcFadeIn 0.2s ease;
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(3px);
+  z-index: 99;
+  animation: fbFadeIn 0.2s ease;
 }
-@keyframes vcFadeIn {
+@keyframes fbFadeIn {
   from { opacity: 0; }
   to   { opacity: 1; }
 }
 
-/* ── Bottom Sheet ── */
-.vc-sheet {
+/* ═══════════════════════════════════════════════════════════════════════════
+   NOTIFICATION PANEL — Facebook-style Card
+   ═══════════════════════════════════════════════════════════════════════════ */
+.fb-panel {
   position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  max-width: 480px;
-  margin: 0 auto;
-  background: #fff;
-  border-radius: 12px 12px 0 0;
-  box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.12);
+  top: 56px;
+  right: 16px;
+  width: 380px;
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 80px);
+  background: ${THEME.bgSurface};
+  border-radius: ${THEME.radiusXl};
+  box-shadow: ${THEME.shadowLg}, 0 0 0 1px rgba(0,0,0,0.04);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  z-index: 9999;
+  z-index: 100;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
-  animation: vcSheetUp 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-  max-height: 85vh;
+  animation: fbPanelIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
-@keyframes vcSheetUp {
-  from { opacity: 0; transform: translateY(100%); }
-  to   { opacity: 1; transform: translateY(0); }
+@keyframes fbPanelIn {
+  from { opacity: 0; transform: translateY(-8px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-/* Drag handle */
-.vc-handle-bar {
+/* Mobile: bottom sheet style */
+@media (max-width: 480px) {
+  .fb-panel {
+    position: fixed;
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    max-width: 100%;
+    border-radius: ${THEME.radiusXl} ${THEME.radiusXl} 0 0;
+    max-height: 85vh;
+    animation: fbPanelUp 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  @keyframes fbPanelUp {
+    from { opacity: 0; transform: translateY(100%); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   HEADER
+   ═══════════════════════════════════════════════════════════════════════════ */
+.fb-header {
+  flex-shrink: 0;
+  padding: 12px 16px 0;
+  border-bottom: 1px solid ${THEME.borderLight};
+}
+.fb-header-main {
   display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.fb-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: ${THEME.textPrimary};
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+.fb-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.fb-hbtn {
+  display: flex;
+  align-items: center;
   justify-content: center;
-  padding: 10px 0 6px;
+  gap: 6px;
+  padding: 8px;
+  border-radius: ${THEME.radiusMd};
+  background: ${THEME.bgHover};
+  border: none;
+  color: ${THEME.textSecondary};
   cursor: pointer;
+  transition: all 0.15s ease;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
 }
-.vc-handle {
-  width: 32px;
-  height: 4px;
-  background: #ddd;
-  border-radius: 2px;
+.fb-hbtn:hover {
+  background: ${THEME.bgActive};
+  color: ${THEME.textPrimary};
 }
-
-/* ── Header ── */
-.vc-header       { flex-shrink: 0; padding: 2px 16px 0; border-bottom: 1px solid #eaeaea; }
-.vc-header-top   { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-.vc-title        { font-size: 18px; font-weight: 600; color: #000; margin: 0; letter-spacing: -0.02em; }
-.vc-header-actions { display: flex; align-items: center; gap: 4px; }
-
-.vc-hbtn {
-  display: flex; align-items: center; justify-content: center; gap: 4px;
-  padding: 6px; border-radius: 6px;
-  background: transparent; border: 1px solid transparent;
-  color: #666; cursor: pointer; transition: all 0.15s;
-  font-size: 12px; font-weight: 500;
+.fb-hbtn:active {
+  transform: scale(0.95);
 }
-.vc-hbtn:hover   { background: #fafafa; border-color: #eaeaea; color: #000; }
-.vc-mark-all     { border-radius: 6px; padding: 6px 10px; white-space: nowrap; }
-.vc-close:hover  { background: #fafafa; border-color: #eaeaea; color: #e00; }
-
-@keyframes vcSpin { to { transform: rotate(360deg); } }
-.vc-spin svg { animation: vcSpin 0.8s linear infinite; }
-
-/* ── Tabs ── */
-.vc-tabs { display: flex; gap: 4px; padding-bottom: 10px; }
-.vc-tab {
-  padding: 5px 14px; border-radius: 6px;
-  background: transparent; border: 1px solid transparent;
-  color: #666; font-size: 13px; font-weight: 500;
-  cursor: pointer; transition: all 0.15s; position: relative;
+.fb-mark-all {
+  padding: 8px 12px;
+  white-space: nowrap;
 }
-.vc-tab:hover     { background: #fafafa; border-color: #eaeaea; color: #000; }
-.vc-tab-active    { background: #000 !important; border-color: #000 !important; color: #fff !important; }
-.vc-tab-dot {
-  display: inline-block; width: 6px; height: 6px;
-  background: #e00; border-radius: 50%;
-  margin-left: 6px; vertical-align: middle;
+.fb-close:hover {
+  background: #FFEBEE;
+  color: ${THEME.urgent};
 }
 
-/* ── Body ── */
-.vc-body {
-  flex: 1; overflow-y: auto; overscroll-behavior: contain;
-  scrollbar-width: thin; scrollbar-color: #ddd transparent;
-}
-.vc-body::-webkit-scrollbar       { width: 4px; }
-.vc-body::-webkit-scrollbar-thumb { background: #ddd; border-radius: 2px; }
+@keyframes fbSpin { to { transform: rotate(360deg); } }
+.fb-spin svg { animation: fbSpin 0.8s linear infinite; }
 
-/* Skeleton */
-@keyframes vcSkeleton {
+/* ═══════════════════════════════════════════════════════════════════════════
+   TABS
+   ═══════════════════════════════════════════════════════════════════════════ */
+.fb-tabs {
+  display: flex;
+  gap: 8px;
+  padding-bottom: 12px;
+}
+.fb-tab {
+  padding: 6px 16px;
+  border-radius: ${THEME.radiusFull};
+  background: transparent;
+  border: none;
+  color: ${THEME.textSecondary};
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  position: relative;
+  font-family: inherit;
+}
+.fb-tab:hover {
+  background: ${THEME.bgHover};
+  color: ${THEME.textPrimary};
+}
+.fb-tab-active {
+  background: ${THEME.primaryLight} !important;
+  color: ${THEME.primary} !important;
+  font-weight: 600;
+}
+.fb-tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  background: ${THEME.primary};
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: 9px;
+  margin-left: 6px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   BODY / SCROLL AREA
+   ═══════════════════════════════════════════════════════════════════════════ */
+.fb-body {
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: ${THEME.border} transparent;
+}
+.fb-body::-webkit-scrollbar {
+  width: 6px;
+}
+.fb-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+.fb-body::-webkit-scrollbar-thumb {
+  background: ${THEME.border};
+  border-radius: 3px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SKELETON LOADING
+   ═══════════════════════════════════════════════════════════════════════════ */
+@keyframes fbSkeleton {
   0%   { background-position: -200px 0; }
   100% { background-position: calc(200px + 100%) 0; }
 }
-.vc-skeleton-list   { padding: 12px 16px; }
-.vc-skeleton-item   { display: flex; align-items: center; gap: 12px; padding: 10px 0; }
-.vc-skeleton-avatar {
-  width: 36px; height: 36px; border-radius: 8px;
-  background: linear-gradient(90deg, #f5f5f5 25%, #eaeaea 50%, #f5f5f5 75%);
-  background-size: 200px 100%; animation: vcSkeleton 1.5s ease-in-out infinite; flex-shrink: 0;
+.fb-skeleton-wrapper {
+  padding: 8px 0;
 }
-.vc-skeleton-lines  { flex: 1; display: flex; flex-direction: column; gap: 8px; }
-.vc-skeleton-line {
-  height: 10px; border-radius: 4px;
-  background: linear-gradient(90deg, #f5f5f5 25%, #eaeaea 50%, #f5f5f5 75%);
-  background-size: 200px 100%; animation: vcSkeleton 1.5s ease-in-out infinite;
+.fb-skeleton-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 16px;
 }
-.vc-skeleton-short  { width: 55%; }
+.fb-skeleton-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(90deg, ${THEME.bgHover} 25%, ${THEME.borderLight} 50%, ${THEME.bgHover} 75%);
+  background-size: 200px 100%;
+  animation: fbSkeleton 1.5s ease-in-out infinite;
+  flex-shrink: 0;
+}
+.fb-skeleton-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 4px;
+}
+.fb-skeleton-line {
+  height: 10px;
+  border-radius: 5px;
+  background: linear-gradient(90deg, ${THEME.bgHover} 25%, ${THEME.borderLight} 50%, ${THEME.bgHover} 75%);
+  background-size: 200px 100%;
+  animation: fbSkeleton 1.5s ease-in-out infinite;
+}
+.fb-skeleton-short { width: 60%; }
+.fb-skeleton-xshort { width: 35%; }
 
-/* Empty */
-.vc-empty         { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 56px 24px; text-align: center; }
-.vc-empty-icon    { width: 52px; height: 52px; border-radius: 12px; background: #fafafa; border: 1px solid #eaeaea; display: flex; align-items: center; justify-content: center; margin-bottom: 4px; }
-.vc-empty-title   { font-size: 15px; font-weight: 600; color: #000; margin: 0; }
-.vc-empty-sub     { font-size: 13px; color: #888; margin: 0; max-width: 260px; line-height: 1.4; }
-
-/* ── Notification list ── */
-.vc-list { padding: 4px 0; }
-.vc-item {
-  display: flex; align-items: flex-start; gap: 12px;
-  padding: 10px 16px; transition: background 0.12s;
-  position: relative; cursor: pointer; border-bottom: 1px solid transparent;
+/* ═══════════════════════════════════════════════════════════════════════════
+   EMPTY STATE
+   ═══════════════════════════════════════════════════════════════════════════ */
+.fb-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 60px 24px;
+  text-align: center;
 }
-.vc-item:hover       { background: #fafafa; }
-.vc-item-unread      { background: #fafafa; }
-.vc-item-unread:hover { background: #f5f5f5; }
-.vc-item-read        { opacity: 0.7; }
+.fb-empty-icon-wrapper {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: ${THEME.bgPage};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+.fb-empty-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.fb-empty-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: ${THEME.textPrimary};
+  margin: 0;
+}
+.fb-empty-sub {
+  font-size: 14px;
+  color: ${THEME.textSecondary};
+  margin: 0;
+  max-width: 240px;
+  line-height: 1.4;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   NOTIFICATION LIST
+   ═══════════════════════════════════════════════════════════════════════════ */
+.fb-list {
+  padding: 4px 0;
+}
+.fb-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 16px;
+  transition: background 0.15s ease;
+  position: relative;
+  cursor: pointer;
+  border-radius: 0;
+}
+.fb-item:hover {
+  background: ${THEME.bgHover};
+}
+.fb-item:active {
+  background: ${THEME.bgActive};
+}
+.fb-item-unread {
+  background: ${THEME.primaryLight};
+}
+.fb-item-unread:hover {
+  background: #FFE8CC;
+}
+.fb-item-read {
+  opacity: 0.85;
+}
+.fb-item-read:hover {
+  opacity: 1;
+}
 
 /* Avatar */
-.vc-item-avatar {
-  width: 36px; height: 36px; border-radius: 8px; flex-shrink: 0;
-  display: flex; align-items: center; justify-content: center; margin-top: 1px;
+.fb-item-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+}
+.fb-item-avatar-inner {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* Content */
-.vc-item-content  { flex: 1; min-width: 0; }
-.vc-item-text     { font-size: 13px; line-height: 1.45; margin: 0 0 2px; color: #000; }
-.vc-item-title    { font-weight: 600; }
-.vc-item-msg      { color: #666; }
-.vc-item-time     { font-size: 11px; font-weight: 500; color: #0070f3; margin: 0; }
-.vc-item-read .vc-item-time { color: #888; }
+.fb-item-content {
+  flex: 1;
+  min-width: 0;
+  padding-top: 2px;
+}
+.fb-item-text {
+  font-size: 14px;
+  line-height: 1.45;
+  margin: 0 0 4px;
+  color: ${THEME.textPrimary};
+}
+.fb-item-title {
+  font-weight: 600;
+}
+.fb-item-msg {
+  color: ${THEME.textSecondary};
+}
+.fb-item-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+.fb-item-type {
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.fb-item-dot-sep {
+  color: ${THEME.textTertiary};
+  font-weight: 700;
+}
+.fb-item-time {
+  color: ${THEME.textTertiary};
+  font-weight: 500;
+}
+.fb-item-unread .fb-item-time {
+  color: ${THEME.primary};
+  font-weight: 600;
+}
 
 /* Right side */
-.vc-item-right    { display: flex; align-items: center; gap: 6px; flex-shrink: 0; margin-top: 3px; }
-.vc-item-dot      { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
-.vc-item-delete {
-  width: 24px; height: 24px; border-radius: 6px;
-  background: transparent; border: 1px solid transparent;
-  color: #bbb; cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  opacity: 0; transition: all 0.12s;
+.fb-item-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  margin-top: 4px;
 }
-.vc-item:hover .vc-item-delete { opacity: 1; }
-.vc-item-delete:hover { background: #f5f5f5; border-color: #eaeaea; color: #e00; }
+.fb-item-unread-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.fb-item-delete {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: transparent;
+  border: none;
+  color: ${THEME.textTertiary};
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: all 0.15s ease;
+}
+.fb-item:hover .fb-item-delete {
+  opacity: 1;
+}
+.fb-item-delete:hover {
+  background: #FFEBEE;
+  color: ${THEME.urgent};
+}
 
-/* ── Footer ── */
-.vc-footer      { padding: 10px 16px; border-top: 1px solid #eaeaea; background: #fafafa; flex-shrink: 0; text-align: center; }
-.vc-footer-text { font-size: 11px; font-weight: 500; color: #888; text-transform: uppercase; letter-spacing: 0.06em; }
+/* ═══════════════════════════════════════════════════════════════════════════
+   FOOTER
+   ═══════════════════════════════════════════════════════════════════════════ */
+.fb-footer {
+  padding: 10px 16px;
+  border-top: 1px solid ${THEME.borderLight};
+  background: ${THEME.bgPage};
+  flex-shrink: 0;
+  text-align: center;
+}
+.fb-footer-text {
+  font-size: 12px;
+  font-weight: 500;
+  color: ${THEME.textSecondary};
+}
 `;
