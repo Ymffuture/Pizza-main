@@ -572,7 +572,7 @@ const css = `
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   flex-shrink: 0;
-  left:32px;
+  right:34px;
 }
 .fb-btn:hover {
   background: ${THEME.bgHover};
