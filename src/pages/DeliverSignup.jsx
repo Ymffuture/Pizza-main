@@ -138,11 +138,9 @@ export default function DeliverSignup() {
       fd.append("id_number", idNumber);
       fd.append("document", file);
 
-      // NOTE: assumes verifyDriverDocument(fd) resolves with the parsed
-      // JSON body (the same convention driverSignup already follows).
-      // If your axios wrapper instead returns the full response object,
-      // change this to: const { data } = await verifyDriverDocument(fd);
-      const data = await verifyDriverDocument(fd);
+      // delivery.api.js functions return the raw axios response (see
+      // getDriverProfile/getWalletBalance etc.) — unwrap .data here.
+      const { data } = await verifyDriverDocument(fd);
 
       let status = "unavailable";
       if (data.matched === true) status = "matched";
