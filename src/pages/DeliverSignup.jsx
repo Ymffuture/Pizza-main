@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { driverSignup } from "../api/delivery.api";
+import { driverSignup, verifyDriverDocument } from "../api/delivery.api";
 import {
   Flame, Bike, ChevronRight, ChevronDown,
   Star, Shield, Clock, Zap, MapPin,
@@ -31,6 +31,17 @@ const FAQS = [
   { q: "Is there a minimum hours requirement?", a: "None. Work as little or as much as you want. No commitments, no penalties." },
 ];
 
+// Status -> { icon, className } map for the inline document-verification row.
+// "mismatch" is deliberately NOT rendered here — it surfaces through the
+// existing red `ds-err` paragraph instead, so there's only one error message
+// per field rather than two saying almost the same thing.
+const VERIFY_DISPLAY = {
+  checking:    { className: "ds-verify-checking" },
+  matched:     { className: "ds-verify-matched" },
+  unreadable:  { className: "ds-verify-unreadable" },
+  unavailable: { className: "ds-verify-unavailable" },
+};
+
 export default function DeliverSignup() {
   const navigate = useNavigate();
   const { isAuth, user } = useAuth();
@@ -58,11 +69,21 @@ export default function DeliverSignup() {
     profile_photo: null,
   });
 
+  // Live ID-number-match status for the two documents that carry an ID
+  // number (id_document, license_document). Shape per field:
+  // { status: 'checking'|'matched'|'mismatch'|'unreadable'|'unavailable', message }
+  const [docVerification, setDocVerification] = useState({
+    id_document: null,
+    license_document: null,
+  });
+
   const [errors, setErrors]   = useState({});
   const [loading, setLoading] = useState(false);
   const [done, setDone]       = useState(false);
   const [apiError, setApiError] = useState(null);
   const [openFaq, setOpenFaq] = useState(null);
+
+  const verifying = Object.values(docVerification).some((v) => v?.status === "checking");
 
   const validate = () => {
     const e = {};
@@ -82,12 +103,61 @@ export default function DeliverSignup() {
     if (!files.license_document) e.license_document = "License document required";
     if (!files.vehicle_document) e.vehicle_document = "Vehicle document required";
     if (!files.profile_photo) e.profile_photo = "Profile photo required";
+
+    // Carry forward a confirmed ID-number mismatch as a blocking error too,
+    // in case the user never re-touches that field after it fails.
+    if (docVerification.id_document?.status === "mismatch") e.id_document = docVerification.id_document.message;
+    if (docVerification.license_document?.status === "mismatch") e.license_document = docVerification.license_document.message;
+
     return e;
   };
 
   const handleChange = (field) => (ev) => {
     setForm((p) => ({ ...p, [field]: ev.target.value }));
     if (errors[field]) setErrors((p) => ({ ...p, [field]: "" }));
+  };
+
+  // Re-checks any already-uploaded ID-bearing documents whenever the typed
+  // ID number changes (on blur, so we're not firing a request per keystroke).
+  const handleIdNumberBlur = () => {
+    if (files.id_document) verifyDocument("id_document", files.id_document, form.id_number);
+    if (files.license_document) verifyDocument("license_document", files.license_document, form.id_number);
+  };
+
+  // Calls POST /delivery/verify-document with the chosen file + the typed
+  // ID number, and reads the printed ID number off the document via the
+  // backend's Gemini-vision check. Only runs once the ID number looks like
+  // a real 13-digit value — no point checking against a half-typed number.
+  const verifyDocument = async (field, file, idNumber) => {
+    if (!file || !/^\d{13}$/.test(idNumber)) return;
+
+    setDocVerification((p) => ({ ...p, [field]: { status: "checking", message: "Verifying ID number…" } }));
+
+    try {
+      const fd = new FormData();
+      fd.append("id_number", idNumber);
+      fd.append("document", file);
+
+      // NOTE: assumes verifyDriverDocument(fd) resolves with the parsed
+      // JSON body (the same convention driverSignup already follows).
+      // If your axios wrapper instead returns the full response object,
+      // change this to: const { data } = await verifyDriverDocument(fd);
+      const data = await verifyDriverDocument(fd);
+
+      let status = "unavailable";
+      if (data.matched === true) status = "matched";
+      else if (data.matched === false) status = "mismatch";
+      else if (data.checked && data.found === false) status = "unreadable";
+
+      setDocVerification((p) => ({ ...p, [field]: { status, message: data.message } }));
+      setErrors((p) => ({ ...p, [field]: status === "mismatch" ? data.message : "" }));
+    } catch (err) {
+      // Network/server error — don't block the applicant, just flag it.
+      setDocVerification((p) => ({
+        ...p,
+        [field]: { status: "unavailable", message: "Couldn't auto-verify — will be checked manually." },
+      }));
+    }
   };
 
   const handleFileChange = (field) => (ev) => {
@@ -97,13 +167,22 @@ export default function DeliverSignup() {
     if (!file.type.startsWith("image/")) { setErrors((p) => ({ ...p, [field]: "Must be an image file" })); return; }
     setFiles((p) => ({ ...p, [field]: file }));
     if (errors[field]) setErrors((p) => ({ ...p, [field]: "" }));
+
+    if (field === "id_document" || field === "license_document") {
+      verifyDocument(field, file, form.id_number);
+    }
   };
 
-  const removeFile = (field) => setFiles((p) => ({ ...p, [field]: null }));
+  const removeFile = (field) => {
+    setFiles((p) => ({ ...p, [field]: null }));
+    setDocVerification((p) => ({ ...p, [field]: null }));
+    setErrors((p) => ({ ...p, [field]: "" }));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!isAuth) { navigate("/login?redirect=/deliver"); return; }
+    if (verifying) return; // a verify-document call is still in flight
 
     const errs = validate();
     if (Object.keys(errs).length) { setErrors(errs); return; }
@@ -226,9 +305,19 @@ export default function DeliverSignup() {
                     <label className="ds-label">ID Number</label>
                     <div className={`ds-input-wrap${errors.id_number ? " ds-input-err" : ""}`}>
                       <User className="ds-icon" />
-                      <input className="ds-input" placeholder="9501015800080" value={form.id_number} onChange={handleChange("id_number")} maxLength={13} />
+                      <input
+                        className="ds-input"
+                        placeholder="9501015800080"
+                        value={form.id_number}
+                        onChange={handleChange("id_number")}
+                        onBlur={handleIdNumberBlur}
+                        maxLength={13}
+                      />
                     </div>
                     {errors.id_number && <p className="ds-err">{errors.id_number}</p>}
+                    {!errors.id_number && (
+                      <p className="ds-hint">We cross-check this against your uploaded ID document &amp; license</p>
+                    )}
                   </div>
 
                   {/* Vehicle */}
@@ -320,34 +409,52 @@ export default function DeliverSignup() {
                     { key: "license_document",  label: "Driver's License" },
                     { key: "vehicle_document",  label: "Vehicle Document" },
                     { key: "profile_photo",     label: "Profile Photo" },
-                  ].map(({ key, label }) => (
-                    <div key={key} className="ds-field">
-                      <label className="ds-label">{label}</label>
-                      <div className={`ds-file-upload${errors[key] ? " ds-input-err" : ""}`}>
-                        {files[key] ? (
-                          <div className="ds-file-preview">
-                            <span className="ds-file-name">{files[key].name}</span>
-                            <button type="button" onClick={() => removeFile(key)} className="ds-file-remove">
-                              <X className="w-4 h-4" />
-                            </button>
-                          </div>
-                        ) : (
-                          <>
-                            <input type="file" accept="image/*" onChange={handleFileChange(key)} className="ds-file-input" id={key} />
-                            <label htmlFor={key} className="ds-file-label">
-                              <Upload className="w-4 h-4" /><span>Choose file</span>
-                            </label>
-                          </>
-                        )}
-                      </div>
-                      {errors[key] && <p className="ds-err">{errors[key]}</p>}
-                    </div>
-                  ))}
+                  ].map(({ key, label }) => {
+                    const verify = docVerification[key];
+                    const verifyDisplay = verify ? VERIFY_DISPLAY[verify.status] : null;
+                    return (
+                      <div key={key} className="ds-field">
+                        <label className="ds-label">{label}</label>
+                        <div className={`ds-file-upload${errors[key] ? " ds-input-err" : ""}`}>
+                          {files[key] ? (
+                            <div className="ds-file-preview">
+                              <span className="ds-file-name">{files[key].name}</span>
+                              <button type="button" onClick={() => removeFile(key)} className="ds-file-remove">
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+                          ) : (
+                            <>
+                              <input type="file" accept="image/*" onChange={handleFileChange(key)} className="ds-file-input" id={key} />
+                              <label htmlFor={key} className="ds-file-label">
+                                <Upload className="w-4 h-4" /><span>Choose file</span>
+                              </label>
+                            </>
+                          )}
+                        </div>
 
-                  <button type="submit" disabled={loading || !isAuth} className="ds-submit-btn">
+                        {/* Live ID-number check — only for id_document / license_document,
+                            and only for non-mismatch states (mismatch shows via ds-err below) */}
+                        {verify && verify.status !== "mismatch" && verifyDisplay && (
+                          <p className={`ds-verify-msg ${verifyDisplay.className}`}>
+                            {verify.status === "checking" && <Loader className="ds-spin" />}
+                            {verify.status === "matched" && <CheckCircle2 />}
+                            {(verify.status === "unreadable" || verify.status === "unavailable") && <AlertCircle />}
+                            <span>{verify.message}</span>
+                          </p>
+                        )}
+
+                        {errors[key] && <p className="ds-err">{errors[key]}</p>}
+                      </div>
+                    );
+                  })}
+
+                  <button type="submit" disabled={loading || !isAuth || verifying} className="ds-submit-btn">
                     {loading
                       ? <><Loader className="w-5 h-5 ds-spin" /> Submitting…</>
-                      : <><Bike className="w-5 h-5" /> Apply to Drive</>}
+                      : verifying
+                        ? <><Loader className="w-5 h-5 ds-spin" /> Verifying documents…</>
+                        : <><Bike className="w-5 h-5" /> Apply to Drive</>}
                   </button>
                   <p className="ds-form-note">By applying you agree to our <Link to="/info" className="ds-form-link">Driver Terms</Link></p>
                 </form>
@@ -493,6 +600,7 @@ const styles = `
   .ds-select { cursor:pointer; appearance:none; }
   .ds-select option { background:#1a0e00; color:var(--text); }
   .ds-err { font-size:11px; font-weight:700; color:#f87171; }
+  .ds-hint { font-size:10px; color:var(--muted); font-weight:600; }
   .ds-error-banner { display:flex; align-items:center; gap:10px; padding:12px 14px; border-radius:12px; background:rgba(248,113,113,0.1); border:1px solid rgba(248,113,113,0.3); color:#f87171; font-size:12px; font-weight:700; margin-bottom:16px; }
   .ds-info-banner { display:flex; align-items:center; gap:10px; padding:12px 14px; border-radius:12px; background:rgba(96,165,250,0.1); border:1px solid rgba(96,165,250,0.3); color:#60a5fa; font-size:12px; font-weight:700; margin-bottom:16px; }
   .ds-file-upload { background:rgba(255,248,231,0.04); border:1.5px dashed var(--border); border-radius:12px; padding:16px; transition:all 0.2s; }
@@ -504,6 +612,12 @@ const styles = `
   .ds-file-name { font-size:13px; color:var(--text); font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .ds-file-remove { background:rgba(248,113,113,0.15); border:1px solid rgba(248,113,113,0.3); border-radius:6px; padding:4px; color:#f87171; cursor:pointer; transition:all 0.2s; display:flex; align-items:center; justify-content:center; }
   .ds-file-remove:hover { background:rgba(248,113,113,0.25); }
+  .ds-verify-msg { display:flex; align-items:center; gap:6px; font-size:11px; font-weight:700; margin:2px 0 0; }
+  .ds-verify-msg svg { width:13px; height:13px; flex-shrink:0; }
+  .ds-verify-checking { color:var(--muted); }
+  .ds-verify-matched { color:#4ade80; }
+  .ds-verify-unreadable { color:#60a5fa; }
+  .ds-verify-unavailable { color:var(--muted); }
   .ds-submit-btn { display:flex; align-items:center; justify-content:center; gap:10px; background:var(--red); color:white; border:none; cursor:pointer; font-family:'Plus Jakarta Sans',sans-serif; font-weight:900; font-size:15px; padding:15px; border-radius:14px; margin-top:4px; box-shadow:0 6px 20px rgba(218,41,28,0.4); transition:all 0.2s; }
   .ds-submit-btn:hover:not(:disabled) { background:var(--red2); transform:scale(1.02); }
   .ds-submit-btn:disabled { opacity:0.55; cursor:not-allowed; }
