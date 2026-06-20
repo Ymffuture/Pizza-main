@@ -7,6 +7,14 @@ export const driverSignup = (formData) =>
     headers: { "Content-Type": "multipart/form-data" },
   });
 
+// Instant ID-number-vs-document check used by the signup form right after
+// a file is chosen (or the ID number field is edited). `formData` must
+// contain `id_number` (string) and `document` (File).
+export const verifyDriverDocument = (formData) =>
+  axiosClient.post("/delivery/verify-document", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+
 // ── Driver Profile ─────────────────────────────────────────────────────────
 export const getDriverProfile = () =>
   axiosClient.get("/delivery/profile");
