@@ -7,6 +7,7 @@ import {
 import axiosClient from "../api/axiosClient";
 import { useAuth } from "../context/AuthContext";
 
+import { TbCircleDotted } from "react-icons/tb";
 /* ═════════════════════════════════════════════════════════════════════════════
    THEME CONFIGURATION — Food Delivery / KotaBites Style
    ═════════════════════════════════════════════════════════════════════════════ */
@@ -486,7 +487,7 @@ export default function NotificationBell() {
                             >
                               {cfg.label}
                             </span>
-                            <span className="fb-item-dot-sep">·</span>
+                            <span className="fb-item-dot-sep"><TbCircleDotted /></span>
                             <span className="fb-item-time">{timeAgo(n.created_at)}</span>
                           </div>
                         </div>
@@ -572,8 +573,8 @@ const css = `
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   flex-shrink: 0;
-  left:24px;
-  top:54px;
+  left:20px;
+  top:52px;
 }
 .fb-btn:hover {
   background: ${THEME.bgHover};
