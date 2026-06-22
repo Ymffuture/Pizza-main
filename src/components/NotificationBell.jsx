@@ -11,55 +11,55 @@ import { useAuth } from "../context/AuthContext";
    THEME CONFIGURATION — Food Delivery / KotaBites Style
    ═════════════════════════════════════════════════════════════════════════════ */
 const THEME = {
-  // Primary palette — warm, appetizing orange
-  primary:        "#E85D04",
-  primaryHover:   "#D00000",
-  primaryLight:   "#FFF3E0",
-  primaryBorder:  "#FFCC80",
+  // Primary palette — Claude's signature amethyst purple
+  primary:        "#6B4C9A",      // Deep amethyst
+  primaryHover:   "#5A3D87",      // Darker violet on hover
+  primaryLight:   "#F5F0FA",      // Soft lavender tint
+  primaryBorder:  "#D4C5E8",      // Light purple border
 
-  // Secondary — fresh green
-  secondary:      "#38B000",
-  secondaryLight: "#E8F5E9",
+  // Secondary — warm sage green (Claude's complementary accent)
+  secondary:      "#4A7C59",      // Muted sage
+  secondaryLight: "#EDF4EF",      // Soft mint tint
 
-  // Facebook-style neutrals
-  bgPage:         "#F0F2F5",
-  bgSurface:      "#FFFFFF",
-  bgHover:        "#F2F2F2",
-  bgActive:       "#E4E6EB",
+  // Background neutrals — warm paper tones
+  bgPage:         "#F7F5F2",      // Warm off-white (like aged paper)
+  bgSurface:      "#FEFDFB",      // Cream white for cards
+  bgHover:        "#F0EDE8",      // Warm gray hover
+  bgActive:       "#E8E4DE",      // Slightly deeper active state
 
-  // Text
-  textPrimary:    "#050505",
-  textSecondary:  "#65676B",
-  textTertiary:   "#8C939D",
+  // Text — ink tones instead of pure black
+  textPrimary:    "#1A1614",      // Warm near-black (ink)
+  textSecondary:  "#6B6560",      // Warm gray
+  textTertiary:   "#A39E99",      // Muted warm gray
 
-  // Borders & dividers
-  border:         "#CED0D4",
-  borderLight:    "#E4E6EB",
+  // Borders & dividers — subtle warm lines
+  border:         "#D9D4CE",      // Warm light gray
+  borderLight:    "#E8E4DE",      // Very subtle divider
 
-  // Notification type colors
-  info:           "#1877F2",  // Facebook blue
-  infoLight:      "#E7F3FF",
-  warning:        "#F5A623",
-  warningLight:   "#FFF8E1",
-  promo:          "#E85D04",  // Primary orange
-  promoLight:     "#FFF3E0",
-  update:         "#1877F2",
-  updateLight:    "#E7F3FF",
-  maintenance:    "#F5A623",
-  maintenanceLight:"#FFF8E1",
-  urgent:         "#FF1744",
-  urgentLight:    "#FFEBEE",
+  // Notification type colors — refined, muted palette
+  info:           "#6B4C9A",      // Primary amethyst
+  infoLight:      "#F5F0FA",      // Lavender tint
+  warning:        "#C4841A",      // Muted amber (less harsh than orange)
+  warningLight:   "#FDF6E9",      // Soft cream
+  promo:          "#6B4C9A",      // Primary purple
+  promoLight:     "#F5F0FA",      // Lavender tint
+  update:         "#4A7C59",      // Sage green
+  updateLight:    "#EDF4EF",      // Mint tint
+  maintenance:    "#C4841A",      // Muted amber
+  maintenanceLight:"#FDF6E9",     // Soft cream
+  urgent:         "#B5423F",      // Muted crimson (less aggressive than pure red)
+  urgentLight:    "#FDF0F0",      // Soft rose tint
 
-  // Shadows (Facebook-style)
-  shadowSm:       "0 1px 2px rgba(0,0,0,0.05)",
-  shadowMd:       "0 4px 12px rgba(0,0,0,0.08)",
-  shadowLg:       "0 12px 28px rgba(0,0,0,0.12)",
+  // Shadows — softer, warmer shadows (no harsh blacks)
+  shadowSm:       "0 1px 2px rgba(26,22,20,0.04)",
+  shadowMd:       "0 4px 12px rgba(26,22,20,0.06)",
+  shadowLg:       "0 12px 28px rgba(26,22,20,0.08)",
 
-  // Radius
+  // Radius — slightly more organic, less mechanical
   radiusSm:       "6px",
-  radiusMd:       "8px",
-  radiusLg:       "12px",
-  radiusXl:       "16px",
+  radiusMd:       "10px",
+  radiusLg:       "14px",
+  radiusXl:       "18px",
   radiusFull:     "9999px",
 };
 
@@ -475,9 +475,9 @@ export default function NotificationBell() {
 
                         {/* Content */}
                         <div className="fb-item-content">
-                          <p className="fb-item-text">
+                          <p className="fb-item-text gap-3 ">
                             <span className="fb-item-title">{n.title}</span>
-                            <span className="fb-item-msg">{n.message}</span>
+                            <span className="fb-item-msg"> ~ {n.message}</span>
                           </p>
                           <div className="fb-item-meta">
                             <span 
@@ -502,7 +502,7 @@ export default function NotificationBell() {
                             title="Remove notification"
                             aria-label="Remove notification"
                           >
-                            <OctagonX style={{ width: 14, height: 14 }} />
+                            <OctagonX style={{ width: 16, height: 16 }} />
                           </button>
                         </div>
                       </div>
@@ -572,8 +572,8 @@ const css = `
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   flex-shrink: 0;
-  left:30px;
-  top:52px;
+  left:24px;
+  top:54px;
 }
 .fb-btn:hover {
   background: ${THEME.bgHover};
