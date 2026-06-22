@@ -14,7 +14,7 @@ import { useAuth } from "../context/AuthContext"; // adjust path if different
 const CURRENCIES = ["ZAR", "SZL", "USD"];
 
 // SZL is pegged 1:1 to ZAR. Replace USD with a live rate when you have one.
-const RATES = { ZAR: 1, SZL: 1, USD: 1 / 16.2 };
+const RATES = { ZAR: 1, SZL: 1, USD: 1 / 16.43 };
 const SYMBOLS = { ZAR: "R", SZL: "E", USD: "$" };
 
 function formatPrice(amount, currency) {
