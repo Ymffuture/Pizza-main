@@ -18,7 +18,7 @@ import { IoSend } from "react-icons/io5";
 import { TbCircleDotted } from "react-icons/tb";
 import { GiCursedStar } from "react-icons/gi";
 import { FaCircleNotch } from "react-icons/fa6";
-
+import { FaBots } from "react-icons/fa6";
 
 
 const AVATAR_URL = "https://api.dicebear.com/9.x/avataaars/svg?seed=ai";
@@ -686,7 +686,7 @@ export default function AiChat() {
           <div className="kb-ai-header">
             <div className="kb-ai-header-left">
               <div>
-                <p className="kb-ai-header-name">KotaBot</p>
+                <p className="kb-ai-header-name"><FaBots size={34} /></p>
                 <p className="kb-ai-header-sub">
                   {loading ? (
                     <span className="kb-ai-typing">thinking…</span>
