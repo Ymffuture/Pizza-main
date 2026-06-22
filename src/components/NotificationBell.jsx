@@ -1,8 +1,8 @@
 // src/components/NotificationBell.jsx
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import {
-  Bell, X, OctagonX, CheckCheck, Info, AlertTriangle,
-  Star, Zap,BellRing, Megaphone, RefreshCw, BellOff,
+  Bell, X, OctagonX, CheckCheck, AlertTriangle,
+  Star, Zap,BellRing, BellOff,
 } from "lucide-react";
 import axiosClient from "../api/axiosClient";
 import { useAuth } from "../context/AuthContext";
@@ -12,6 +12,7 @@ import { MdCrisisAlert } from "react-icons/md";
 import { LuBadgeInfo } from "react-icons/lu";
 import { TbUrgent } from "react-icons/tb";
 import { GrVmMaintenance } from "react-icons/gr";
+import { RiRefreshLine } from "react-icons/ri";
 /* ═════════════════════════════════════════════════════════════════════════════
    THEME CONFIGURATION — Food Delivery / KotaBites Style
    ═════════════════════════════════════════════════════════════════════════════ */
@@ -385,7 +386,7 @@ export default function NotificationBell() {
                     onClick={load}
                     title="Refresh"
                   >
-                    <RefreshCw style={{ width: 16, height: 16 }} />
+                    <RiRefreshLine style={{ width: 16, height: 16 }} />
                   </button>
                   <button 
                     className="fb-hbtn fb-close" 
@@ -578,8 +579,8 @@ const css = `
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   flex-shrink: 0;
-  left:14px;
-  top:42px;
+  left:12px;
+  top:40px;
 }
 .fb-btn:hover {
   background: ${THEME.bgHover};
