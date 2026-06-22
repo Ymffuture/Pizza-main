@@ -14,7 +14,8 @@ import { useParams, Link } from "react-router-dom";
 import { getBusinessHoursStatus } from "../utils/businessHours";
 import Avatar from "./Avatar";
 import { Loader3 } from "./Loader";
-
+import { IoSend } from "react-icons/io5";
+import { TbCircleDotted } from "react-icons/tb";
 const AVATAR_URL = "https://api.dicebear.com/9.x/avataaars/svg?seed=ai";
 
 /* ─────────────────────────────────────────────────────────────────────────── */
@@ -191,7 +192,7 @@ function ThinkingBlock({ steps, elapsed, isThinking }) {
         onClick={() => setExpanded((e) => !e)}
       >
         <span className="claude-thinking-header-left">
-          <Sparkles size={14} className={isThinking ? "claude-think-spin" : ""} />
+          <TbCircleDotted size={14} className={isThinking ? "claude-think-spin" : ""} />
           <span className="claude-thinking-label">{label}</span>
           {isThinking && (
             <span className="claude-thinking-dots">
@@ -770,8 +771,8 @@ export default function AiChat() {
                   aria-label="Send"
                 >
                   {loading
-                    ? <Loader className="w-4 h-4 kb-ai-spin" />
-                    : <CornerRightUp className="w-4 h-4" />}
+                    ? <TbCircleDotted className="w-4 h-4 kb-ai-spin" />
+                    : <IoSend className="w-4 h-4" />}
                 </button>
               </div>
             </>
