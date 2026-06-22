@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import axiosClient from "../api/axiosClient";
 import { useAuth } from "../context/AuthContext";
-
+import { PiDotDuotone } from "react-icons/pi";
 import { TbCircleDotted } from "react-icons/tb";
 /* ═════════════════════════════════════════════════════════════════════════════
    THEME CONFIGURATION — Food Delivery / KotaBites Style
@@ -487,7 +487,7 @@ export default function NotificationBell() {
                             >
                               {cfg.label}
                             </span>
-                            <span className="fb-item-dot-sep"><TbCircleDotted /></span>
+                            <span className="fb-item-dot-sep"><PiDotDuotone className ="animate-pulse" /></span>
                             <span className="fb-item-time">{timeAgo(n.created_at)}</span>
                           </div>
                         </div>
@@ -495,7 +495,8 @@ export default function NotificationBell() {
                         {/* Right side actions */}
                         <div className="fb-item-right">
                           {!n.is_read && (
-                            <div className="fb-item-unread-dot" style={{ background: cfg.color }} />
+                        <TbCircleDotted className="fb-item-unread-dot" style={{ background: cfg.color }} />
+                          
                           )}
                           <button
                             className="fb-item-delete"
@@ -573,8 +574,8 @@ const css = `
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   flex-shrink: 0;
-  left:20px;
-  top:52px;
+  left:16px;
+  top:50px;
 }
 .fb-btn:hover {
   background: ${THEME.bgHover};
