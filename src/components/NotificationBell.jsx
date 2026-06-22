@@ -477,7 +477,7 @@ export default function NotificationBell() {
                         {/* Content */}
                         <div className="fb-item-content">
                           <p className="fb-item-text gap-3 ">
-                            <span className="fb-item-title">{n.title}</span>
+                            <span className="fb-item-title">{n.title}</span><br/>
                             <span className="fb-item-msg"> ~ {n.message}</span>
                           </p>
                           <div className="fb-item-meta">
@@ -574,8 +574,8 @@ const css = `
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   flex-shrink: 0;
-  left:16px;
-  top:50px;
+  left:14px;
+  top:48px;
 }
 .fb-btn:hover {
   background: ${THEME.bgHover};
