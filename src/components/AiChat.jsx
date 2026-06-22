@@ -188,7 +188,7 @@ function ThinkingBlock({ steps, elapsed, isThinking }) {
 
   const label = isThinking
     ? `Thinking… (${steps.length} step${steps.length !== 1 ? "s" : ""})`
-    : `Done · ${elapsed}s`;
+    : `Thought for · ${elapsed}s`;
 
   return (
     <div className="claude-thinking-wrap">
