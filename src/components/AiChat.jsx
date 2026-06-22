@@ -16,6 +16,11 @@ import Avatar from "./Avatar";
 import { Loader3 } from "./Loader";
 import { IoSend } from "react-icons/io5";
 import { TbCircleDotted } from "react-icons/tb";
+import { GiCursedStar } from "react-icons/gi";
+import { FaCircleNotch } from "react-icons/fa6";
+
+
+
 const AVATAR_URL = "https://api.dicebear.com/9.x/avataaars/svg?seed=ai";
 
 /* ─────────────────────────────────────────────────────────────────────────── */
@@ -220,7 +225,7 @@ function ThinkingBlock({ steps, elapsed, isThinking }) {
                   {done ? "✓" : "›"}
                 </span>
                 <span className="claude-thinking-text">{step}</span>
-                {!done && <span className="claude-thinking-cursor">▋</span>}
+                {!done && <span className="claude-thinking-cursor"><GiCursedStar /></span>}
               </div>
             );
           })}
@@ -285,7 +290,7 @@ function Bubble({ msg, onCancelConfirm, cancellingId, user }) {
                 </ReactMarkdown>
 
                 {/* Streaming cursor */}
-                {stillStreaming && <span className="kb-stream-cursor">▋</span>}
+                {stillStreaming && <span className="kb-stream-cursor"><GiCursedStar/></span>}
 
                 {/* Order ID copy */}
                 {!stillStreaming && orderId && (
@@ -667,7 +672,7 @@ export default function AiChat() {
           <span className="kb-fab-status-dot" style={{ background: isOpen ? "#00E5FF" : "#FF4081" }} />
           {(unread > 0 || loading) && (
             <span className="kb-ai-unread">
-              {loading ? <Loader3 /> : unread}
+              {loading ? <FaCircleNotch /> : unread}
             </span>
           )}
         </button>
