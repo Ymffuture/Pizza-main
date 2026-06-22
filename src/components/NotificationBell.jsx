@@ -829,6 +829,7 @@ const css = `
 .fb-body {
   flex: 1;
   overflow-y: auto;
+  min-height: 0;
   overscroll-behavior: contain;
   scrollbar-width: thin;
   scrollbar-color: ${THEME.border} transparent;
