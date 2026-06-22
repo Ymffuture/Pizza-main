@@ -495,7 +495,7 @@ export default function NotificationBell() {
                         {/* Right side actions */}
                         <div className="fb-item-right">
                           {!n.is_read && (
-                        <TbCircleDotted className="fb-item-unread-dot" style={{ background: cfg.color }} />
+                        <TbCircleDotted className="fb-item-unread-dot" style={{ color: cfg.color, width: 16, height: 16  }} />
                           
                           )}
                           <button
