@@ -464,13 +464,13 @@ export default function NotificationBell() {
                         {/* Avatar / Icon */}
                         <div
                           className="fb-item-avatar"
-                          style={{ background: cfg.bg }}
+                          style={{ background:"transparent" }}
                         >
                           <div 
                             className="fb-item-avatar-inner"
-                            style={{ background: cfg.color }}
+                            style={{ background:"transparent"}}
                           >
-                            <NIcon style={{ width: 14, height: 14, color: "#fff" }} />
+                            <NIcon style={{ width: 16, height: 16, color:cfg.color }} className={n.is_read ? "opacity-30" :" opacity-1" } />
                           </div>
                         </div>
 
