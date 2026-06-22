@@ -8,6 +8,10 @@ import axiosClient from "../api/axiosClient";
 import { useAuth } from "../context/AuthContext";
 import { PiDotDuotone } from "react-icons/pi";
 import { TbCircleDotted } from "react-icons/tb";
+import { MdCrisisAlert } from "react-icons/md";
+import { LuBadgeInfo } from "react-icons/lu";
+import { TbUrgent } from "react-icons/tb";
+import { GrVmMaintenance } from "react-icons/gr";
 /* ═════════════════════════════════════════════════════════════════════════════
    THEME CONFIGURATION — Food Delivery / KotaBites Style
    ═════════════════════════════════════════════════════════════════════════════ */
@@ -69,14 +73,14 @@ const THEME = {
    ═════════════════════════════════════════════════════════════════════════════ */
 const TYPE_CFG = {
   info:        { 
-    Icon: Info,          
+    Icon: LuBadgeInfo,          
     color: THEME.info, 
     bg: THEME.infoLight,  
     border: "#B3D9FF",
     label: "Info"
   },
   warning:     { 
-    Icon: AlertTriangle, 
+    Icon: MdCrisisAlert, 
     color: "#B35900", 
     bg: THEME.warningLight,  
     border: "#FFE082",
@@ -97,14 +101,14 @@ const TYPE_CFG = {
     label: "Update"
   },
   maintenance: { 
-    Icon: AlertTriangle, 
+    Icon: GrVmMaintenance, 
     color: "#B35900", 
     bg: THEME.maintenanceLight,  
     border: "#FFE082",
     label: "Maintenance"
   },
   urgent:      { 
-    Icon: Megaphone,     
+    Icon: TbUrgent,     
     color: THEME.urgent, 
     bg: THEME.urgentLight,    
     border: "#FFCDD2",
@@ -338,7 +342,7 @@ export default function NotificationBell() {
           </div>
           {unread > 0 && (
             <span className={`fb-badge${badgePulse ? " fb-badge-pulse" : ""}`}>
-              {unread > 99 ? "99+" : unread}
+              {unread > 9 ? "9+" : unread}
             </span>
           )}
         </button>
@@ -407,7 +411,7 @@ export default function NotificationBell() {
                 >
                   Unread
                   {unread > 0 && (
-                    <span className="fb-tab-badge">{unread > 99 ? "99+" : unread}</span>
+                    <span className="fb-tab-badge">{unread > 9 ? "9+" : unread}</span>
                   )}
                 </button>
               </div>
@@ -495,7 +499,7 @@ export default function NotificationBell() {
                         {/* Right side actions */}
                         <div className="fb-item-right">
                           {!n.is_read && (
-                        <TbCircleDotted className="fb-item-unread-dot" style={{ color: cfg.color, width: 16, height: 16  }} />
+                        <TbCircleDotted className="fb-item-unread-dot " style={{ color: cfg.color, width: 16, height: 16  }} />
                           
                           )}
                           <button
@@ -575,7 +579,7 @@ const css = `
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   flex-shrink: 0;
   left:14px;
-  top:48px;
+  top:42px;
 }
 .fb-btn:hover {
   background: ${THEME.bgHover};
@@ -673,7 +677,7 @@ const css = `
   position: fixed;
   top: 56px;
   right: 16px;
-  width: 380px;
+  width: 600px;
   max-width: calc(100vw - 32px);
   max-height: calc(100vh - 80px);
   background: ${THEME.bgSurface};
