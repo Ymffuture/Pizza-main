@@ -262,6 +262,29 @@ function ThinkingBlock({ steps, elapsed, isThinking }) {
 /* ─────────────────────────────────────────────────────────────────────────── */
 /*  MESSAGE BUBBLE                                                             */
 /* ─────────────────────────────────────────────────────────────────────────── */
+function RotatingActions({ actions, interval = 2000 }) {
+  const [idx, setIdx] = useState(0);
+
+  useEffect(() => {
+    if (!actions || actions.length <= 1) return;
+    const id = setInterval(() => {
+      setIdx((i) => (i + 1) % actions.length);
+    }, interval);
+    return () => clearInterval(id);
+  }, [actions, interval]);
+
+  if (!actions || actions.length === 0) return null;
+  const { Icon, label } = actions[idx];
+
+  return (
+    <div className="kb-welcome-rotator">
+      <div key={idx} className="kb-welcome-rotator-item">
+        <Icon className="kb-welcome-action-icon" />
+        <span>{label}</span>
+      </div>
+    </div>
+  );
+  }
 
 function Bubble({ msg, onCancelConfirm, cancellingId, user }) {
   const isUser  = msg.role === "user";
@@ -313,16 +336,10 @@ function Bubble({ msg, onCancelConfirm, cancellingId, user }) {
                   {renderContent}
                 </ReactMarkdown>
                 
-{msg.actions && (
-  <ul className="kb-welcome-actions">
-    {msg.actions.map(({ Icon, label }) => (
-      <li key={label} className="kb-welcome-action">
-        <Icon className="kb-welcome-action-icon" />
-        <span>{label}</span>
-      </li>
-    ))}
-  </ul>
-)}
+{/* Welcome quick-actions — rotating, one at a time */}
+               {msg.actions && <RotatingActions actions={msg.actions} />}
+
+              
                 { msg.footer && <p className="kb-md-p kb-welcome-footer">{msg.footer}</p>}
 
                 {/* Streaming cursor */}
@@ -1108,17 +1125,22 @@ const styles = `
     .kb-ai-fab    { right:12px; bottom:12px; }
   }
 
-  .kb-welcome-actions {
-  list-style: none; margin: 8px 0 4px; padding: 0;
-  display: flex; flex-direction: column; gap: 6px;
+.kb-welcome-rotator {
+  height: 20px;            /* fixed height — prevents layout jump as labels change length */
+  margin: 8px 0 4px;
+  overflow: hidden;
+  position: relative;
 }
-.kb-welcome-action {
+.kb-welcome-rotator-item {
   display: flex; align-items: center; gap: 8px;
   font-size: 12.5px; font-weight: 600;
   color: rgba(200,200,220,0.85);
+  animation: kbRotateIn 0.35s ease both;
 }
 .kb-welcome-action-icon { width: 15px; height: 15px; flex-shrink: 0; color: var(--kb-cyan); }
+@keyframes kbRotateIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
 .kb-welcome-footer { margin-top: 8px !important; color: rgba(200,200,220,0.7); }
-
-
 `;
