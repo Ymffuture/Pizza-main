@@ -204,15 +204,18 @@ function ThinkingBlock({ steps, elapsed, isThinking }) {
         onClick={() => setExpanded((e) => !e)}
       >
         <span className="claude-thinking-header-left">
-          <TbCircleDotted size={14} className={isThinking ? "claude-think-spin" : ""} />
+          <TbCircleDotted size={16} className={isThinking ? "claude-think-spin" : ""} />
           <span className="claude-thinking-label">{label}</span>
-          {isThinking && (
+          
+          {/*{isThinking && (
             <span className="claude-thinking-dots">
               <span /><span /><span />
             </span>
           )}
+          */} 
+          
         </span>
-        {expanded ? <ChevronDown size={14} strokeWidth={2} /> : <ChevronRight size={14} strokeWidth={2} />}
+        {expanded && steps.length < 0 ? <ChevronDown size={14} strokeWidth={2} /> : <ChevronRight size={14} strokeWidth={2} />}
       </button>
 
       {expanded && steps.length > 0 && (
