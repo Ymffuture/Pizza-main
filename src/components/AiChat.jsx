@@ -21,7 +21,7 @@ import { FaCircleNotch } from "react-icons/fa6";
 import { FaBots } from "react-icons/fa6";
 import { CiCircleCheck } from "react-icons/ci";
 import { TbTruckDelivery } from "react-icons/tb";
-
+import {LuChevronsLeftRight, LuChevronsLeftRightEllipsis } from "react-icons/lu"; 
 
 
 const AVATAR_URL = "https://api.dicebear.com/9.x/avataaars/svg?seed=ai";
@@ -215,7 +215,13 @@ function ThinkingBlock({ steps, elapsed, isThinking }) {
           */} 
           
         </span>
-        {expanded && steps.length < 0 ? <ChevronDown size={14} strokeWidth={2} /> : <ChevronRight size={14} strokeWidth={2} />}
+        {steps.length !== 0 ? (
+        <span >
+          {expanded ? <LuChevronsLeftRight size={14} strokeWidth={2} /> : <LuChevronsLeftRightEllipsis size={14} strokeWidth={2} />} 
+         
+        </span>
+      ) :""} 
+        
       </button>
 
       {expanded && steps.length > 0 && (
