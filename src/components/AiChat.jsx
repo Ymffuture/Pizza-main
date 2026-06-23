@@ -19,6 +19,10 @@ import { TbCircleDotted } from "react-icons/tb";
 import { GiCursedStar } from "react-icons/gi";
 import { FaCircleNotch } from "react-icons/fa6";
 import { FaBots } from "react-icons/fa6";
+import { FaCircleNotch } from "react-icons/fa6";
+import { CiCircleCheck } from "react-icons/ci";
+import { TbTruckDelivery } from "react-icons/tb";
+
 
 
 const AVATAR_URL = "https://api.dicebear.com/9.x/avataaars/svg?seed=ai";
@@ -222,7 +226,7 @@ function ThinkingBlock({ steps, elapsed, isThinking }) {
                   className="claude-thinking-bullet"
                   style={{ color: done ? "#2d7d46" : "#d97757" }}
                 >
-                  {done ? "✓" : "›"}
+                  {done ? <CiCircleCheck />: <FaCircleNotch className="animate-spin" />}
                 </span>
                 <span className="claude-thinking-text">{step}</span>
                 {!done && <span className="claude-thinking-cursor"><GiCursedStar /></span>}
