@@ -190,9 +190,11 @@ function ThinkingBlock({ steps, elapsed, isThinking }) {
   }, [isThinking]);
 
   const label = isThinking
-    ? `Thinking… (${steps.length} step${steps.length !== 1 ? "s" : ""})`
-    : `Thought for · ${elapsed}s`;
-
+  ? steps.length === 1
+    ? "Thinking..."
+    : `Executing reasoning... ${steps.length} step${steps.length !== 1 ? "s" : ""}`
+  : `Thought for · ${elapsed}s`;
+  
   return (
     <div className="claude-thinking-wrap">
       <button
@@ -689,14 +691,14 @@ export default function AiChat() {
           <div className="kb-ai-header">
             <div className="kb-ai-header-left">
               <div>
-                <p className="kb-ai-header-name"><FaBots size={64} /></p>
+                <p className="kb-ai-header-name"><FaBots size={40} /></p>
                 <p className="kb-ai-header-sub">
                   {loading ? (
                     <span className="kb-ai-typing">thinking…</span>
                   ) : isOpen ? (
-                    <span style={{ color: "#00E5FF", fontWeight: 700 }}><TbTruckDelivery/> Open</span>
+                    <span className="flex gap-3" style={{ color: "#00E5FF", fontWeight: 700 }}><TbTruckDelivery size={18} /> Open</span>
                   ) : (
-                    <span style={{ color: "#FF4081", fontWeight: 700 }}><TbTruckDelivery/> Closed</span>
+                    <span className="flex gap-3" style={{ color: "#FF4081", fontWeight: 700 }}><TbTruckDelivery size={18} /> Closed</span>
                   )}
                 </p>
               </div>
