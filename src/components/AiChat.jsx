@@ -22,7 +22,8 @@ import { FaBots } from "react-icons/fa6";
 import { CiCircleCheck } from "react-icons/ci";
 import { TbTruckDelivery } from "react-icons/tb";
 import {LuChevronsLeftRight, LuChevronsLeftRightEllipsis } from "react-icons/lu"; 
-
+import { TbSearch, TbX, TbMessage2 } from "react-icons/tb";
+import { GiHamburger } from "react-icons/gi";
 
 const AVATAR_URL = "https://api.dicebear.com/9.x/avataaars/svg?seed=ai";
 
@@ -148,6 +149,13 @@ function CopyOrderId({ orderId }) {
     </button>
   );
 }
+
+const WELCOME_ACTIONS = [
+  { Icon: TbSearch,   label: "Track an order" },
+  { Icon: TbX,        label: "Cancel an order" },
+  { Icon: GiHamburger,label: "Suggest something lekker" },
+  { Icon: TbMessage2, label: "Pass on feedback" },
+];
 
 /* ─────────────────────────────────────────────────────────────────────────── */
 /*  MARKDOWN                                                                   */
@@ -304,6 +312,18 @@ function Bubble({ msg, onCancelConfirm, cancellingId, user }) {
                 <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
                   {renderContent}
                 </ReactMarkdown>
+                
+{msg.actions && (
+  <ul className="kb-welcome-actions">
+    {msg.actions.map(({ Icon, label }) => (
+      <li key={label} className="kb-welcome-action">
+        <Icon className="kb-welcome-action-icon" />
+        <span>{label}</span>
+      </li>
+    ))}
+  </ul>
+)}
+                { msg.footer && <p className="kb-md-p kb-welcome-footer">{msg.footer}</p>}
 
                 {/* Streaming cursor */}
                 {stillStreaming && <span className="kb-stream-cursor"><GiCursedStar/></span>}
@@ -453,12 +473,13 @@ export default function AiChat() {
   const [cancelResult, setCancelResult] = useState(null);
 
   const [messages, setMessages] = useState([
-    {
-      role: "assistant",
-      content:
-        "Yebo! 👋 I'm **KotaBot**. I can help you:\n- 🔍 Track an order\n- ❌ Cancel an order\n- 🍔 Suggest something lekker\n- 💬 Pass on feedback\n\nWhat can I do for you?",
-    },
-  ]);
+  {
+    role: "assistant",
+    content: "Hello! 👋 I'm **KotaBot**. I can help you:",
+    actions: WELCOME_ACTIONS,
+    footer: "What can I do for you?",
+  },
+]);
 
   const bottomRef = useRef(null);
   const inputRef  = useRef(null);
@@ -1086,4 +1107,18 @@ const styles = `
     .kb-ai-window { right:12px; bottom:12px; width:calc(100vw - 24px); }
     .kb-ai-fab    { right:12px; bottom:12px; }
   }
+
+  .kb-welcome-actions {
+  list-style: none; margin: 8px 0 4px; padding: 0;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.kb-welcome-action {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12.5px; font-weight: 600;
+  color: rgba(200,200,220,0.85);
+}
+.kb-welcome-action-icon { width: 15px; height: 15px; flex-shrink: 0; color: var(--kb-cyan); }
+.kb-welcome-footer { margin-top: 8px !important; color: rgba(200,200,220,0.7); }
+
+
 `;
