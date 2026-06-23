@@ -190,9 +190,11 @@ function ThinkingBlock({ steps, elapsed, isThinking }) {
   }, [isThinking]);
 
   const label = isThinking
-  ? steps.length === 1
-    ? "Thinking..."
-    : `Executing reasoning... ${steps.length} step${steps.length !== 1 ? "s" : ""}`
+  ? steps.length === 0
+    ? ""
+    : steps.length === 1
+      ? "Thinking..."
+      : `Executing reasoning... ${steps.length} step${steps.length !== 1 ? "s" : ""}`
   : `Thought for · ${elapsed}s`;
   
   return (
