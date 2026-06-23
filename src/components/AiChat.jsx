@@ -675,7 +675,7 @@ export default function AiChat() {
           <span className="kb-fab-status-dot" style={{ background: isOpen ? "#00E5FF" : "#FF4081" }} />
           {(unread > 0 || loading) && (
             <span className="kb-ai-unread">
-              {loading ? <FaCircleNotch /> : unread}
+              {loading ? <FaCircleNotch className ="animate-spin" /> : unread}
             </span>
           )}
         </button>
@@ -689,14 +689,14 @@ export default function AiChat() {
           <div className="kb-ai-header">
             <div className="kb-ai-header-left">
               <div>
-                <p className="kb-ai-header-name"><FaBots size={34} /></p>
+                <p className="kb-ai-header-name"><FaBots size={64} /></p>
                 <p className="kb-ai-header-sub">
                   {loading ? (
                     <span className="kb-ai-typing">thinking…</span>
                   ) : isOpen ? (
-                    <span style={{ color: "#00E5FF", fontWeight: 700 }}>● Delivery open</span>
+                    <span style={{ color: "#00E5FF", fontWeight: 700 }}><TbTruckDelivery/> Open</span>
                   ) : (
-                    <span style={{ color: "#FF4081", fontWeight: 700 }}>● Delivery closed</span>
+                    <span style={{ color: "#FF4081", fontWeight: 700 }}><TbTruckDelivery/> Closed</span>
                   )}
                 </p>
               </div>
@@ -830,7 +830,7 @@ const styles = `
   .kb-ai-unread {
     position:absolute; top:-6px; right:-6px;
     min-width:20px; height:20px; border-radius:50px;
-    background:var(--kb-cyan); color:var(--kb-dark);
+    background:transparent ; color:#0ea5a4 ;
     font-size:11px; font-weight:900;
     display:flex; align-items:center; justify-content:center; padding:0 5px;
     animation:kbPop 0.3s cubic-bezier(0.34,1.56,0.64,1);
