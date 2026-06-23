@@ -19,7 +19,6 @@ import { TbCircleDotted } from "react-icons/tb";
 import { GiCursedStar } from "react-icons/gi";
 import { FaCircleNotch } from "react-icons/fa6";
 import { FaBots } from "react-icons/fa6";
-import { FaCircleNotch } from "react-icons/fa6";
 import { CiCircleCheck } from "react-icons/ci";
 import { TbTruckDelivery } from "react-icons/tb";
 
