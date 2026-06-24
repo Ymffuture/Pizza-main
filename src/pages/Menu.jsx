@@ -20,13 +20,20 @@ import { Tooltip } from "antd";
 import ActiveOrderTracker from "../components/ActiveOrderTracker";
 import SettingsPanel from "../components/SettingsPanel";
 
+import allImg from "../assets/category/restaurant.png";
+import kotaImg from "../assets/category/fries.png";
+import drinksImg from "../assets/category/soda.png";
+import sidesImg from "../assets/category/fries.png";
+import combosImg from "../assets/category/food.png";
+import dessertsImg from "../assets/category/ice-cream.png";
+
 const CATEGORIES = [
-  { label: "All",      emoji: "🍽️" },
-  { label: "Kota",     emoji: "🥪" },
-  { label: "Drinks",   emoji: "🥤" },
-  { label: "Sides",    emoji: "🍟" },
-  { label: "Combos",   emoji: "🔥" },
-  { label: "Desserts", emoji: "🍰" },
+  { label: "All",      image: allImg },
+  { label: "Kota",     image: kotaImg },
+  { label: "Drinks",   image: drinksImg },
+  { label: "Sides",    image: sidesImg },
+  { label: "Combos",   image: combosImg },
+  { label: "Desserts", image: dessertsImg },
 ];
 
 // Nav items for sidebar
@@ -393,7 +400,7 @@ export default function Menu() {
                   onClick={() => setActiveCategory(cat.label)}
                   className={`mn-cat-pill${activeCategory === cat.label ? " mn-cat-active" : ""}`}
                 >
-                  <span className="mn-cat-emoji">{cat.emoji}</span>
+                  <img src={category.image} alt={category.label} className="w-6 h-6" />
                   <span className="mn-cat-label">{cat.label}</span>
                 </button>
               ))}
