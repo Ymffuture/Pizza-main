@@ -722,7 +722,7 @@ export default function AiChat() {
       {/* FAB */}
       {!open && (
         <button className="kb-ai-fab" onClick={handleOpen} aria-label="Open KotaBot" title="KotaBot">
-          <FaBots className={`w-6 h-6 ${isOpen? "text-green" :"text-red"} `} />
+          <FaBots className={`w-8 h-8 ${isOpen ? "text-green" :"text-red"} `} />
           {/*  <span className="kb-fab-status-dot" style={{ background: isOpen ? "#00E5FF" : "#FF4081" }} />*/} 
           {(unread > 0 || loading) && (
             <span className="kb-ai-unread">
@@ -740,14 +740,16 @@ export default function AiChat() {
           <div className="kb-ai-header">
             <div className="kb-ai-header-left">
               <div>
-                <p className="kb-ai-header-name"><FaBots size={40} /></p>
+                <p className="kb-ai-header-name"><FaBots size={36} /></p>
                 <p className="kb-ai-header-sub">
                   {loading ? (
-                    <span className="kb-ai-typing">thinking…</span>
+                    <span className="kb-ai-typing">thinking <span className="claude-thinking-dots">
+              <span /><span /><span />
+            </span></span>
                   ) : isOpen ? (
-                    <span className="flex gap-3" style={{ color: "#00E5FF", fontWeight: 700 }}><TbTruckDelivery size={18} /> Open</span>
+                    <span className="flex gap-3" style={{ color: "#00E5FF", fontWeight: 700 }}><TbTruckDelivery size={18} /></span>
                   ) : (
-                    <span className="flex gap-3" style={{ color: "#FF4081", fontWeight: 700 }}><TbTruckDelivery size={18} /> Closed</span>
+                    <span className="flex gap-3" style={{ color: "#FF4081", fontWeight: 700 }}><TbTruckDelivery size={18} /></span>
                   )}
                 </p>
               </div>
