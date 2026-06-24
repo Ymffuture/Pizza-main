@@ -400,7 +400,7 @@ export default function Menu() {
                   onClick={() => setActiveCategory(cat.label)}
                   className={`mn-cat-pill${activeCategory === cat.label ? " mn-cat-active" : ""}`}
                 >
-                  <img src={category.image} alt={category.label} className="w-6 h-6" />
+                  <img src={cat.image} alt={cat.label} className="w-6 h-6" />
                   <span className="mn-cat-label">{cat.label}</span>
                 </button>
               ))}
