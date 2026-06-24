@@ -722,8 +722,8 @@ export default function AiChat() {
       {/* FAB */}
       {!open && (
         <button className="kb-ai-fab" onClick={handleOpen} aria-label="Open KotaBot" title="KotaBot">
-          <BotMessageSquare className="w-6 h-6" />
-          <span className="kb-fab-status-dot" style={{ background: isOpen ? "#00E5FF" : "#FF4081" }} />
+          <FaBots className={`w-6 h-6 ${isOpen? "text-green" :"text-red"} `} />
+          {/*  <span className="kb-fab-status-dot" style={{ background: isOpen ? "#00E5FF" : "#FF4081" }} />*/} 
           {(unread > 0 || loading) && (
             <span className="kb-ai-unread">
               {loading ? <FaCircleNotch className ="animate-spin" /> : unread}
@@ -866,11 +866,10 @@ const styles = `
   .kb-ai-fab {
     position:fixed; bottom:24px; right:24px; z-index:9998;
     display:flex; align-items:center; gap:8px;
-    background:linear-gradient(135deg,var(--kb-purple) 0%,var(--kb-cyan2) 100%);
+    background:linear-gradient(135deg,skyblue 0%, white 100%);
     color:white; border:none; cursor:pointer;
     font-family:'Plus Jakarta Sans',sans-serif; font-weight:800; font-size:13px;
     padding:13px 20px; border-radius:50px;
-    box-shadow:0 8px 28px rgba(124,77,255,0.45),0 0 0 2px rgba(0,229,255,0.25);
     transition:all 0.25s; animation:kbAiFabIn 0.4s cubic-bezier(0.34,1.56,0.64,1);
   }
   .kb-ai-fab:hover { transform:scale(1.06); filter:brightness(1.1); }
