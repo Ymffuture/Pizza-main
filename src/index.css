@@ -10,8 +10,8 @@
 /* ── Global CSS variables ── */
 :root {
   /* PRIMARY — was #DA291C red, now orange */
-  --primary:      black;
-  --primary-dark: gray;
+  --primary:      #04111A;
+  --primary-dark: #666;
 
   /* ACCENT — was #FFC72C gold, now cyan */
   --accent:       #06B6D4;
@@ -170,7 +170,6 @@ body {
 .ve-resend-btn,
 .suc-primary-btn {
   background: var(--primary) !important;
-  box-shadow: 0 6px 18px gray !important;
 }
 
 .kb-ai-fab:hover,
