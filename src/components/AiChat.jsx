@@ -722,7 +722,11 @@ export default function AiChat() {
       {/* FAB */}
       {!open && (
         <button className="kb-ai-fab" onClick={handleOpen} aria-label="Open KotaBot" title="KotaBot">
-          <FaBots className={`w-8 h-8 ${isOpen ? "text-green" :"text-red"} `} />
+          <FaBots
+  className={`w-10 h-10 ${isOpen ? "text-green-500" : "text-red-500"}`}
+  aria-label={isOpen ? "Bot is online" : "Bot is offline"}
+  role="img"
+/>
           {/*  <span className="kb-fab-status-dot" style={{ background: isOpen ? "#00E5FF" : "#FF4081" }} />*/} 
           {(unread > 0 || loading) && (
             <span className="kb-ai-unread">
@@ -743,7 +747,7 @@ export default function AiChat() {
                 <p className="kb-ai-header-name"><FaBots size={36} /></p>
                 <p className="kb-ai-header-sub">
                   {loading ? (
-                    <span className="kb-ai-typing">thinking <span className="claude-thinking-dots">
+                    <span className="kb-ai-typing flex gap-1">thinking <span className="claude-thinking-dots">
               <span /><span /><span />
             </span></span>
                   ) : isOpen ? (
@@ -832,7 +836,7 @@ export default function AiChat() {
                   aria-label="Send"
                 >
                   {loading
-                    ? <TbCircleDotted className="w-4 h-4 kb-ai-spin" />
+                    ? <FaCircleNotch className="w-4 h-4 kb-ai-spin" />
                     : <IoSend className="w-4 h-4" />}
                 </button>
               </div>
