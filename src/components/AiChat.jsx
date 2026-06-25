@@ -4,7 +4,7 @@ import {
   X,Sparkles,Send, BotMessageSquare, Forward, CornerRightUp,
   Loader, Minimize2, Maximize2, XCircle, CheckCircle, Clock,
   CircleUser, Copy, Check, Link as LinkIcon, ChevronDown, ChevronRight,
-  Brain
+  Brain, Paperclip, FileText
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -26,6 +26,14 @@ import { TbSearch, TbX, TbMessage2 } from "react-icons/tb";
 import { GiHamburger } from "react-icons/gi";
 
 const AVATAR_URL = "https://api.dicebear.com/9.x/avataaars/svg?seed=ai";
+
+/* Mirrors services/file_reader_service.py on the backend — keep in sync */
+const MAX_ATTACHMENT_BYTES = 8 * 1024 * 1024; // 8 MB
+const ALLOWED_ATTACHMENT_TYPES = [
+  "image/jpeg", "image/jpg", "image/png", "image/webp",
+  "image/heic", "image/heif", "image/gif",
+  "application/pdf", "text/plain", "text/csv",
+];
 
 /* ─────────────────────────────────────────────────────────────────────────── */
 /*  REASONING — AI-GENERATED (OpenRouter) + keyword fallback                  */
@@ -329,7 +337,15 @@ function Bubble({ msg, onCancelConfirm, cancellingId, user }) {
         {msg.content && (
           <div className={`kb-ai-bubble ${isUser ? "kb-ai-bubble-u" : "kb-ai-bubble-b"}`}>
             {isUser ? (
-              msg.content
+              <>
+                {msg.attachment && (
+                  <div className="kb-attach-sent-chip">
+                    <Paperclip className="w-3 h-3" />
+                    <span>{msg.attachment.filename}</span>
+                  </div>
+                )}
+                {msg.content}
+              </>
             ) : (
               <>
                 <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
@@ -489,6 +505,10 @@ export default function AiChat() {
   const [cancellingId, setCancellingId] = useState(null);
   const [cancelResult, setCancelResult] = useState(null);
 
+  const [attachedFile, setAttachedFile] = useState(null);
+  const [attachError,  setAttachError]  = useState("");
+  const [previewUrl,   setPreviewUrl]   = useState(null);
+
   const [messages, setMessages] = useState([
   {
     role: "assistant",
@@ -500,6 +520,7 @@ export default function AiChat() {
 
   const bottomRef = useRef(null);
   const inputRef  = useRef(null);
+  const fileInputRef  = useRef(null);
   const abortRef  = useRef(null);
   const thinkTimerRef = useRef(null);
   const startTimeRef  = useRef(null);
@@ -513,7 +534,36 @@ export default function AiChat() {
   useEffect(() => { if (open && !minimised) inputRef.current?.focus(); }, [open, minimised]);
   useEffect(() => { if (pageOrderId) setCtxId(pageOrderId); }, [pageOrderId]);
 
+  /* Image thumbnail preview — created/revoked as the attachment changes */
+  useEffect(() => {
+    if (!attachedFile || !attachedFile.type.startsWith("image/")) {
+      setPreviewUrl(null);
+      return;
+    }
+    const url = URL.createObjectURL(attachedFile);
+    setPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [attachedFile]);
+
   const isOpen = hoursStatus.isOpen;
+
+  /* ── Attach a file — validated client-side, read by Gemini at send time ── */
+  const handleFileSelect = (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // reset so picking the same file again still fires onChange
+    if (!file) return;
+
+    if (file.size > MAX_ATTACHMENT_BYTES) {
+      setAttachError(`File too large — max ${MAX_ATTACHMENT_BYTES / (1024 * 1024)} MB`);
+      return;
+    }
+    if (!ALLOWED_ATTACHMENT_TYPES.includes(file.type)) {
+      setAttachError("Unsupported file — try an image (jpg/png/webp) or PDF");
+      return;
+    }
+    setAttachError("");
+    setAttachedFile(file);
+  };
 
   /* ── helpers to mutate the last bot message in place ── */
   const patchLast = useCallback((patch) => {
@@ -569,12 +619,20 @@ export default function AiChat() {
   ───────────────────────────────────────────────────────── */
   const handleSend = async () => {
     const text = input.trim();
-    if (!text || loading) return;
+    if ((!text && !attachedFile) || loading) return;
 
     const detectedId = extractOrderId(text);
     if (detectedId) setCtxId(detectedId);
 
-    const userMsg = { role: "user", content: text };
+    const fileToSend = attachedFile;
+    setAttachedFile(null);
+    setAttachError("");
+
+    const userMsg = {
+      role: "user",
+      content: text || `Sent a file: ${fileToSend.name}`,
+      ...(fileToSend ? { attachment: { filename: fileToSend.name, mimeType: fileToSend.type } } : {}),
+    };
     const updated = [...messages, userMsg];
     setMessages(updated);
     setInput("");
@@ -590,25 +648,53 @@ export default function AiChat() {
 
     /* ── 2. Fire BOTH calls simultaneously ── */
     const firstUserIdx = updated.findIndex((m) => m.role === "user");
-    const apiMessages  = firstUserIdx >= 0 ? updated.slice(firstUserIdx) : updated;
 
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current  = controller;
 
     // Reasoning generation (Gemini 2.0 Flash — fast, free tier)
-    const reasoningPromise = generateReasoningSteps(text);
+    const reasoningPromise = generateReasoningSteps(text || "Customer sent a file attachment");
 
-    // Main chat call
-    const chatPromise = axiosClient
-      .post("/ai/chat",
+    // Main chat call. If a file was attached, it's read with Gemini vision
+    // FIRST (KotaBot's own OpenRouter model is text-only) and the resulting
+    // description is folded into the LAST message's content — the user only
+    // ever sees their own typed text + the small attachment chip; the rich
+    // file description is invisible context for the model only.
+    const chatPromise = (async () => {
+      let attachmentContext = "";
+      if (fileToSend) {
+        try {
+          const fd = new FormData();
+          fd.append("file", fileToSend);
+          if (text) fd.append("question", text);
+          const { data } = await axiosClient.post("/ai/chat/read-file", fd, {
+            headers: { "Content-Type": "multipart/form-data" },
+            signal: controller.signal,
+          });
+          attachmentContext = `\n\n[Attached file: ${data.filename}]\n${data.description}`;
+        } catch (err) {
+          if (err.name === "AbortError" || err.name === "CanceledError") throw err;
+          const reason = err?.response?.data?.detail || "Couldn't read that file.";
+          attachmentContext = `\n\n[Attached file: ${fileToSend.name} — could not be read: ${reason}]`;
+        }
+      }
+
+      const apiMessages = (firstUserIdx >= 0 ? updated.slice(firstUserIdx) : updated).map((m, i, arr) => ({
+        role: m.role,
+        content: i === arr.length - 1 ? `${m.content}${attachmentContext}` : m.content,
+      }));
+
+      const { data } = await axiosClient.post(
+        "/ai/chat",
         { messages: apiMessages, order_id: detectedId || contextId || null },
-        { signal: controller.signal })
-      .then((r) => r.data)
-      .catch((err) => {
-        if (err.name === "AbortError" || err.name === "CanceledError") throw err;
-        return { __error: err };
-      });
+        { signal: controller.signal },
+      );
+      return data;
+    })().catch((err) => {
+      if (err.name === "AbortError" || err.name === "CanceledError") throw err;
+      return { __error: err };
+    });
 
     /* ── 3. As soon as reasoning resolves, animate steps in ── */
     //  Chat call keeps running in background during this animation
@@ -809,8 +895,53 @@ export default function AiChat() {
                 </div>
               )}
 
+              {/* Pending attachment preview */}
+              {(attachedFile || attachError) && (
+                <div className="kb-attach-preview-row">
+                  {attachedFile && (
+                    <div className="kb-attach-preview-chip">
+                      {previewUrl ? (
+                        <img src={previewUrl} alt="" className="kb-attach-thumb" />
+                      ) : (
+                        <span className="kb-attach-icon-box">
+                          <FileText className="w-4 h-4" />
+                        </span>
+                      )}
+                      <span className="kb-attach-filename">{attachedFile.name}</span>
+                      <span className="kb-attach-filesize">{(attachedFile.size / 1024).toFixed(0)} KB</span>
+                      <button
+                        type="button"
+                        className="kb-attach-remove-btn"
+                        onClick={() => setAttachedFile(null)}
+                        aria-label="Remove attachment"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  )}
+                  {attachError && <p className="kb-attach-error">{attachError}</p>}
+                </div>
+              )}
+
               {/* Input */}
               <div className="kb-ai-input-row">
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileSelect}
+                  accept="image/jpeg,image/png,image/webp,image/heic,image/heif,image/gif,application/pdf,text/plain,text/csv"
+                  style={{ display: "none" }}
+                />
+                <button
+                  type="button"
+                  className="kb-attach-btn"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={loading || !isAuth}
+                  title="Attach an image or PDF"
+                  aria-label="Attach a file"
+                >
+                  <Paperclip className="w-4 h-4" />
+                </button>
                 <textarea
                   ref={inputRef}
                   className="kb-ai-input"
@@ -832,7 +963,7 @@ export default function AiChat() {
                 <button
                   className="kb-ai-send-btn"
                   onClick={handleSend}
-                  disabled={loading || !input.trim() || !isAuth}
+                  disabled={loading || (!input.trim() && !attachedFile) || !isAuth}
                   aria-label="Send"
                 >
                   {loading
@@ -1121,6 +1252,44 @@ const styles = `
   .kb-ai-send-btn { width:38px; height:38px; border-radius:11px; flex-shrink:0; background:linear-gradient(135deg,var(--kb-purple) 0%,var(--kb-cyan2) 100%); border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; color:white; transition:all 0.18s; box-shadow:0 3px 12px rgba(124,77,255,0.4); }
   .kb-ai-send-btn:hover:not(:disabled) { filter:brightness(1.15); transform:scale(1.05); }
   .kb-ai-send-btn:disabled { opacity:0.45; cursor:not-allowed; transform:none; }
+
+  /* ── Attach (file upload) ── */
+  .kb-attach-btn {
+    width:38px; height:38px; border-radius:11px; flex-shrink:0;
+    background:rgba(200,200,220,0.06); border:1.5px solid rgba(0,229,255,0.12);
+    cursor:pointer; display:flex; align-items:center; justify-content:center;
+    color:rgba(200,200,220,0.6); transition:all 0.18s;
+  }
+  .kb-attach-btn:hover:not(:disabled) { color:var(--kb-cyan); border-color:rgba(0,229,255,0.35); background:rgba(0,229,255,0.08); }
+  .kb-attach-btn:disabled { opacity:0.4; cursor:not-allowed; }
+
+  .kb-attach-preview-row { padding:0 12px 8px; flex-shrink:0; }
+  .kb-attach-preview-chip {
+    display:flex; align-items:center; gap:8px; padding:6px 8px;
+    background:rgba(0,229,255,0.06); border:1px solid rgba(0,229,255,0.18);
+    border-radius:10px; animation:kbWindowIn 0.2s ease;
+  }
+  .kb-attach-thumb    { width:32px; height:32px; border-radius:7px; object-fit:cover; flex-shrink:0; }
+  .kb-attach-icon-box {
+    width:32px; height:32px; border-radius:7px; flex-shrink:0;
+    background:rgba(0,229,255,0.12); color:var(--kb-cyan);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .kb-attach-filename  { font-size:11.5px; font-weight:700; color:var(--kb-text); flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .kb-attach-filesize  { font-size:10px; color:rgba(200,200,220,0.45); flex-shrink:0; }
+  .kb-attach-remove-btn {
+    background:none; border:none; color:rgba(200,200,220,0.45); cursor:pointer;
+    display:flex; align-items:center; justify-content:center; flex-shrink:0; padding:2px;
+  }
+  .kb-attach-remove-btn:hover { color:#FF4081; }
+  .kb-attach-error { font-size:10.5px; color:#FF4081; font-weight:600; margin:4px 0 0; }
+
+  .kb-attach-sent-chip {
+    display:inline-flex; align-items:center; gap:5px;
+    font-size:10.5px; font-weight:700; opacity:0.9;
+    margin-bottom:5px; padding:3px 8px; border-radius:8px;
+    background:rgba(255,255,255,0.15);
+  }
 
   @keyframes kbSpin { to { transform:rotate(360deg); } }
   .kb-ai-spin { animation:kbSpin 0.75s linear infinite; }
