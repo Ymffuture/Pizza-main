@@ -4,7 +4,7 @@ import {
   X,Sparkles,Send, BotMessageSquare, Forward, CornerRightUp,
   Loader, Minimize2, Maximize2, XCircle, CheckCircle, Clock,
   CircleUser, Copy, Check, Link as LinkIcon, ChevronDown, ChevronRight,
-  Brain, Paperclip, FileText
+  Brain, Paperclip, FileText, Mic, Square
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -34,6 +34,7 @@ const ALLOWED_ATTACHMENT_TYPES = [
   "image/heic", "image/heif", "image/gif",
   "application/pdf", "text/plain", "text/csv",
 ];
+const MAX_RECORD_SECONDS = 60; // auto-stop a voice note at 60s
 
 /* ─────────────────────────────────────────────────────────────────────────── */
 /*  REASONING — AI-GENERATED (OpenRouter) + keyword fallback                  */
@@ -96,6 +97,12 @@ async function generateReasoningSteps(userText) {
 function extractOrderId(text) {
   const full = text.match(/(?<![a-zA-Z0-9_])([0-9a-fA-F]{24})(?![a-zA-Z0-9_])/);
   return full ? full[1] : null;
+}
+
+function formatRecordTime(totalSeconds) {
+  const m = Math.floor(totalSeconds / 60);
+  const s = totalSeconds % 60;
+  return `${m}:${String(s).padStart(2, "0")}`;
 }
 
 function useTypewriter(target, enabled, speed = 18) {
@@ -509,6 +516,10 @@ export default function AiChat() {
   const [attachError,  setAttachError]  = useState("");
   const [previewUrl,   setPreviewUrl]   = useState(null);
 
+  const [isRecording,   setIsRecording]   = useState(false);
+  const [recordSeconds, setRecordSeconds] = useState(0);
+  const [transcribing,  setTranscribing]  = useState(false);
+
   const [messages, setMessages] = useState([
   {
     role: "assistant",
@@ -524,6 +535,11 @@ export default function AiChat() {
   const abortRef  = useRef(null);
   const thinkTimerRef = useRef(null);
   const startTimeRef  = useRef(null);
+
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef   = useRef([]);
+  const mediaStreamRef   = useRef(null);
+  const recordTimerRef   = useRef(null);
 
   useEffect(() => {
     const id = setInterval(() => setHoursStatus(getBusinessHoursStatus()), 60_000);
@@ -545,6 +561,23 @@ export default function AiChat() {
     return () => URL.revokeObjectURL(url);
   }, [attachedFile]);
 
+  /* Auto-stop a voice note once it hits the cap */
+  useEffect(() => {
+    if (isRecording && recordSeconds >= MAX_RECORD_SECONDS) stopRecording();
+  }, [recordSeconds, isRecording]);
+
+  /* Release the mic / clear timers if the widget unmounts mid-recording */
+  useEffect(() => {
+    return () => {
+      clearInterval(recordTimerRef.current);
+      mediaStreamRef.current?.getTracks().forEach((t) => t.stop());
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+        mediaRecorderRef.current.onstop = null;
+        mediaRecorderRef.current.stop();
+      }
+    };
+  }, []);
+
   const isOpen = hoursStatus.isOpen;
 
   /* ── Attach a file — validated client-side, read by Gemini at send time ── */
@@ -563,6 +596,99 @@ export default function AiChat() {
     }
     setAttachError("");
     setAttachedFile(file);
+  };
+
+  /* ── Voice notes — record with MediaRecorder, transcribe via Gemini,
+       drop the transcript straight into the input box for review ── */
+  const releaseMic = () => {
+    mediaStreamRef.current?.getTracks().forEach((t) => t.stop());
+    mediaStreamRef.current = null;
+  };
+
+  const startRecording = async () => {
+    if (isRecording || loading || transcribing) return;
+    setAttachError("");
+
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
+      setAttachError("Voice recording isn't supported in this browser.");
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaStreamRef.current = stream;
+
+      const mimeCandidates = [
+        "audio/webm;codecs=opus", "audio/webm",
+        "audio/mp4", "audio/ogg;codecs=opus", "audio/ogg",
+      ];
+      const supportedMime = mimeCandidates.find((m) => MediaRecorder.isTypeSupported?.(m));
+
+      const recorder = new MediaRecorder(stream, supportedMime ? { mimeType: supportedMime } : undefined);
+      audioChunksRef.current = [];
+      recorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunksRef.current.push(e.data); };
+      recorder.onstop = () => handleRecordingStop(recorder.mimeType || supportedMime || "audio/webm");
+
+      mediaRecorderRef.current = recorder;
+      recorder.start();
+      setIsRecording(true);
+      setRecordSeconds(0);
+      recordTimerRef.current = setInterval(() => setRecordSeconds((s) => s + 1), 1000);
+    } catch (err) {
+      setAttachError("Microphone access denied — check your browser permissions.");
+      releaseMic();
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      mediaRecorderRef.current.stop(); // → onstop → handleRecordingStop
+    }
+    clearInterval(recordTimerRef.current);
+    setIsRecording(false);
+  };
+
+  const cancelRecording = () => {
+    if (mediaRecorderRef.current) {
+      mediaRecorderRef.current.onstop = null; // discard — skip transcription
+      if (mediaRecorderRef.current.state !== "inactive") mediaRecorderRef.current.stop();
+    }
+    clearInterval(recordTimerRef.current);
+    releaseMic();
+    audioChunksRef.current = [];
+    setIsRecording(false);
+    setRecordSeconds(0);
+  };
+
+  const handleRecordingStop = async (mimeType) => {
+    releaseMic();
+    setRecordSeconds(0);
+
+    const blob = audioChunksRef.current.length
+      ? new Blob(audioChunksRef.current, { type: mimeType })
+      : null;
+    audioChunksRef.current = [];
+    if (!blob || blob.size === 0) return; // cancelled, or nothing was captured
+
+    setTranscribing(true);
+    try {
+      const ext = mimeType.includes("mp4") ? "m4a" : mimeType.includes("ogg") ? "ogg" : "webm";
+      const audioFile = new File([blob], `voice-note.${ext}`, { type: mimeType });
+
+      const fd = new FormData();
+      fd.append("file", audioFile);
+
+      const { data } = await axiosClient.post("/ai/chat/read-file", fd, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      setInput((prev) => (prev.trim() ? `${prev.trim()} ${data.description}` : data.description));
+      setTimeout(() => inputRef.current?.focus(), 50);
+    } catch (err) {
+      setAttachError(err?.response?.data?.detail || "Couldn't transcribe that — try again or type it instead.");
+    } finally {
+      setTranscribing(false);
+    }
   };
 
   /* ── helpers to mutate the last bot message in place ── */
@@ -925,45 +1051,99 @@ export default function AiChat() {
 
               {/* Input */}
               <div className="kb-ai-input-row">
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleFileSelect}
-                  accept="image/jpeg,image/png,image/webp,image/heic,image/heif,image/gif,application/pdf,text/plain,text/csv"
-                  style={{ display: "none" }}
-                />
-                <button
-                  type="button"
-                  className="kb-attach-btn"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={loading || !isAuth}
-                  title="Attach an image or PDF"
-                  aria-label="Attach a file"
-                >
-                  <Paperclip className="w-4 h-4" />
-                </button>
-                <textarea
-                  ref={inputRef}
-                  className="kb-ai-input"
-                  rows={1}
-                  placeholder={
-                    !isAuth ? "Sign in to chat"
-                      : !isOpen ? "Ask about your order…"
-                        : "Ask KotaBot anything…"
-                  }
-                  value={input}
-                  disabled={loading || !isAuth}
-                  onChange={(e) => {
-                    if (e.target.value.length > 2000) return;
-                    setInput(e.target.value);
-                  }}
-                  onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && (e.preventDefault(), handleSend())}
-                  style={{ resize: "none", overflow: "hidden" }}
-                />
+                {isRecording || transcribing ? (
+                  <div className={`kb-record-indicator${transcribing ? " kb-transcribing-indicator" : ""}`}>
+                    {isRecording && (
+                      <button
+                        type="button"
+                        className="kb-record-cancel-btn"
+                        onClick={cancelRecording}
+                        title="Cancel"
+                        aria-label="Cancel recording"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                    {isRecording ? (
+                      <>
+                        <span className="kb-record-dot" />
+                        <span className="kb-record-time">{formatRecordTime(recordSeconds)}</span>
+                        <span className="kb-record-hint">Recording…</span>
+                      </>
+                    ) : (
+                      <>
+                        <FaCircleNotch className="w-3.5 h-3.5 kb-ai-spin" />
+                        <span className="kb-record-hint">Transcribing…</span>
+                      </>
+                    )}
+                  </div>
+                ) : (
+                  <>
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      onChange={handleFileSelect}
+                      accept="image/jpeg,image/png,image/webp,image/heic,image/heif,image/gif,application/pdf,text/plain,text/csv"
+                      style={{ display: "none" }}
+                    />
+                    <button
+                      type="button"
+                      className="kb-attach-btn"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={loading || !isAuth}
+                      title="Attach an image or PDF"
+                      aria-label="Attach a file"
+                    >
+                      <Paperclip className="w-4 h-4" />
+                    </button>
+                    <textarea
+                      ref={inputRef}
+                      className="kb-ai-input"
+                      rows={1}
+                      placeholder={
+                        !isAuth ? "Sign in to chat"
+                          : !isOpen ? "Ask about your order…"
+                            : "Ask KotaBot anything…"
+                      }
+                      value={input}
+                      disabled={loading || !isAuth}
+                      onChange={(e) => {
+                        if (e.target.value.length > 2000) return;
+                        setInput(e.target.value);
+                      }}
+                      onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && (e.preventDefault(), handleSend())}
+                      style={{ resize: "none", overflow: "hidden" }}
+                    />
+                  </>
+                )}
+
+                {isRecording ? (
+                  <button
+                    type="button"
+                    className="kb-record-stop-btn"
+                    onClick={stopRecording}
+                    title="Stop recording"
+                    aria-label="Stop recording and transcribe"
+                  >
+                    <Square className="w-3.5 h-3.5" fill="currentColor" />
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="kb-mic-btn"
+                    onClick={startRecording}
+                    disabled={loading || !isAuth || transcribing}
+                    title="Record a voice note"
+                    aria-label="Record a voice note"
+                  >
+                    <Mic className="w-4 h-4" />
+                  </button>
+                )}
+
                 <button
                   className="kb-ai-send-btn"
                   onClick={handleSend}
-                  disabled={loading || (!input.trim() && !attachedFile) || !isAuth}
+                  disabled={loading || isRecording || transcribing || (!input.trim() && !attachedFile) || !isAuth}
                   aria-label="Send"
                 >
                   {loading
@@ -1290,6 +1470,46 @@ const styles = `
     margin-bottom:5px; padding:3px 8px; border-radius:8px;
     background:rgba(255,255,255,0.15);
   }
+
+  /* ── Voice recording ── */
+  .kb-mic-btn {
+    width:38px; height:38px; border-radius:11px; flex-shrink:0;
+    background:rgba(200,200,220,0.06); border:1.5px solid rgba(0,229,255,0.12);
+    cursor:pointer; display:flex; align-items:center; justify-content:center;
+    color:rgba(200,200,220,0.6); transition:all 0.18s;
+  }
+  .kb-mic-btn:hover:not(:disabled) { color:var(--kb-cyan); border-color:rgba(0,229,255,0.35); background:rgba(0,229,255,0.08); }
+  .kb-mic-btn:disabled { opacity:0.4; cursor:not-allowed; }
+
+  .kb-record-stop-btn {
+    width:38px; height:38px; border-radius:11px; flex-shrink:0;
+    background:rgba(255,64,129,0.15); border:1.5px solid rgba(255,64,129,0.4);
+    cursor:pointer; display:flex; align-items:center; justify-content:center;
+    color:#FF4081; transition:all 0.18s;
+  }
+  .kb-record-stop-btn:hover { background:rgba(255,64,129,0.25); }
+
+  .kb-record-indicator {
+    flex:1; display:flex; align-items:center; gap:8px;
+    background:rgba(255,64,129,0.06); border:1.5px solid rgba(255,64,129,0.2);
+    border-radius:12px; padding:0 12px; height:38px;
+  }
+  .kb-transcribing-indicator { background:rgba(0,229,255,0.06); border-color:rgba(0,229,255,0.2); }
+
+  .kb-record-cancel-btn {
+    background:none; border:none; color:rgba(200,200,220,0.5); cursor:pointer;
+    display:flex; align-items:center; justify-content:center; padding:0; flex-shrink:0;
+  }
+  .kb-record-cancel-btn:hover { color:var(--kb-text); }
+
+  .kb-record-dot {
+    width:8px; height:8px; border-radius:50%; background:#FF4081; flex-shrink:0;
+    animation:kbRecordPulse 1.1s ease infinite;
+  }
+  @keyframes kbRecordPulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.75)} }
+
+  .kb-record-time { font-size:12.5px; font-weight:800; color:#FF4081; font-family:monospace; flex-shrink:0; }
+  .kb-record-hint { font-size:11.5px; font-weight:600; color:rgba(200,200,220,0.6); }
 
   @keyframes kbSpin { to { transform:rotate(360deg); } }
   .kb-ai-spin { animation:kbSpin 0.75s linear infinite; }
