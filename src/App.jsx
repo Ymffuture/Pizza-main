@@ -14,6 +14,7 @@ import PrivacyPage        from "./components/Privacy";
 import TermsPage          from "./components/Terms";
 import SupportPage        from "./components/Support";
 import { UserStatusProvider } from "./context/UserStatusContext";
+import { BillingProvider }    from "./context/BillingContext";
 import AccountStatusBanner    from "./components/AccountStatusBanner";
 import FeatureGate        from "./components/FeatureGate";
 
@@ -36,6 +37,7 @@ const Wallet           = lazy(() => import("./pages/Wallet"));
 const DeliverDashboard = lazy(() => import("./pages/DeliverDashboard"));
 const ClientWallet     = lazy(() => import("./pages/ClientWallet"));
 const Appeal = lazy(() => import("./pages/Appeal"));
+const Pricing = lazy(() => import("./pages/Pricing"));
 
 // inside <Routes>
 
@@ -109,6 +111,7 @@ export default function App() {
     <ErrorBoundary>
       <AuthProvider>
         <UserStatusProvider>
+        <BillingProvider>
           <OrderProvider>
             <CartProvider>
               <ToastProvider>
@@ -146,6 +149,7 @@ export default function App() {
                       <Route path="/terms"                 element={<TermsPage />} />
                       <Route path="/support"               element={<SupportPage />} />
                       <Route path="/success"               element={<Success />} />
+                      <Route path="/pricing"               element={<Pricing />} />
                       
 <Route path="/appeal" element={<RequireAuth><Appeal /></RequireAuth>} />
 
@@ -258,6 +262,7 @@ export default function App() {
               </ToastProvider>
             </CartProvider>
           </OrderProvider>
+        </BillingProvider>
         </UserStatusProvider>
       </AuthProvider>
     </ErrorBoundary>
