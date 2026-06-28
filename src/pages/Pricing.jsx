@@ -189,7 +189,7 @@ export default function Pricing() {
             <div className="pr-card-head">
               <span className="pr-card-name pr-card-name-gold">ProBite</span>
               <div className="pr-card-price">
-                <span className="pr-price-amount">R{price ?? "—"}</span>
+                <span className="pr-price-amount">R{price ?? "179.99"}</span>
                 <span className="pr-price-period">/{cycle === "monthly" ? "mo" : "yr"}</span>
               </div>
               {monthlyEquivalent && (
