@@ -19,6 +19,8 @@ import { FaHeart, FaRegHeart, FaBookmark, FaRegBookmark, FaCommentDots, FaRegCom
 import { motion, AnimatePresence } from 'framer-motion';
 import Avatar from './Avatar';
 import axiosClient from '../api/axiosClient';
+import { useBilling } from '../context/BillingContext';
+import { useToast } from './Toast';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Main component
@@ -32,6 +34,8 @@ export default function SocialActions({
   className = '',
 }) {
   // ── State ─────────────────────────────────────────────────────────────────
+  const { isProBite } = useBilling();
+  const toast = useToast();
   const [stats, setStats] = useState({
     likes: initialStats.likes ?? 0,
     comments: initialStats.comments ?? 0,
@@ -279,18 +283,54 @@ export default function SocialActions({
     }
   }, [currentUser?.id]);
 
-  // ── Edit comment ──────────────────────────────────────────────────────────
+  // ── Edit comment (ProBite perk) ──────────────────────────────────────────
   const handleSaveEdit = useCallback(async () => {
     if (!editing?.text.trim()) return;
     const { id, text } = editing;
+
+    if (!isProBite) {
+      setEditing(null);
+      toast.show({
+        type: 'info',
+        title: 'ProBite perk',
+        message: 'Editing comments is a ProBite feature.',
+        learnMoreUrl: '/pricing',
+      });
+      return;
+    }
+
+    const previous = comments;
     setComments(prev =>
       prev.map(c => (c.id === id ? { ...c, content: text, is_edited: true } : c))
     );
     setEditing(null);
     try {
       await axiosClient.patch(`/social/comment/${id}`, { content: text });
-    } catch {}
-  }, [editing]);
+    } catch (err) {
+      setComments(previous); // roll back the optimistic update — it was rejected
+      const status = err?.response?.status;
+      toast.show({
+        type: 'error',
+        title: status === 403 ? 'ProBite perk' : "Couldn't save edit",
+        message: status === 403
+          ? 'Editing comments is a ProBite feature.'
+          : 'Please try again.',
+      });
+    }
+  }, [editing, isProBite, comments, toast]);
+
+  const handleEditClick = useCallback((comment) => {
+    if (!isProBite) {
+      toast.show({
+        type: 'info',
+        title: 'ProBite perk',
+        message: 'Editing comments is a ProBite feature.',
+        learnMoreUrl: '/pricing',
+      });
+      return;
+    }
+    setEditing({ id: comment.id, text: comment.content });
+  }, [isProBite, toast]);
 
   // ── Formatters ────────────────────────────────────────────────────────────
   const fmt = (n) =>
@@ -464,10 +504,11 @@ export default function SocialActions({
                       currentUserId={currentUser?.id}
                       isLast={idx === comments.length - 1}
                       isNew={newCommentIds.has(comment.id)}
+                      isProBite={isProBite}
                       editing={editing?.id === comment.id ? editing : null}
                       onLike={() => handleLikeComment(comment.id)}
                       onDelete={() => handleDelete(comment.id)}
-                      onEdit={() => setEditing({ id: comment.id, text: comment.content })}
+                      onEdit={() => handleEditClick(comment)}
                       onEditChange={text => setEditing(e => ({ ...e, text }))}
                       onEditSave={handleSaveEdit}
                       onEditCancel={() => setEditing(null)}
@@ -526,6 +567,7 @@ function CommentRow({
   currentUserId,
   isLast,
   isNew,
+  isProBite,
   editing,
   onLike,
   onDelete,
@@ -625,6 +667,11 @@ function CommentRow({
                       className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 transition-colors"
                     >
                       <Pencil className="w-3.5 h-3.5" /> Edit
+                      {!isProBite && (
+                        <span className="ml-auto text-[9px] font-bold text-amber-400 bg-amber-400/10 px-1.5 py-0.5 rounded-full">
+                          PRO
+                        </span>
+                      )}
                     </button>
                     <button
                       onClick={() => { onDelete(); setMenuOpen(false); }}

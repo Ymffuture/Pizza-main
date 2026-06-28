@@ -10,6 +10,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import axiosClient from "../api/axiosClient";
 import { useAuth } from "../context/AuthContext";
+import { useBilling } from "../context/BillingContext";
 import { useParams, Link } from "react-router-dom";
 import { getBusinessHoursStatus } from "../utils/businessHours";
 import Avatar from "./Avatar";
@@ -499,6 +500,8 @@ function SignInPrompt() {
 
 export default function AiChat() {
   const { isAuth, user } = useAuth();
+  const { isProBite, credits, applyCreditsUpdate } = useBilling();
+  const outOfCredits = isAuth && !isProBite && !credits.unlimited && (credits.credits ?? 1) <= 0;
   const params      = useParams();
   const pageOrderId = params?.id || null;
 
@@ -747,6 +750,22 @@ export default function AiChat() {
     const text = input.trim();
     if ((!text && !attachedFile) || loading) return;
 
+    if (outOfCredits) {
+      setInput("");
+      setMessages((prev) => [
+        ...prev,
+        { role: "user", content: text || "Sent a file" },
+        {
+          role: "assistant",
+          content: "You're out of free KotaBot credits for now. They refill automatically every few hours, or go **[ProBite](/pricing)** for unlimited chat — no waiting. 🍕",
+          preTyping: false,
+          streaming: true,
+        },
+      ]);
+      if (!open) setUnread((u) => u + 1);
+      return;
+    }
+
     const detectedId = extractOrderId(text);
     if (detectedId) setCtxId(detectedId);
 
@@ -885,9 +904,19 @@ export default function AiChat() {
 
     /* ── 6. Inject final reply for typewriter ── */
     if (apiError) {
-      const errMsg = apiError?.response?.status === 401
-        ? "Please **sign in** to chat with KotaBot."
-        : "Eish, something went wrong. Try again in a moment.";
+      const status = apiError?.response?.status;
+      const errMsg =
+        status === 401
+          ? "Please **sign in** to chat with KotaBot."
+          : status === 402
+          ? "You're out of free KotaBot credits for now. They refill automatically, or go **[ProBite](/pricing)** for unlimited chat — no waiting. 🍕"
+          : "Eish, something went wrong. Try again in a moment.";
+      if (status === 402) {
+        const detail = apiError?.response?.data?.detail;
+        if (detail && typeof detail === "object") {
+          applyCreditsUpdate({ unlimited: false, credits: detail.credits, credits_cap: detail.credits_cap, resets_at: detail.resets_at });
+        }
+      }
       setMessages((prev) => {
         const next = [...prev];
         const last = { ...next[next.length - 1], content: errMsg, preTyping: false, streaming: true };
@@ -896,6 +925,7 @@ export default function AiChat() {
       });
     } else {
       if (apiData.cancel_result) setCancelResult(apiData.cancel_result);
+      if (apiData.credits) applyCreditsUpdate(apiData.credits);
 
       const pendingId = (() => {
         const orderId = detectedId || contextId;
@@ -971,6 +1001,15 @@ export default function AiChat() {
               </div>
             </div>
             <div className="kb-ai-header-actions">
+              {isAuth && (
+                <Link
+                  to="/pricing"
+                  className={`kb-credits-badge ${isProBite ? "kb-credits-pro" : outOfCredits ? "kb-credits-empty" : ""}`}
+                  title={isProBite ? "Unlimited with ProBite" : "View KotaBot credits & ProBite"}
+                >
+                  {isProBite ? "PRO ∞" : `${credits.credits ?? "—"}/${credits.creditsCap ?? 20}`}
+                </Link>
+              )}
               <button className="kb-ai-icon-btn" onClick={() => setMin((m) => !m)} title={minimised ? "Expand" : "Minimise"}>
                 {minimised ? <Maximize2 className="w-4 h-4" /> : <Minimize2 className="w-4 h-4" />}
               </button>
@@ -1240,6 +1279,16 @@ const styles = `
   }
   .kb-ai-icon-btn:hover { color:var(--kb-text); border-color:rgba(0,229,255,0.3); }
   .kb-ai-close-btn:hover { background:rgba(255,64,129,0.2); color:#FF4081; border-color:rgba(255,64,129,0.3); }
+
+  .kb-credits-badge {
+    display:flex; align-items:center; height:30px; padding:0 10px;
+    border-radius:8px; background:rgba(200,200,220,0.06); border:1px solid rgba(0,229,255,0.12);
+    color:rgba(200,200,220,0.65); font-size:11px; font-weight:800; letter-spacing:0.02em;
+    text-decoration:none; cursor:pointer; transition:all 0.18s; white-space:nowrap;
+  }
+  .kb-credits-badge:hover { color:var(--kb-text); border-color:rgba(0,229,255,0.3); }
+  .kb-credits-pro   { background:rgba(255,199,44,0.12); border-color:rgba(255,199,44,0.3); color:#FFC72C; }
+  .kb-credits-empty { background:rgba(248,113,113,0.12); border-color:rgba(248,113,113,0.3); color:#f87171; }
 
   /* ── Thinking block ── */
   .kb-thinking-wrap {
