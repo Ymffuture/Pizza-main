@@ -1007,7 +1007,7 @@ export default function AiChat() {
                   className={`kb-credits-badge ${isProBite ? "kb-credits-pro" : outOfCredits ? "kb-credits-empty" : ""}`}
                   title={isProBite ? "Unlimited with ProBite" : "View KotaBot credits & ProBite"}
                 >
-                  {isProBite ? "PRO ∞" : `${credits.credits ?? "—"}/${credits.creditsCap ?? 20}`}
+                  {isProBite ? "PRO ∞" : `${credits.credits ?? "—"}/${credits.creditsCap ?? 100}`}
                 </Link>
               )}
               <button className="kb-ai-icon-btn" onClick={() => setMin((m) => !m)} title={minimised ? "Expand" : "Minimise"}>
