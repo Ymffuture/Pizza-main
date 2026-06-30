@@ -667,11 +667,11 @@ function CommentRow({
                       className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 transition-colors"
                     >
                       <Pencil className="w-3.5 h-3.5" /> Edit
-                      {!isProBite && (
+                      {!isProBite ? (
                         <span className="ml-auto text-[9px] font-bold text-amber-400 bg-amber-400/10 px-1.5 py-0.5 rounded-full">
                           PRO
                         </span>
-                      )}
+                      ):<GoVerified className ="px-1.5 py-0.5" />}
                     </button>
                     <button
                       onClick={() => { onDelete(); setMenuOpen(false); }}
