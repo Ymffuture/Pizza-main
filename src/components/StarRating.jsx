@@ -21,6 +21,9 @@ import Avatar from './Avatar';
 import axiosClient from '../api/axiosClient';
 import { useBilling } from '../context/BillingContext';
 import { useToast } from './Toast';
+import { GoVerified } from "react-icons/go";
+
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Main component
