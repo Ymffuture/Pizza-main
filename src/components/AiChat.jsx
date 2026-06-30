@@ -1012,7 +1012,7 @@ export default function AiChat() {
                   {isProBite ? <RiVerifiedBadgeFill className="text-white" size={16} />: `${credits.credits ?? "Loading..."}`}
                 </Link>
               )}
-                 {isProBite? && (
+                 {isProBite && (
               <button className="kb-ai-icon-btn" onClick={() => setMin((m) => !m)} title={minimised ? "Expand" : "Minimise"}>
                 {minimised ? <Maximize2 className="w-4 h-4" /> : <Minimize2 className="w-4 h-4" />}
               </button>)} 
