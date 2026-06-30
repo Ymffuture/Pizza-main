@@ -25,6 +25,8 @@ import { TbTruckDelivery } from "react-icons/tb";
 import {LuChevronsLeftRight, LuChevronsLeftRightEllipsis } from "react-icons/lu"; 
 import { TbSearch, TbX, TbMessage2 } from "react-icons/tb";
 import { GiHamburger } from "react-icons/gi";
+import { RiVerifiedBadgeFill } from "react-icons/ri";
+
 
 const AVATAR_URL = "https://api.dicebear.com/9.x/avataaars/svg?seed=ai";
 
@@ -1007,7 +1009,7 @@ export default function AiChat() {
                   className={`kb-credits-badge ${isProBite ? "kb-credits-pro" : outOfCredits ? "kb-credits-empty" : ""}`}
                   title={isProBite ? "Unlimited with ProBite" : "View KotaBot credits & ProBite"}
                 >
-                  {isProBite ? "PRO ∞" : `${credits.credits ?? "—"}/${credits.creditsCap ?? 100}`}
+                  {isProBite ? <RiVerifiedBadgeFill className="text-white" size={34} />: `${credits.credits ?? "—"}/${credits.creditsCap ?? 100}`}
                 </Link>
               )}
               <button className="kb-ai-icon-btn" onClick={() => setMin((m) => !m)} title={minimised ? "Expand" : "Minimise"}>
