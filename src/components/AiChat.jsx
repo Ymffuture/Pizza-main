@@ -1009,7 +1009,7 @@ export default function AiChat() {
                   className={`kb-credits-badge ${isProBite ? "kb-credits-pro" : outOfCredits ? "kb-credits-empty" : ""}`}
                   title={isProBite ? "Unlimited with ProBite" : "View KotaBot credits & ProBite"}
                 >
-                  {isProBite ? <RiVerifiedBadgeFill className="text-white" size={34} />: `${credits.credits ?? "—"}/${credits.creditsCap ?? 100}`}
+                  {isProBite ? <RiVerifiedBadgeFill className="text-white" size={16} />: `${credits.credits ?? "—"}/${credits.creditsCap ?? 100}`}
                 </Link>
               )}
               <button className="kb-ai-icon-btn" onClick={() => setMin((m) => !m)} title={minimised ? "Expand" : "Minimise"}>
@@ -1289,7 +1289,7 @@ const styles = `
     text-decoration:none; cursor:pointer; transition:all 0.18s; white-space:nowrap;
   }
   .kb-credits-badge:hover { color:var(--kb-text); border-color:rgba(0,229,255,0.3); }
-  .kb-credits-pro   { background:rgba(255,199,44,0.12); border-color:rgba(255,199,44,0.3); color:#FFC72C; }
+  .kb-credits-pro   { background:transparent ; border:none; }
   .kb-credits-empty { background:rgba(248,113,113,0.12); border-color:rgba(248,113,113,0.3); color:#f87171; }
 
   /* ── Thinking block ── */
