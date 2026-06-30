@@ -94,7 +94,7 @@ export default function Pricing() {
   const free = plans?.find((p) => p.id === "free");
   const probite = plans?.find((p) => p.id === "probite");
   const price = probite ? (cycle === "monthly" ? probite.price_monthly : probite.price_yearly) : null;
-  const fmtPrice = (n) => (n == null ? "—" : Number(n).toFixed(2));
+  const fmtPrice = (n) => (n == null ? null : Number(n).toFixed(2));
   const monthlyEquivalent = probite && cycle === "yearly" ? fmtPrice(probite.price_yearly / 12) : null;
 
   return (
@@ -152,39 +152,57 @@ export default function Pricing() {
             <div className="pr-card-head">
               <span className="pr-card-name">Free</span>
               <div className="pr-card-price">
-                <span className="pr-price-amount">R0</span>
-                <span className="pr-price-period">/forever</span>
+                {plans ? (
+                  <>
+                    <span className="pr-price-amount">R0</span>
+                    <span className="pr-price-period">/forever</span>
+                  </>
+                ) : (
+                  <div className="pr-skeleton-price">
+                    <span className="pr-skeleton-text pr-skeleton-text-lg" />
+                    <span className="pr-skeleton-text pr-skeleton-text-sm" />
+                  </div>
+                )}
               </div>
             </div>
 
             <ul className="pr-features">
-              <li>
-                <Sparkles className="w-4 h-4 pr-feat-icon" />
-                <span>
-                  {free ? free.features[0] : `${credits.creditsCap ?? 100} KotaBot credits, refilling every 3 hours`}
-                </span>
-              </li>
-              <li>
-                <MessageCircle className="w-4 h-4 pr-feat-icon" />
-                <span>{free?.features?.[1] ?? "Like & comment on menu items"}</span>
-              </li>
-              {/* Anything beyond the first 2 is rendered straight from the
-                  backend's plan list — new app features show up here
-                  automatically without another frontend deploy. */}
-              {free?.features?.slice(2).map((f) => (
-                <li key={f}>
-                  <Check className="w-4 h-4 pr-feat-icon" />
-                  <span>{f}</span>
-                </li>
-              ))}
-              <li className="pr-feat-muted">
-                <X className="w-4 h-4 pr-feat-icon-off" />
-                <span>Edit your comments</span>
-              </li>
-              <li className="pr-feat-muted">
-                <X className="w-4 h-4 pr-feat-icon-off" />
-                <span>Like / comment notifications</span>
-              </li>
+              {plans ? (
+                <>
+                  <li>
+                    <Sparkles className="w-4 h-4 pr-feat-icon" />
+                    <span>
+                      {free ? free.features[0] : `${credits.creditsCap ?? 100} KotaBot credits, refilling every 3 hours`}
+                    </span>
+                  </li>
+                  <li>
+                    <MessageCircle className="w-4 h-4 pr-feat-icon" />
+                    <span>{free?.features?.[1] ?? "Like & comment on menu items"}</span>
+                  </li>
+                  {free?.features?.slice(2).map((f) => (
+                    <li key={f}>
+                      <Check className="w-4 h-4 pr-feat-icon" />
+                      <span>{f}</span>
+                    </li>
+                  ))}
+                  <li className="pr-feat-muted">
+                    <X className="w-4 h-4 pr-feat-icon-off" />
+                    <span>Edit your comments</span>
+                  </li>
+                  <li className="pr-feat-muted">
+                    <X className="w-4 h-4 pr-feat-icon-off" />
+                    <span>Like / comment notifications</span>
+                  </li>
+                </>
+              ) : (
+                <>
+                  <li><span className="pr-skeleton-line" /></li>
+                  <li><span className="pr-skeleton-line" /></li>
+                  <li><span className="pr-skeleton-line" /></li>
+                  <li><span className="pr-skeleton-line" /></li>
+                  <li><span className="pr-skeleton-line" /></li>
+                </>
+              )}
             </ul>
 
             <button className="pr-cta pr-cta-ghost" disabled>
@@ -199,8 +217,17 @@ export default function Pricing() {
             <div className="pr-card-head">
               <span className="pr-card-name pr-card-name-gold">ProBite</span>
               <div className="pr-card-price">
-                <span className="pr-price-amount">R{fmtPrice(price)}</span>
-                <span className="pr-price-period">/{cycle === "monthly" ? "mo" : "yr"}</span>
+                {plans ? (
+                  <>
+                    <span className="pr-price-amount">R{fmtPrice(price) ?? "—"}</span>
+                    <span className="pr-price-period">/{cycle === "monthly" ? "mo" : "yr"}</span>
+                  </>
+                ) : (
+                  <div className="pr-skeleton-price">
+                    <span className="pr-skeleton-text pr-skeleton-text-lg" />
+                    <span className="pr-skeleton-text pr-skeleton-text-sm" />
+                  </div>
+                )}
               </div>
               {monthlyEquivalent && (
                 <span className="pr-price-note">≈ R{monthlyEquivalent}/mo billed yearly</span>
@@ -208,27 +235,35 @@ export default function Pricing() {
             </div>
 
             <ul className="pr-features">
-              <li>
-                <MessageCircle className="w-4 h-4 pr-feat-icon-gold" />
-                <span><strong>Unlimited</strong> KotaBot chat — no credits, no waiting</span>
-              </li>
-              <li>
-                <Pencil className="w-4 h-4 pr-feat-icon-gold" />
-                <span>Edit your comments anytime</span>
-              </li>
-              <li>
-                <Bell className="w-4 h-4 pr-feat-icon-gold" />
-                <span>Get notified on likes &amp; comments</span>
-              </li>
-              {/* "Everything in Free" + any future ProBite perks come
-                  straight from the backend list, same pattern as the
-                  Free card above. */}
-              {(probite?.features?.slice(3) ?? ["Everything in Free"]).map((f) => (
-                <li key={f}>
-                  <Check className="w-4 h-4 pr-feat-icon-gold" />
-                  <span>{f}</span>
-                </li>
-              ))}
+              {plans ? (
+                <>
+                  <li>
+                    <MessageCircle className="w-4 h-4 pr-feat-icon-gold" />
+                    <span><strong>Unlimited</strong> KotaBot chat — no credits, no waiting</span>
+                  </li>
+                  <li>
+                    <Pencil className="w-4 h-4 pr-feat-icon-gold" />
+                    <span>Edit your comments anytime</span>
+                  </li>
+                  <li>
+                    <Bell className="w-4 h-4 pr-feat-icon-gold" />
+                    <span>Get notified on likes &amp; comments</span>
+                  </li>
+                  {(probite?.features?.slice(3) ?? ["Everything in Free"]).map((f) => (
+                    <li key={f}>
+                      <Check className="w-4 h-4 pr-feat-icon-gold" />
+                      <span>{f}</span>
+                    </li>
+                  ))}
+                </>
+              ) : (
+                <>
+                  <li><span className="pr-skeleton-line" /></li>
+                  <li><span className="pr-skeleton-line" /></li>
+                  <li><span className="pr-skeleton-line" /></li>
+                  <li><span className="pr-skeleton-line" /></li>
+                </>
+              )}
             </ul>
 
             {isProBite ? (
@@ -247,7 +282,7 @@ export default function Pricing() {
                 )}
               </div>
             ) : (
-              <button className="pr-cta pr-cta-gold" onClick={handleSubscribe} disabled={subscribing}>
+              <button className="pr-cta pr-cta-gold" onClick={handleSubscribe} disabled={subscribing || !plans}>
                 {subscribing ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
@@ -326,7 +361,7 @@ const styles = `
   .pr-card-head { margin-bottom: 20px; }
   .pr-card-name { display: block; font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 1px; margin-bottom: 8px; }
   .pr-card-name-gold { color: var(--gold); }
-  .pr-card-price { display: flex; align-items: baseline; gap: 4px; }
+  .pr-card-price { display: flex; align-items: baseline; gap: 4px; min-height: 48px; }
   .pr-price-amount { font-family: 'Bebas Neue', sans-serif; font-size: 38px; }
   .pr-price-period { font-size: 13px; color: var(--muted); font-weight: 600; }
   .pr-price-note { display: block; font-size: 11px; color: var(--muted); margin-top: 4px; }
@@ -341,7 +376,7 @@ const styles = `
   .pr-cta { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; border: none; cursor: pointer; font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 900; font-size: 14px; padding: 14px; border-radius: 14px; transition: all 0.2s; }
   .pr-cta-gold { background: var(--gold); color: var(--dark); box-shadow: 0 4px 20px rgba(255,199,44,0.25); }
   .pr-cta-gold:hover { background: #ffd75c; transform: scale(1.02); }
-  .pr-cta-gold:disabled { opacity: 0.7; cursor: wait; transform: none; }
+  .pr-cta-gold:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
   .pr-cta-ghost { background: transparent; border: 1px solid var(--border); color: var(--muted); cursor: default; }
 
   .pr-current-plan { display: flex; flex-direction: column; gap: 10px; align-items: center; padding-top: 4px; }
@@ -352,4 +387,49 @@ const styles = `
   .pr-credit-status { font-size: 13px; color: var(--muted); margin-bottom: 18px; }
   .pr-back-link { font-size: 13px; color: var(--muted); text-decoration: none; }
   .pr-back-link:hover { color: var(--text); }
+
+  /* ── Claude.ai-style skeleton loading ── */
+  @keyframes pr-shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+
+  .pr-skeleton-text,
+  .pr-skeleton-line {
+    display: inline-block;
+    background: linear-gradient(
+      90deg,
+      rgba(255, 248, 231, 0.06) 25%,
+      rgba(255, 248, 231, 0.12) 50%,
+      rgba(255, 248, 231, 0.06) 75%
+    );
+    background-size: 200% 100%;
+    animation: pr-shimmer 1.6s ease-in-out infinite;
+    border-radius: 6px;
+  }
+
+  .pr-skeleton-text {
+    height: 14px;
+  }
+  .pr-skeleton-text-lg {
+    width: 80px;
+    height: 38px;
+    border-radius: 8px;
+  }
+  .pr-skeleton-text-sm {
+    width: 40px;
+    height: 14px;
+  }
+
+  .pr-skeleton-line {
+    width: 100%;
+    height: 14px;
+    border-radius: 6px;
+  }
+
+  .pr-skeleton-price {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
 `;
