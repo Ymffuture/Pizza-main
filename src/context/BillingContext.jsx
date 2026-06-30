@@ -15,8 +15,8 @@ import { getMyBilling } from "../api/billing.api";
 
 const BLANK_CREDITS = {
   unlimited: false,
-  credits: 20,
-  creditsCap: 20,
+  credits: 100,
+  creditsCap: 100,
   resetsAt: null,
 };
 
