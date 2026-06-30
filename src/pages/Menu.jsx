@@ -321,7 +321,9 @@ export default function Menu() {
                     {!collapsed && (
                       <>
                         <div className="mn-user-info">
+                          <Tooltip title ={isProBite? "ProBite" :"Free plan"} >
                           <span className="mn-user-name flex gap-2">{user?.full_name?.split(" ")[0] || "User"} {isProBite? <RiVerifiedBadgeFill className ="text-blue-600" /> :<VscUnverified className ="text-yellow-400" />} </span>
+                        </Tooltip>
                           <span className="mn-user-email">{user?.email}</span>
                         </div>
                         <button className="mn-logout-btn" onClick={handleLogout} title="Sign out">
@@ -370,7 +372,7 @@ export default function Menu() {
             </button>
             <Tooltip title={user?.full_name} placement="top">
               <span style={{ flexShrink: 0 }}>
-                <Avatar picture={user?.picture || user?.avatar} name={user?.full_name} email={user?.email} size={40} />
+                <Avatar picture={user?.picture || user?.avatar} name={user?.full_name} email={user?.email} size={30} />
               </span>
             </Tooltip>
           </header>
