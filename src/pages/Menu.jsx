@@ -8,7 +8,9 @@ import { useToast } from "../components/Toast";
 import Footer from "../components/Footer";
 import Avatar from "../components/Avatar";
 import NotificationBell from "../components/NotificationBell";
+import { RiVerifiedBadgeFill } from "react-icons/ri";
 // import AccountStatusBanner from "../components/AccountStatusBanner" 
+import { useBilling } from '../context/BillingContext';
 import {
   ShoppingBag, RefreshCw, UtensilsCrossed, Zap, PanelLeftClose, MessagesSquare, LayoutDashboard,
   ChevronRight, Flame, Search,Scale, SlidersHorizontal, LogOut,
@@ -62,7 +64,8 @@ export default function Menu() {
   const { addItem, count } = useCart();
   const { logout, isAuth, user } = useAuth();
   const toast              = useToast();
-
+  const { isProBite } = useBilling();
+  
   const handleLogout = () => {
     logout();
     toast.show({ type: "info", title: "Signed out", message: "See you next time!" });
@@ -318,7 +321,7 @@ export default function Menu() {
                     {!collapsed && (
                       <>
                         <div className="mn-user-info">
-                          <span className="mn-user-name">{user?.full_name?.split(" ")[0] || "User"}</span>
+                          <span className="mn-user-name flex gap-2">{user?.full_name?.split(" ")[0] || "User"}q {isProBite? <RiVerifiedBadgeFill className ="text-blue-600" /> :"FREE"} </span>
                           <span className="mn-user-email">{user?.email}</span>
                         </div>
                         <button className="mn-logout-btn" onClick={handleLogout} title="Sign out">
