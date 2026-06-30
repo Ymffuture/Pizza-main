@@ -21,7 +21,7 @@ import { useAuth } from "../context/AuthContext";
 import { Tooltip } from "antd";
 import ActiveOrderTracker from "../components/ActiveOrderTracker";
 import SettingsPanel from "../components/SettingsPanel";
-
+import { VscUnverified } from "react-icons/vsc";
 import allImg from "../assets/category/restaurant.png";
 import kotaImg from "../assets/category/fries.png";
 import drinksImg from "../assets/category/soda.png";
@@ -321,7 +321,7 @@ export default function Menu() {
                     {!collapsed && (
                       <>
                         <div className="mn-user-info">
-                          <span className="mn-user-name flex gap-2">{user?.full_name?.split(" ")[0] || "User"} {isProBite? <RiVerifiedBadgeFill className ="text-blue-600" /> :"FREE"} </span>
+                          <span className="mn-user-name flex gap-2">{user?.full_name?.split(" ")[0] || "User"} {isProBite? <RiVerifiedBadgeFill className ="text-blue-600" /> :<VscUnverified className ="text-yellow-400" />} </span>
                           <span className="mn-user-email">{user?.email}</span>
                         </div>
                         <button className="mn-logout-btn" onClick={handleLogout} title="Sign out">
