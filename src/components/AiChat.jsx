@@ -1009,12 +1009,13 @@ export default function AiChat() {
                   className={`kb-credits-badge ${isProBite ? "kb-credits-pro" : outOfCredits ? "kb-credits-empty" : ""}`}
                   title={isProBite ? "Unlimited with ProBite" : "View KotaBot credits & ProBite"}
                 >
-                  {isProBite ? <RiVerifiedBadgeFill className="text-white" size={16} />: `${credits.credits ?? "—"}/${credits.creditsCap ?? 100}`}
+                  {isProBite ? <RiVerifiedBadgeFill className="text-white" size={16} />: `${credits.credits ?? "Loading..."}`}
                 </Link>
               )}
+                 {isProBite? && (
               <button className="kb-ai-icon-btn" onClick={() => setMin((m) => !m)} title={minimised ? "Expand" : "Minimise"}>
                 {minimised ? <Maximize2 className="w-4 h-4" /> : <Minimize2 className="w-4 h-4" />}
-              </button>
+              </button>)} 
               <button className="kb-ai-icon-btn kb-ai-close-btn" onClick={() => setOpen(false)}>
                 <X className="w-4 h-4" />
               </button>
@@ -1127,11 +1128,12 @@ export default function AiChat() {
                       accept="image/jpeg,image/png,image/webp,image/heic,image/heif,image/gif,application/pdf,text/plain,text/csv"
                       style={{ display: "none" }}
                     />
+                  
                     <button
                       type="button"
                       className="kb-attach-btn"
                       onClick={() => fileInputRef.current?.click()}
-                      disabled={loading || !isAuth}
+                      disabled={loading || !isAuth || !isProBite}
                       title="Attach an image or PDF"
                       aria-label="Attach a file"
                     >
