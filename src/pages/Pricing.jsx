@@ -94,7 +94,8 @@ export default function Pricing() {
   const free = plans?.find((p) => p.id === "free");
   const probite = plans?.find((p) => p.id === "probite");
   const price = probite ? (cycle === "monthly" ? probite.price_monthly : probite.price_yearly) : null;
-  const monthlyEquivalent = probite && cycle === "yearly" ? (probite.price_yearly / 12).toFixed(0) : null;
+  const fmtPrice = (n) => (n == null ? "—" : Number(n).toFixed(2));
+  const monthlyEquivalent = probite && cycle === "yearly" ? fmtPrice(probite.price_yearly / 12) : null;
 
   return (
     <div className="pr-root">
@@ -160,13 +161,22 @@ export default function Pricing() {
               <li>
                 <Sparkles className="w-4 h-4 pr-feat-icon" />
                 <span>
-                  {free ? free.features[0] : "20 KotaBot credits, refilling every 5 hours"}
+                  {free ? free.features[0] : `${credits.creditsCap ?? 100} KotaBot credits, refilling every 3 hours`}
                 </span>
               </li>
               <li>
                 <MessageCircle className="w-4 h-4 pr-feat-icon" />
-                <span>Like &amp; comment on menu items</span>
+                <span>{free?.features?.[1] ?? "Like & comment on menu items"}</span>
               </li>
+              {/* Anything beyond the first 2 is rendered straight from the
+                  backend's plan list — new app features show up here
+                  automatically without another frontend deploy. */}
+              {free?.features?.slice(2).map((f) => (
+                <li key={f}>
+                  <Check className="w-4 h-4 pr-feat-icon" />
+                  <span>{f}</span>
+                </li>
+              ))}
               <li className="pr-feat-muted">
                 <X className="w-4 h-4 pr-feat-icon-off" />
                 <span>Edit your comments</span>
@@ -189,7 +199,7 @@ export default function Pricing() {
             <div className="pr-card-head">
               <span className="pr-card-name pr-card-name-gold">ProBite</span>
               <div className="pr-card-price">
-                <span className="pr-price-amount">R{price ?? "179.99"}</span>
+                <span className="pr-price-amount">R{fmtPrice(price)}</span>
                 <span className="pr-price-period">/{cycle === "monthly" ? "mo" : "yr"}</span>
               </div>
               {monthlyEquivalent && (
@@ -210,10 +220,15 @@ export default function Pricing() {
                 <Bell className="w-4 h-4 pr-feat-icon-gold" />
                 <span>Get notified on likes &amp; comments</span>
               </li>
-              <li>
-                <Check className="w-4 h-4 pr-feat-icon-gold" />
-                <span>Everything in Free</span>
-              </li>
+              {/* "Everything in Free" + any future ProBite perks come
+                  straight from the backend list, same pattern as the
+                  Free card above. */}
+              {(probite?.features?.slice(3) ?? ["Everything in Free"]).map((f) => (
+                <li key={f}>
+                  <Check className="w-4 h-4 pr-feat-icon-gold" />
+                  <span>{f}</span>
+                </li>
+              ))}
             </ul>
 
             {isProBite ? (
