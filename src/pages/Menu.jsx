@@ -321,7 +321,7 @@ export default function Menu() {
                     {!collapsed && (
                       <>
                         <div className="mn-user-info">
-                          <span className="mn-user-name flex gap-2">{user?.full_name?.split(" ")[0] || "User"}q {isProBite? <RiVerifiedBadgeFill className ="text-blue-600" /> :"FREE"} </span>
+                          <span className="mn-user-name flex gap-2">{user?.full_name?.split(" ")[0] || "User"} {isProBite? <RiVerifiedBadgeFill className ="text-blue-600" /> :"FREE"} </span>
                           <span className="mn-user-email">{user?.email}</span>
                         </div>
                         <button className="mn-logout-btn" onClick={handleLogout} title="Sign out">
