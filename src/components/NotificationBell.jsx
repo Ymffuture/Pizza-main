@@ -567,8 +567,8 @@ const css = `
    ═══════════════════════════════════════════════════════════════════════════ */
 .fb-btn {
   position: absolute;
-  width: 40px;
-  height: 40px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   background: ${THEME.bgSurface};
   border: none;
@@ -580,7 +580,7 @@ const css = `
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   flex-shrink: 0;
   left:11px;
-  top:-10px;
+  top:-12px;
 }
 .fb-btn:hover {
   background: ${THEME.bgHover};
