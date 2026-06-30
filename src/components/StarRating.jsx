@@ -674,7 +674,7 @@ function CommentRow({
                         <span className="ml-auto text-[9px] font-bold text-amber-400 bg-amber-400/10 px-1.5 py-0.5 rounded-full">
                           PRO
                         </span>
-                      ):<GoVerified className ="px-1.5 py-0.5" />}
+                      ):<GoVerified />}
                     </button>
                     <button
                       onClick={() => { onDelete(); setMenuOpen(false); }}
