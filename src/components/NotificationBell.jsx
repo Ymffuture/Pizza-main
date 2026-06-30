@@ -580,7 +580,7 @@ const css = `
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   flex-shrink: 0;
   left:11px;
-  top:2px;
+  top:-4px;
 }
 .fb-btn:hover {
   background: ${THEME.bgHover};
