@@ -26,7 +26,7 @@ import {LuChevronsLeftRight, LuChevronsLeftRightEllipsis } from "react-icons/lu"
 import { TbSearch, TbX, TbMessage2 } from "react-icons/tb";
 import { GiHamburger } from "react-icons/gi";
 import { RiVerifiedBadgeFill } from "react-icons/ri";
-
+import { Tooltip } from "antd";
 
 const AVATAR_URL = "https://api.dicebear.com/9.x/avataaars/svg?seed=ai";
 
