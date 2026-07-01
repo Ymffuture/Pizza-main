@@ -1018,9 +1018,12 @@ export default function AiChat() {
                   {isProBite ? <RiVerifiedBadgeFill className="text-white" size={16} />: `${credits.credits ?? "Loading..."}`}
                 </Link>
               )}
+              {isProBite && (
               <button className="kb-ai-icon-btn" onClick={() => setMin((m) => !m)} title={minimised ? "Expand" : "Minimise"}>
                 {minimised ? <Maximize2 className="w-4 h-4" /> : <Minimize2 className="w-4 h-4" />}
               </button>
+        )} 
+              
               <button className="kb-ai-icon-btn kb-ai-close-btn" onClick={() => setOpen(false)}>
                 <X className="w-4 h-4" />
               </button>
@@ -1177,9 +1180,7 @@ export default function AiChat() {
                     <Square className="w-3.5 h-3.5" fill="currentColor" />
                   </button>
                 ) : (
-              <Tooltip
-title={isProBite ? "Record a voice note" : "Record a voice note (5s max — go ProBite for 60s)"}
->
+              <Tooltip title={isProBite ? "Record a voice note" : "Record a voice note (5s max — go ProBite for 60s)"}>
                   <button
                     type="button"
                     className="kb-mic-btn"
