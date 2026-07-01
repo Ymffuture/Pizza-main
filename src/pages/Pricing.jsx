@@ -266,7 +266,7 @@ export default function Pricing() {
                   {/* Order thresholds */}
                   <li>
                     <ShoppingBag className="w-4 h-4 pr-feat-icon-gold" />
-                    <span>Order online — minimum R250 card / R150 cash</span>
+                    <span>Order online — over R250 card / R150 cash</span>
                   </li>
                   {/* Edit comments */}
                   <li>
