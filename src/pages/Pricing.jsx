@@ -169,17 +169,17 @@ export default function Pricing() {
                     <Mic className="w-4 h-4 pr-feat-icon" />
                     <span>Voice notes up to <strong>5 seconds</strong></span>
                   </li>
-                  {/* File upload */}
-                  <li>
-                    <Paperclip className="w-4 h-4 pr-feat-icon" />
+                  {/* File upload — ProBite only */}
+                  <li className="pr-feat-muted">
+                    <X className="w-4 h-4 pr-feat-icon-off" />
                     <span>File &amp; image uploads in chat</span>
                   </li>
-                  {/* Minimize chat */}
-                  <li>
-                    <Minimize2 className="w-4 h-4 pr-feat-icon" />
-                    <span>Minimisable KotaBot chat widget</span>
+                  {/* Minimize — ProBite only */}
+                  <li className="pr-feat-muted">
+                    <X className="w-4 h-4 pr-feat-icon-off" />
+                    <span>Minimisable chat widget</span>
                   </li>
-                  {/* Order online threshold */}
+                  {/* Order thresholds */}
                   <li>
                     <ShoppingBag className="w-4 h-4 pr-feat-icon" />
                     <span>Order online — minimum R250 card / R150 cash</span>
