@@ -26,7 +26,7 @@ import {LuChevronsLeftRight, LuChevronsLeftRightEllipsis } from "react-icons/lu"
 import { TbSearch, TbX, TbMessage2 } from "react-icons/tb";
 import { GiHamburger } from "react-icons/gi";
 import { RiVerifiedBadgeFill } from "react-icons/ri";
-
+import { Tooltip } from "antd";
 
 const AVATAR_URL = "https://api.dicebear.com/9.x/avataaars/svg?seed=ai";
 
@@ -1128,7 +1128,9 @@ export default function AiChat() {
                       accept="image/jpeg,image/png,image/webp,image/heic,image/heif,image/gif,application/pdf,text/plain,text/csv"
                       style={{ display: "none" }}
                     />
+                  <Tooltip tittle={!isProBite? "Upgrade to ProBiite" :""} >
                   
+            
                     <button
                       type="button"
                       className="kb-attach-btn"
@@ -1139,6 +1141,7 @@ export default function AiChat() {
                     >
                       <Paperclip className="w-4 h-4" />
                     </button>
+                    </Tooltip>
                     <textarea
                       ref={inputRef}
                       className="kb-ai-input"
