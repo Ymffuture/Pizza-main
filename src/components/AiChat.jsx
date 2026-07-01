@@ -37,7 +37,14 @@ const ALLOWED_ATTACHMENT_TYPES = [
   "image/heic", "image/heif", "image/gif",
   "application/pdf", "text/plain", "text/csv",
 ];
-const MAX_RECORD_SECONDS = 60; // auto-stop a voice note at 60s
+// line ~40 — top of file, replaces the old constant
+const RECORD_SECONDS_FREE = 5;
+const RECORD_SECONDS_PRO  = 60;
+
+// line ~505 — inside the component, after isProBite is destructured
+const MAX_RECORD_SECONDS = isProBite ? RECORD_SECONDS_PRO : RECORD_SECONDS_FREE;
+
+// mic button title — free users see the limit on hover
 
 /* ─────────────────────────────────────────────────────────────────────────── */
 /*  REASONING — AI-GENERATED (OpenRouter) + keyword fallback                  */
@@ -108,7 +115,10 @@ function formatRecordTime(totalSeconds) {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
-function useTypewriter(target, enabled, speed = 18) {
+function useTypewriter(target, enabled, speed = 18, charsPerFrame = 3, slow = false) {
+  const effectiveSpeed = slow ? 55 : speed;
+  const effectiveChars = slow ? 1  : charsPerFrame;
+
   const [displayed, setDisplayed] = useState("");
   const [done, setDone]           = useState(false);
   const frameRef = useRef(null);
@@ -308,13 +318,14 @@ function Bubble({ msg, onCancelConfirm, cancellingId, user }) {
   const isUser  = msg.role === "user";
   const orderId = !isUser ? extractOrderId(msg.content) : null;
 
+  const displayed = useTypewriter(msg.content, msg.streaming, 18, 3, !isProBite);
   /* typewriter runs when msg.streaming === true */
   const { displayed, done: twDone } = useTypewriter(
     msg.content,
     !isUser && !!msg.streaming,
     14,
   );
-
+  
   const renderContent = !isUser && msg.streaming ? displayed : msg.content;
   const stillStreaming = !isUser && msg.streaming && !twDone;
 
@@ -846,8 +857,11 @@ export default function AiChat() {
     /* ── 3. As soon as reasoning resolves, animate steps in ── */
     //  Chat call keeps running in background during this animation
     const reasoningSteps = await reasoningPromise;
-    const STEP_INTERVAL  = 360;
-
+    const STEP_INTERVAL_PRO =360
+    const STEP_INTERVAL_FREE = 180;
+    
+    const STEP_INTERVAL = isProBite? STEP_INTERVAL_PRO:STEP_INTERVAL_FREE;
+    
     await new Promise((resolve) => {
       let idx = 0;
       const tick = () => {
@@ -1128,7 +1142,7 @@ export default function AiChat() {
                       accept="image/jpeg,image/png,image/webp,image/heic,image/heif,image/gif,application/pdf,text/plain,text/csv"
                       style={{ display: "none" }}
                     />
-                  <Tooltip tittle={!isProBite? "Upgrade to ProBiite" :""} >
+                  <Tooltip tittle={!isProBite? "Upgrade to ProBite" :""} >
                   
             
                     <button
@@ -1174,6 +1188,9 @@ export default function AiChat() {
                     <Square className="w-3.5 h-3.5" fill="currentColor" />
                   </button>
                 ) : (
+              <Tooltip
+                title={isProBite ? "Record a voice note" : "Record a voice note (5s max — go ProBite for 60s)"}
+  >
                   <button
                     type="button"
                     className="kb-mic-btn"
@@ -1184,6 +1201,7 @@ export default function AiChat() {
                   >
                     <Mic className="w-4 h-4" />
                   </button>
+            </Tooltip>
                 )}
 
                 <button
