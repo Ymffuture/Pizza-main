@@ -857,8 +857,8 @@ export default function AiChat() {
     /* ── 3. As soon as reasoning resolves, animate steps in ── */
     //  Chat call keeps running in background during this animation
     const reasoningSteps = await reasoningPromise;
-    const STEP_INTERVAL_PRO =360
-    const STEP_INTERVAL_FREE = 180;
+    const STEP_INTERVAL_PRO =340
+    const STEP_INTERVAL_FREE = 900;
     
     const STEP_INTERVAL = isProBite? STEP_INTERVAL_PRO:STEP_INTERVAL_FREE;
     
