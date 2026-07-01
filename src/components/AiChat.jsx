@@ -37,7 +37,7 @@ const ALLOWED_ATTACHMENT_TYPES = [
   "image/heic", "image/heif", "image/gif",
   "application/pdf", "text/plain", "text/csv",
 ];
-const RECORD_SECONDS_FREE = 10;
+const RECORD_SECONDS_FREE = 5;
 const RECORD_SECONDS_PRO  = 60;
 
 /* ─────────────────────────────────────────────────────────────────────────── */
@@ -1177,6 +1177,9 @@ export default function AiChat() {
                     <Square className="w-3.5 h-3.5" fill="currentColor" />
                   </button>
                 ) : (
+              <Tooltip
+title={isProBite ? "Record a voice note" : "Record a voice note (5s max — go ProBite for 60s)"}
+>
                   <button
                     type="button"
                     className="kb-mic-btn"
@@ -1187,7 +1190,8 @@ export default function AiChat() {
                   >
                     <Mic className="w-4 h-4" />
                   </button>
-                )}
+            </Tooltip>              
+            )}
 
                 <button
                   className="kb-ai-send-btn"
