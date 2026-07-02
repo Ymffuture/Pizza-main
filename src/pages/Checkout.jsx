@@ -60,10 +60,10 @@ export default function Checkout() {
   const toast = useToast();
 
   // ── Billing / ProBite status — must be called inside the component ────
-  const { isProBite, expiresAt, cancelAtPeriodEnd } = useBilling();
+  const { isProBite, expiresAt, cancelAtPeriodEnd, isLoading} = useBilling();
   const proExpiryLabel = isProBite ? formatExpiry(expiresAt) : null;
   
-if (isProBite = false) {
+if (isLoading) {
   toast.show({ type: "info", title: "Loading... ", message: "Activating ProBite. Please wait... " });
 }
   // ── Payment method limits (depend on ProBite status) ───────────────────
