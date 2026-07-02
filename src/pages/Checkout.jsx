@@ -24,27 +24,14 @@ function calcDeliveryFee(subtotal) {
   if (subtotal <= 100) return 12;
   return 15;
 }
-const {
-    isProBite, expiresAt, cancelAtPeriodEnd, credits, refresh,
-  } = useBilling();
-// ── Payment method limits ─────────────────────────────────────────────────
-const CASH_MAX =isProBite? 2000: 150;
-const CARD_MAX = isProBite ? 3000:250;
 
-const PAYMENT_METHODS = [
-  {
-    id:    "cash",
-    label: "Cash on Delivery",
-    sub:   `Pay when your order arrives · max ${formatCurrency(CASH_MAX)}`,
-    Icon:  Banknote,
-  },
-  {
-    id:    "paystack",
-    label: "Pay Online",
-    sub:   `Card, EFT & Instant EFT via Paystack · max ${formatCurrency(CARD_MAX)}`,
-    Icon:  CreditCard,
-  },
-];
+// ── Format a billing expiry date for display next to the price ────────────
+function formatExpiry(dateStr) {
+  if (!dateStr) return null;
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleDateString("en-ZA", { day: "numeric", month: "short", year: "numeric" });
+}
 
 function parseError(err) {
   const status = err?.response?.status;
@@ -71,6 +58,29 @@ export default function Checkout() {
   const { submitOrder, loading } = useOrder();
   const { startPayment }         = usePayment();
   const toast = useToast();
+
+  // ── Billing / ProBite status — must be called inside the component ────
+  const { isProBite, expiresAt, cancelAtPeriodEnd } = useBilling();
+  const proExpiryLabel = isProBite ? formatExpiry(expiresAt) : null;
+
+  // ── Payment method limits (depend on ProBite status) ───────────────────
+  const CASH_MAX = isProBite ? 2000 : 150;
+  const CARD_MAX = isProBite ? 3000 : 250;
+
+  const PAYMENT_METHODS = [
+    {
+      id:    "cash",
+      label: "Cash on Delivery",
+      sub:   `Pay when your order arrives · max ${formatCurrency(CASH_MAX)}`,
+      Icon:  Banknote,
+    },
+    {
+      id:    "paystack",
+      label: "Pay Online",
+      sub:   `Card, EFT & Instant EFT via Paystack · max ${formatCurrency(CARD_MAX)}`,
+      Icon:  CreditCard,
+    },
+  ];
 
   const [hoursStatus] = useState(() => getBusinessHoursStatus());
   const [payMethod,    setPayMethod]    = useState("cash");
@@ -359,7 +369,15 @@ export default function Checkout() {
               </div>
             )}
             <div className="co-total-row">
-              <span>Total</span>
+              <span>
+                Total
+                {isProBite && proExpiryLabel && (
+                  <span className="co-pro-expiry" title={cancelAtPeriodEnd ? "ProBite will not renew" : "ProBite renews on this date"}>
+                    <Star className="w-3 h-3" style={{ color: "var(--gold)" }} />
+                    ProBite {cancelAtPeriodEnd ? "ends" : "renews"} {proExpiryLabel}
+                  </span>
+                )}
+              </span>
               <span className="co-total-amount">{formatCurrency(orderTotal)}</span>
             </div>
           </div>
@@ -615,6 +633,7 @@ const styles = `
   .co-fee-tier-badge{background:rgba(255,199,44,0.1);border:1px solid rgba(255,199,44,0.2);color:var(--gold);font-size:9px;font-weight:800;padding:2px 7px;border-radius:50px;letter-spacing:0.05em;}
   .co-total-row{display:flex;align-items:center;justify-content:space-between;padding-top:10px;border-top:1px solid var(--border);font-size:13px;font-weight:700;color:var(--muted);}
   .co-total-amount{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:1px;color:var(--red);}
+  .co-pro-expiry{display:inline-flex;align-items:center;gap:4px;margin-left:8px;font-size:10px;font-weight:700;color:var(--gold);text-transform:none;letter-spacing:0;}
 
   .co-fee-info{display:flex;align-items:flex-start;gap:8px;font-size:11px;color:var(--muted);line-height:1.5;padding:8px 12px;background:rgba(255,199,44,0.04);border:1px solid rgba(255,199,44,0.08);border-radius:10px;}
 
