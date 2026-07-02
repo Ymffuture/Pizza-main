@@ -4,7 +4,7 @@ import {
   X,Sparkles,Send, BotMessageSquare, Forward, CornerRightUp,
   Loader, Minimize2, Maximize2, XCircle, CheckCircle, Clock,
   CircleUser, Copy, Check, Link as LinkIcon, ChevronDown, ChevronRight,
-  Brain, Paperclip, FileText, Mic, Square
+  Brain, Paperclip, FileText, Mic, Square, Plus, StopCircle, ArrowUp
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -359,6 +359,12 @@ function Bubble({ msg, onCancelConfirm, cancellingId, user, isProBite }) {
                     <span>{msg.attachment.filename}</span>
                   </div>
                 )}
+                {msg.link && (
+                  <div className="kb-attach-sent-chip">
+                    <LinkIcon className="w-3 h-3" />
+                    <span>{msg.link.url}</span>
+                  </div>
+                )}
                 {msg.content}
               </>
             ) : (
@@ -527,6 +533,14 @@ export default function AiChat() {
   const [attachError,  setAttachError]  = useState("");
   const [previewUrl,   setPreviewUrl]   = useState(null);
 
+  /* Claude-style "+" menu — upload file / add link */
+  const [showPlusMenu,  setShowPlusMenu]  = useState(false);
+  const [showLinkInput, setShowLinkInput] = useState(false);
+  const [linkValue,     setLinkValue]     = useState("");
+  const [attachedLink,  setAttachedLink]  = useState(null); // { url }
+  const plusMenuRef = useRef(null);
+  const linkInputRef = useRef(null);
+
   const [isRecording,   setIsRecording]   = useState(false);
   const [recordSeconds, setRecordSeconds] = useState(0);
   const [transcribing,  setTranscribing]  = useState(false);
@@ -560,6 +574,23 @@ export default function AiChat() {
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, loading]);
   useEffect(() => { if (open && !minimised) inputRef.current?.focus(); }, [open, minimised]);
   useEffect(() => { if (pageOrderId) setCtxId(pageOrderId); }, [pageOrderId]);
+
+  /* Close the "+" menu on outside click / Escape */
+  useEffect(() => {
+    if (!showPlusMenu) return;
+    const onClick = (e) => {
+      if (plusMenuRef.current && !plusMenuRef.current.contains(e.target)) setShowPlusMenu(false);
+    };
+    const onKey = (e) => { if (e.key === "Escape") setShowPlusMenu(false); };
+    document.addEventListener("mousedown", onClick);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onClick);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [showPlusMenu]);
+
+  useEffect(() => { if (showLinkInput) linkInputRef.current?.focus(); }, [showLinkInput]);
 
   /* Image thumbnail preview — created/revoked as the attachment changes */
   useEffect(() => {
@@ -608,6 +639,17 @@ export default function AiChat() {
     setAttachError("");
     setAttachedFile(file);
   };
+
+  /* ── Attach a link — shown as a chip, folded into the message on send ── */
+  const submitLink = () => {
+    const raw = linkValue.trim();
+    if (!raw) { setShowLinkInput(false); return; }
+    const normalized = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+    setAttachedLink({ url: normalized });
+    setLinkValue("");
+    setShowLinkInput(false);
+  };
+  const removeLink = () => setAttachedLink(null);
 
   /* ── Voice notes — record with MediaRecorder, transcribe via Gemini,
        drop the transcript straight into the input box for review ── */
@@ -756,7 +798,7 @@ export default function AiChat() {
   ───────────────────────────────────────────────────────── */
   const handleSend = async () => {
     const text = input.trim();
-    if ((!text && !attachedFile) || loading) return;
+    if ((!text && !attachedFile && !attachedLink) || loading) return;
 
     if (outOfCredits) {
       setInput("");
@@ -778,13 +820,16 @@ export default function AiChat() {
     if (detectedId) setCtxId(detectedId);
 
     const fileToSend = attachedFile;
+    const linkToSend = attachedLink;
     setAttachedFile(null);
     setAttachError("");
+    setAttachedLink(null);
 
     const userMsg = {
       role: "user",
-      content: text || `Sent a file: ${fileToSend.name}`,
+      content: text || (fileToSend ? `Sent a file: ${fileToSend.name}` : `Shared a link`),
       ...(fileToSend ? { attachment: { filename: fileToSend.name, mimeType: fileToSend.type } } : {}),
+      ...(linkToSend ? { link: linkToSend } : {}),
     };
     const updated = [...messages, userMsg];
     setMessages(updated);
@@ -816,6 +861,9 @@ export default function AiChat() {
     // file description is invisible context for the model only.
     const chatPromise = (async () => {
       let attachmentContext = "";
+      if (linkToSend) {
+        attachmentContext += `\n\n[Shared link: ${linkToSend.url}]`;
+      }
       if (fileToSend) {
         try {
           const fd = new FormData();
@@ -825,11 +873,11 @@ export default function AiChat() {
             headers: { "Content-Type": "multipart/form-data" },
             signal: controller.signal,
           });
-          attachmentContext = `\n\n[Attached file: ${data.filename}]\n${data.description}`;
+          attachmentContext += `\n\n[Attached file: ${data.filename}]\n${data.description}`;
         } catch (err) {
           if (err.name === "AbortError" || err.name === "CanceledError") throw err;
           const reason = err?.response?.data?.detail || "Couldn't read that file.";
-          attachmentContext = `\n\n[Attached file: ${fileToSend.name} — could not be read: ${reason}]`;
+          attachmentContext += `\n\n[Attached file: ${fileToSend.name} — could not be read: ${reason}]`;
         }
       }
 
@@ -961,6 +1009,29 @@ export default function AiChat() {
     abortRef.current = null;
   };
 
+  /* ── Stop the in-flight response — cancels the network call + reasoning
+       animation and closes out the placeholder bubble gracefully ── */
+  const handleStop = () => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    clearTimeout(thinkTimerRef.current);
+    setLoading(false);
+    setMessages((prev) => {
+      const next = [...prev];
+      const last = next[next.length - 1];
+      if (last?.role === "assistant" && !last.content) {
+        next[next.length - 1] = {
+          ...last,
+          content: "_Stopped._",
+          preTyping: false,
+          streaming: false,
+          reasoning: last.reasoning ? { ...last.reasoning, thinking: false } : undefined,
+        };
+      }
+      return next;
+    });
+  };
+
   const handleOpen = () => { setOpen(true); setMin(false); setUnread(0); };
 
   /* ─────────────────────────────────────────────────────────────────────── */
@@ -1072,8 +1143,8 @@ export default function AiChat() {
                 </div>
               )}
 
-              {/* Pending attachment preview */}
-              {(attachedFile || attachError) && (
+              {/* Pending attachment / link preview */}
+              {(attachedFile || attachedLink || attachError) && (
                 <div className="kb-attach-preview-row">
                   {attachedFile && (
                     <div className="kb-attach-preview-chip">
@@ -1096,12 +1167,60 @@ export default function AiChat() {
                       </button>
                     </div>
                   )}
+                  {attachedLink && (
+                    <div className="kb-attach-preview-chip">
+                      <span className="kb-attach-icon-box">
+                        <LinkIcon className="w-4 h-4" />
+                      </span>
+                      <span className="kb-attach-filename">{attachedLink.url}</span>
+                      <button
+                        type="button"
+                        className="kb-attach-remove-btn"
+                        onClick={removeLink}
+                        aria-label="Remove link"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  )}
                   {attachError && <p className="kb-attach-error">{attachError}</p>}
                 </div>
               )}
 
-              {/* Input */}
-              <div className="kb-ai-input-row">
+              {/* Inline "add a link" popover, opened from the + menu */}
+              {showLinkInput && (
+                <div className="kb-link-popover-row">
+                  <div className="kb-link-popover">
+                    <LinkIcon className="w-3.5 h-3.5" style={{ flexShrink: 0, opacity: 0.6 }} />
+                    <input
+                      ref={linkInputRef}
+                      type="text"
+                      className="kb-link-input"
+                      placeholder="Paste a link…"
+                      value={linkValue}
+                      onChange={(e) => setLinkValue(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") { e.preventDefault(); submitLink(); }
+                        if (e.key === "Escape") { e.preventDefault(); setShowLinkInput(false); setLinkValue(""); }
+                      }}
+                    />
+                    <button type="button" className="kb-link-add-btn" onClick={submitLink} disabled={!linkValue.trim()}>
+                      Add
+                    </button>
+                    <button
+                      type="button"
+                      className="kb-link-cancel-btn"
+                      onClick={() => { setShowLinkInput(false); setLinkValue(""); }}
+                      aria-label="Cancel"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* ── Composer — Claude.ai-style rounded input with a "+" menu ── */}
+              <div className="kb-composer">
                 {isRecording || transcribing ? (
                   <div className={`kb-record-indicator${transcribing ? " kb-transcribing-indicator" : ""}`}>
                     {isRecording && (
@@ -1127,6 +1246,16 @@ export default function AiChat() {
                         <span className="kb-record-hint">Transcribing…</span>
                       </>
                     )}
+                    <button
+                      type="button"
+                      className="kb-record-stop-btn"
+                      onClick={stopRecording}
+                      disabled={transcribing}
+                      title="Stop recording"
+                      aria-label="Stop recording and transcribe"
+                    >
+                      <Square className="w-3.5 h-3.5" fill="currentColor" />
+                    </button>
                   </div>
                 ) : (
                   <>
@@ -1137,20 +1266,10 @@ export default function AiChat() {
                       accept="image/jpeg,image/png,image/webp,image/heic,image/heif,image/gif,application/pdf,text/plain,text/csv"
                       style={{ display: "none" }}
                     />
-                  
-                    <button
-                      type="button"
-                      className="kb-attach-btn"
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={loading || !isAuth || !isProBite}
-                      title="Attach an image or PDF"
-                      aria-label="Attach a file"
-                    >
-                      <Paperclip className="w-4 h-4" />
-                    </button>
+
                     <textarea
                       ref={inputRef}
-                      className="kb-ai-input"
+                      className="kb-composer-textarea"
                       rows={1}
                       placeholder={
                         !isAuth ? "Sign in to chat"
@@ -1166,44 +1285,87 @@ export default function AiChat() {
                       onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && (e.preventDefault(), handleSend())}
                       style={{ resize: "none", overflow: "hidden" }}
                     />
+
+                    <div className="kb-composer-toolbar">
+                      <div className="kb-composer-left">
+                        <div className="kb-plus-wrap" ref={plusMenuRef}>
+                          <button
+                            type="button"
+                            className={`kb-plus-btn${showPlusMenu ? " kb-plus-btn-active" : ""}`}
+                            onClick={() => setShowPlusMenu((v) => !v)}
+                            disabled={loading || !isAuth}
+                            title="Add file or link"
+                            aria-label="Add file or link"
+                            aria-expanded={showPlusMenu}
+                          >
+                            <Plus className="w-4 h-4" />
+                          </button>
+
+                          {showPlusMenu && (
+                            <div className="kb-plus-menu" role="menu">
+                              <button
+                                type="button"
+                                className="kb-plus-menu-item"
+                                role="menuitem"
+                                disabled={!isProBite}
+                                onClick={() => { fileInputRef.current?.click(); setShowPlusMenu(false); }}
+                              >
+                                <Paperclip className="w-4 h-4" />
+                                <span>Upload a file</span>
+                                {!isProBite && <span className="kb-plus-menu-badge">Pro</span>}
+                              </button>
+                              <button
+                                type="button"
+                                className="kb-plus-menu-item"
+                                role="menuitem"
+                                onClick={() => { setShowLinkInput(true); setShowPlusMenu(false); }}
+                              >
+                                <LinkIcon className="w-4 h-4" />
+                                <span>Add a link</span>
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
+                        <Tooltip title={isProBite ? "Record a voice note" : "Record a voice note (5s max — go ProBite for 60s)"}>
+                          <button
+                            type="button"
+                            className="kb-mic-btn"
+                            onClick={startRecording}
+                            disabled={loading || !isAuth || transcribing}
+                            aria-label="Record a voice note"
+                          >
+                            <Mic className="w-4 h-4" />
+                          </button>
+                        </Tooltip>
+                      </div>
+
+                      <div className="kb-composer-right">
+                        {loading ? (
+                          <button
+                            type="button"
+                            className="kb-stop-btn"
+                            onClick={handleStop}
+                            title="Stop response"
+                            aria-label="Stop response"
+                          >
+                            <Square className="w-3.5 h-3.5" fill="currentColor" />
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            className="kb-ai-send-btn"
+                            onClick={handleSend}
+                            disabled={isRecording || transcribing || (!input.trim() && !attachedFile && !attachedLink) || !isAuth}
+                            aria-label="Send"
+                          >
+                            <ArrowUp className="w-4 h-4" strokeWidth={2.5} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
                   </>
                 )}
-
-                {isRecording ? (
-                  <button
-                    type="button"
-                    className="kb-record-stop-btn"
-                    onClick={stopRecording}
-                    title="Stop recording"
-                    aria-label="Stop recording and transcribe"
-                  >
-                    <Square className="w-3.5 h-3.5" fill="currentColor" />
-                  </button>
-                ) : (
-              <Tooltip title={isProBite ? "Record a voice note" : "Record a voice note (5s max — go ProBite for 60s)"}>
-                  <button
-                    type="button"
-                    className="kb-mic-btn"
-                    onClick={startRecording}
-                    disabled={loading || !isAuth || transcribing}
-                    title={isProBite ? "Record a voice note" : "Record a voice note (10s max — go ProBite for 60s)"}
-                    aria-label="Record a voice note"
-                  >
-                    <Mic className="w-4 h-4" />
-                  </button>
-            </Tooltip>              
-            )}
-
-                <button
-                  className="kb-ai-send-btn"
-                  onClick={handleSend}
-                  disabled={loading || isRecording || transcribing || (!input.trim() && !attachedFile) || !isAuth}
-                  aria-label="Send"
-                >
-                  {loading
-                    ? <FaCircleNotch className="w-4 h-4 kb-ai-spin" />
-                    : <IoSend className="w-4 h-4" />}
-                </button>
               </div>
             </>
           )}
@@ -1487,25 +1649,95 @@ const styles = `
   .kb-ai-quick-chip { padding:5px 11px; border-radius:10px; background:rgba(0,229,255,0.07); border:1px solid rgba(0,229,255,0.2); color:rgba(200,200,220,0.7); font-size:11px; font-weight:700; cursor:pointer; transition:all 0.18s; font-family:'Plus Jakarta Sans',sans-serif; white-space:nowrap; }
   .kb-ai-quick-chip:hover { background:rgba(0,229,255,0.15); color:var(--kb-text); border-color:rgba(0,229,255,0.4); }
 
-  /* ── Input row ── */
-  .kb-ai-input-row { display:flex; align-items:center; gap:8px; padding:10px 12px 14px; flex-shrink:0; border-top:1px solid rgba(0,229,255,0.08); }
-  .kb-ai-input { flex:1; background:rgba(200,200,220,0.05); border:1.5px solid rgba(0,229,255,0.12); border-radius:12px; padding:9px 13px; color:var(--kb-text); font-size:13px; font-weight:500; font-family:'Plus Jakarta Sans',sans-serif; outline:none; transition:border-color 0.2s; }
-  .kb-ai-input:focus { border-color:rgba(0,229,255,0.4); }
-  .kb-ai-input::placeholder { color:rgba(200,200,220,0.3); }
-  .kb-ai-input:disabled { opacity:0.5; cursor:not-allowed; }
-  .kb-ai-send-btn { width:38px; height:38px; border-radius:11px; flex-shrink:0; background:linear-gradient(135deg,var(--kb-purple) 0%,var(--kb-cyan2) 100%); border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; color:white; transition:all 0.18s; box-shadow:0 3px 12px rgba(124,77,255,0.4); }
-  .kb-ai-send-btn:hover:not(:disabled) { filter:brightness(1.15); transform:scale(1.05); }
-  .kb-ai-send-btn:disabled { opacity:0.45; cursor:not-allowed; transform:none; }
-
-  /* ── Attach (file upload) ── */
-  .kb-attach-btn {
-    width:38px; height:38px; border-radius:11px; flex-shrink:0;
-    background:rgba(200,200,220,0.06); border:1.5px solid rgba(0,229,255,0.12);
-    cursor:pointer; display:flex; align-items:center; justify-content:center;
-    color:rgba(200,200,220,0.6); transition:all 0.18s;
+  /* ── Composer — Claude.ai-style rounded pill with a "+" menu ── */
+  .kb-composer {
+    display:flex; flex-direction:column; gap:2px;
+    margin:8px 12px 12px; flex-shrink:0;
+    background:rgba(200,200,220,0.05); border:1.5px solid rgba(0,229,255,0.14);
+    border-radius:20px; padding:10px 10px 8px; transition:border-color 0.2s, box-shadow 0.2s;
   }
-  .kb-attach-btn:hover:not(:disabled) { color:var(--kb-cyan); border-color:rgba(0,229,255,0.35); background:rgba(0,229,255,0.08); }
-  .kb-attach-btn:disabled { opacity:0.4; cursor:not-allowed; }
+  .kb-composer:focus-within { border-color:rgba(0,229,255,0.4); box-shadow:0 0 0 3px rgba(0,229,255,0.08); }
+
+  .kb-composer-textarea {
+    width:100%; background:none; border:none; outline:none; resize:none;
+    color:var(--kb-text); font-size:13.5px; font-weight:500; line-height:1.5;
+    font-family:'Plus Jakarta Sans',sans-serif; padding:2px 4px 6px; max-height:120px;
+  }
+  .kb-composer-textarea::placeholder { color:rgba(200,200,220,0.35); }
+  .kb-composer-textarea:disabled { opacity:0.5; cursor:not-allowed; }
+
+  .kb-composer-toolbar { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .kb-composer-left  { display:flex; align-items:center; gap:6px; }
+  .kb-composer-right { display:flex; align-items:center; gap:6px; }
+
+  .kb-ai-send-btn { width:30px; height:30px; border-radius:50%; flex-shrink:0; background:linear-gradient(135deg,var(--kb-purple) 0%,var(--kb-cyan2) 100%); border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; color:white; transition:all 0.18s; box-shadow:0 3px 12px rgba(124,77,255,0.4); }
+  .kb-ai-send-btn:hover:not(:disabled) { filter:brightness(1.15); transform:scale(1.05); }
+  .kb-ai-send-btn:disabled { opacity:0.4; cursor:not-allowed; transform:none; box-shadow:none; }
+
+  .kb-stop-btn {
+    width:30px; height:30px; border-radius:50%; flex-shrink:0;
+    background:var(--kb-text); border:none; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; color:var(--kb-dark);
+    transition:all 0.18s; animation:kbWindowIn 0.15s ease;
+  }
+  .kb-stop-btn:hover { filter:brightness(0.9); transform:scale(1.05); }
+
+  /* ── "+" menu — upload file / add link ── */
+  .kb-plus-wrap { position:relative; }
+  .kb-plus-btn {
+    width:30px; height:30px; border-radius:50%; flex-shrink:0;
+    background:rgba(200,200,220,0.07); border:1.5px solid rgba(0,229,255,0.14);
+    cursor:pointer; display:flex; align-items:center; justify-content:center;
+    color:rgba(200,200,220,0.7); transition:all 0.18s;
+  }
+  .kb-plus-btn:hover:not(:disabled) { color:var(--kb-cyan); border-color:rgba(0,229,255,0.35); background:rgba(0,229,255,0.08); }
+  .kb-plus-btn:disabled { opacity:0.4; cursor:not-allowed; }
+  .kb-plus-btn-active { color:var(--kb-cyan); border-color:rgba(0,229,255,0.4); background:rgba(0,229,255,0.1); transform:rotate(45deg); }
+
+  .kb-plus-menu {
+    position:absolute; bottom:calc(100% + 8px); left:0; z-index:20;
+    min-width:180px; padding:6px; display:flex; flex-direction:column; gap:2px;
+    background:var(--kb-card); border:1px solid rgba(0,229,255,0.18); border-radius:14px;
+    box-shadow:0 10px 30px rgba(0,0,0,0.45); animation:kbWindowIn 0.15s ease;
+  }
+  .kb-plus-menu-item {
+    display:flex; align-items:center; gap:9px; width:100%;
+    background:none; border:none; border-radius:9px; padding:9px 10px;
+    color:var(--kb-text); font-size:12.5px; font-weight:600; text-align:left; cursor:pointer;
+    font-family:'Plus Jakarta Sans',sans-serif; transition:background 0.15s;
+  }
+  .kb-plus-menu-item:hover:not(:disabled) { background:rgba(0,229,255,0.1); }
+  .kb-plus-menu-item:disabled { opacity:0.45; cursor:not-allowed; }
+  .kb-plus-menu-item span:first-of-type { flex:1; }
+  .kb-plus-menu-badge {
+    font-size:9px; font-weight:800; padding:2px 6px; border-radius:50px;
+    background:rgba(124,77,255,0.2); color:#B39DFF; letter-spacing:0.03em;
+  }
+
+  /* ── Add-a-link popover ── */
+  .kb-link-popover-row { padding:0 12px 8px; flex-shrink:0; }
+  .kb-link-popover {
+    display:flex; align-items:center; gap:8px;
+    background:rgba(0,229,255,0.06); border:1.5px solid rgba(0,229,255,0.25);
+    border-radius:12px; padding:0 10px; height:38px; animation:kbWindowIn 0.15s ease;
+  }
+  .kb-link-input {
+    flex:1; background:none; border:none; outline:none; color:var(--kb-text);
+    font-size:12.5px; font-weight:500; font-family:'Plus Jakarta Sans',sans-serif;
+  }
+  .kb-link-input::placeholder { color:rgba(200,200,220,0.35); }
+  .kb-link-add-btn {
+    background:var(--kb-cyan); color:var(--kb-dark); border:none; border-radius:8px;
+    padding:5px 11px; font-size:11.5px; font-weight:800; cursor:pointer; flex-shrink:0;
+    font-family:'Plus Jakarta Sans',sans-serif; transition:all 0.15s;
+  }
+  .kb-link-add-btn:disabled { opacity:0.4; cursor:not-allowed; }
+  .kb-link-add-btn:hover:not(:disabled) { filter:brightness(1.1); }
+  .kb-link-cancel-btn {
+    background:none; border:none; color:rgba(200,200,220,0.5); cursor:pointer;
+    display:flex; align-items:center; justify-content:center; flex-shrink:0; padding:2px;
+  }
+  .kb-link-cancel-btn:hover { color:var(--kb-text); }
 
   .kb-attach-preview-row { padding:0 12px 8px; flex-shrink:0; }
   .kb-attach-preview-chip {
@@ -1537,26 +1769,27 @@ const styles = `
 
   /* ── Voice recording ── */
   .kb-mic-btn {
-    width:38px; height:38px; border-radius:11px; flex-shrink:0;
-    background:rgba(200,200,220,0.06); border:1.5px solid rgba(0,229,255,0.12);
+    width:30px; height:30px; border-radius:50%; flex-shrink:0;
+    background:rgba(200,200,220,0.07); border:1.5px solid rgba(0,229,255,0.14);
     cursor:pointer; display:flex; align-items:center; justify-content:center;
-    color:rgba(200,200,220,0.6); transition:all 0.18s;
+    color:rgba(200,200,220,0.7); transition:all 0.18s;
   }
   .kb-mic-btn:hover:not(:disabled) { color:var(--kb-cyan); border-color:rgba(0,229,255,0.35); background:rgba(0,229,255,0.08); }
   .kb-mic-btn:disabled { opacity:0.4; cursor:not-allowed; }
 
   .kb-record-stop-btn {
-    width:38px; height:38px; border-radius:11px; flex-shrink:0;
+    width:30px; height:30px; border-radius:50%; flex-shrink:0; margin-left:auto;
     background:rgba(255,64,129,0.15); border:1.5px solid rgba(255,64,129,0.4);
     cursor:pointer; display:flex; align-items:center; justify-content:center;
     color:#FF4081; transition:all 0.18s;
   }
-  .kb-record-stop-btn:hover { background:rgba(255,64,129,0.25); }
+  .kb-record-stop-btn:hover:not(:disabled) { background:rgba(255,64,129,0.25); }
+  .kb-record-stop-btn:disabled { opacity:0.4; cursor:not-allowed; }
 
   .kb-record-indicator {
     flex:1; display:flex; align-items:center; gap:8px;
     background:rgba(255,64,129,0.06); border:1.5px solid rgba(255,64,129,0.2);
-    border-radius:12px; padding:0 12px; height:38px;
+    border-radius:14px; padding:0 12px; height:44px;
   }
   .kb-transcribing-indicator { background:rgba(0,229,255,0.06); border-color:rgba(0,229,255,0.2); }
 
