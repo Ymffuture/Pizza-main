@@ -1527,7 +1527,7 @@ const styles = `
   /* ── Window ── */
   .kb-ai-window {
     position:fixed; bottom:24px; right:24px; z-index:9999;
-    width:min(540px,calc(100vw - 32px));
+    width:min(500px,calc(100vw - 32px));
     background:var(--kb-card);
     border:1px solid rgba(0,229,255,0.12); border-radius:22px;
     box-shadow:0 24px 60px rgba(0,0,0,0.7),0 0 0 1px rgba(124,77,255,0.08);
