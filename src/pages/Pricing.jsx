@@ -292,7 +292,7 @@ export default function Pricing() {
                   ))}
                   <li>
                     <Check className="w-4 h-4 pr-feat-icon-gold" />
-                    <span>Everything in Free</span>
+                    <span>More AI models to explore</span>
                   </li>
                 </>
               ) : (
