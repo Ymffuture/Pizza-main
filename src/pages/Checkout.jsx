@@ -10,6 +10,7 @@ import { useToast }        from "../components/Toast";
 import { formatCurrency }  from "../utils/formatCurrency";
 import { validateRewardCode, useRewardCode } from "../api/rewards.api"; // ← was localStorage helpers
 import { getBusinessHoursStatus } from "../utils/businessHours";
+import { useBilling } from "../context/BillingContext";
 import {
   ArrowLeft, CreditCard, Banknote, ShoppingBag,
   MapPin, Phone, ChevronRight, Loader2, CheckCircle2,
@@ -23,10 +24,12 @@ function calcDeliveryFee(subtotal) {
   if (subtotal <= 100) return 12;
   return 15;
 }
-
+const {
+    isProBite, expiresAt, cancelAtPeriodEnd, credits, refresh,
+  } = useBilling();
 // ── Payment method limits ─────────────────────────────────────────────────
-const CASH_MAX = 150;
-const CARD_MAX = 250;
+const CASH_MAX =isProBite? 2000: 150;
+const CARD_MAX = isProBite ? 3000:250;
 
 const PAYMENT_METHODS = [
   {
