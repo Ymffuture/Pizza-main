@@ -543,17 +543,18 @@ export default function AiChat() {
 
   /* Model picker — fetched from /ai/models, falls back to this static
      list (kept in sync with routes/ai.py:AVAILABLE_MODELS) if the fetch
-     fails, so the picker always has something to show. */
+     fails, so the picker always has something to show. `probite_only`
+     models are greyed out for FREE users — enforced server-side too. */
   const FALLBACK_MODELS = [
-    { id: "nvidia/nemotron-3-nano-30b-a3b:free",                          label: "Nemotron 3 Nano",       description: "Default — fast, well-rounded for KotaBot chat" },
-    { id: "cohere/north-mini-code:free",                                   label: "North Mini Code",       description: "Cohere — lightweight, code-leaning" },
-    { id: "nvidia/llama-nemotron-rerank-vl-1b-v2:free",                    label: "Nemotron Rerank VL",    description: "NVIDIA — vision-language reranking" },
-    { id: "nvidia/nemotron-3.5-content-safety:free",                       label: "Nemotron Content Safety", description: "NVIDIA — safety-tuned moderation model" },
-    { id: "poolside/laguna-m.1:free",                                      label: "Laguna M.1",            description: "Poolside — general purpose" },
-    { id: "liquid/lfm-2.5-1.2b-thinking:free",                             label: "LFM 2.5 Thinking",      description: "Liquid — small, chain-of-thought tuned" },
-    { id: "cognitivecomputations/dolphin-mistral-24b-venice-edition:free", label: "Dolphin Mistral 24B",   description: "Uncensored-tuned Mistral fine-tune" },
-    { id: "qwen/qwen3-coder:free",                                         label: "Qwen3 Coder",           description: "Alibaba — strong at code" },
-    { id: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",            label: "Nemotron Omni Reasoning", description: "NVIDIA — multimodal reasoning" },
+    { id: "nvidia/nemotron-3-nano-30b-a3b:free",                          label: "Nemotron 3 Nano",         description: "Default — fast, well-rounded for KotaBot chat", probite_only: false },
+    { id: "cohere/north-mini-code:free",                                   label: "North Mini Code",         description: "Cohere — lightweight, code-leaning",            probite_only: true },
+    { id: "nvidia/llama-nemotron-rerank-vl-1b-v2:free",                    label: "Nemotron Rerank VL",      description: "NVIDIA — vision-language reranking",            probite_only: false },
+    { id: "nvidia/nemotron-3.5-content-safety:free",                       label: "Nemotron Content Safety", description: "NVIDIA — safety-tuned moderation model",         probite_only: true },
+    { id: "poolside/laguna-m.1:free",                                      label: "Laguna M.1",              description: "Poolside — general purpose",                     probite_only: false },
+    { id: "liquid/lfm-2.5-1.2b-thinking:free",                             label: "LFM 2.5 Thinking",        description: "Liquid — small, chain-of-thought tuned",         probite_only: true },
+    { id: "cognitivecomputations/dolphin-mistral-24b-venice-edition:free", label: "Dolphin Mistral 24B",     description: "Uncensored-tuned Mistral fine-tune",             probite_only: true },
+    { id: "qwen/qwen3-coder:free",                                         label: "Qwen3 Coder",             description: "Alibaba — strong at code",                       probite_only: true },
+    { id: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",            label: "Nemotron Omni Reasoning", description: "NVIDIA — multimodal reasoning",                  probite_only: true },
   ];
   const [availableModels, setAvailableModels] = useState(FALLBACK_MODELS);
   const [selectedModel,   setSelectedModel]   = useState(FALLBACK_MODELS[0].id);
@@ -611,7 +612,8 @@ export default function AiChat() {
 
   useEffect(() => { if (showLinkInput) linkInputRef.current?.focus(); }, [showLinkInput]);
 
-  /* Fetch the live model catalog once — falls back to FALLBACK_MODELS on error */
+  /* Fetch the live model catalog once (and again if ProBite status changes)
+     — falls back to FALLBACK_MODELS on error */
   useEffect(() => {
     if (!isAuth) return;
     let cancelled = false;
@@ -620,13 +622,16 @@ export default function AiChat() {
         const { data } = await axiosClient.get("/ai/models");
         if (cancelled || !data?.models?.length) return;
         setAvailableModels(data.models);
-        setSelectedModel((prev) => (data.models.some((m) => m.id === prev) ? prev : (data.default || data.models[0].id)));
+        setSelectedModel((prev) => {
+          const prevModel = data.models.find((m) => m.id === prev);
+          return prevModel && prevModel.available !== false ? prev : (data.default || data.models[0].id);
+        });
       } catch {
         /* keep FALLBACK_MODELS — non-fatal, chat still works with the default model */
       }
     })();
     return () => { cancelled = true; };
-  }, [isAuth]);
+  }, [isAuth, isProBite]);
 
   /* Close the model menu on outside click / Escape */
   useEffect(() => {
@@ -1129,44 +1134,6 @@ export default function AiChat() {
                   )}
                 </p>
               </div>
-
-              {isAuth && (
-                <div className="kb-model-wrap" ref={modelMenuRef}>
-                  <button
-                    type="button"
-                    className={`kb-model-btn${showModelMenu ? " kb-model-btn-active" : ""}`}
-                    onClick={() => setShowModelMenu((v) => !v)}
-                    title="Choose model"
-                    aria-label="Choose model"
-                    aria-expanded={showModelMenu}
-                  >
-                    <span className="kb-model-btn-label">
-                      {availableModels.find((m) => m.id === selectedModel)?.label || "Model"}
-                    </span>
-                    <ChevronDown className="w-3 h-3" />
-                  </button>
-
-                  {showModelMenu && (
-                    <div className="kb-model-menu" role="menu">
-                      {availableModels.map((m) => (
-                        <button
-                          type="button"
-                          key={m.id}
-                          role="menuitem"
-                          className={`kb-model-menu-item${m.id === selectedModel ? " kb-model-menu-item-active" : ""}`}
-                          onClick={() => { setSelectedModel(m.id); setShowModelMenu(false); }}
-                        >
-                          <div className="kb-model-menu-item-text">
-                            <span className="kb-model-menu-item-label">{m.label}</span>
-                            {m.description && <span className="kb-model-menu-item-desc">{m.description}</span>}
-                          </div>
-                          {m.id === selectedModel && <Check className="w-3.5 h-3.5" style={{ flexShrink: 0 }} />}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
             <div className="kb-ai-header-actions">
               {isAuth && (
@@ -1430,6 +1397,53 @@ export default function AiChat() {
                       </div>
 
                       <div className="kb-composer-right">
+                        {isAuth && (
+                          <div className="kb-model-wrap" ref={modelMenuRef}>
+                            <button
+                              type="button"
+                              className={`kb-model-btn${showModelMenu ? " kb-model-btn-active" : ""}`}
+                              onClick={() => setShowModelMenu((v) => !v)}
+                              disabled={loading}
+                              title="Choose model"
+                              aria-label="Choose model"
+                              aria-expanded={showModelMenu}
+                            >
+                              <span className="kb-model-btn-label">
+                                {availableModels.find((m) => m.id === selectedModel)?.label || "Model"}
+                              </span>
+                              <ChevronDown className="w-3 h-3" />
+                            </button>
+
+                            {showModelMenu && (
+                              <div className="kb-model-menu" role="menu">
+                                {availableModels.map((m) => {
+                                  const locked = m.available !== undefined ? !m.available : (m.probite_only && !isProBite);
+                                  return (
+                                    <button
+                                      type="button"
+                                      key={m.id}
+                                      role="menuitem"
+                                      disabled={locked}
+                                      className={`kb-model-menu-item${m.id === selectedModel ? " kb-model-menu-item-active" : ""}`}
+                                      onClick={() => { if (locked) return; setSelectedModel(m.id); setShowModelMenu(false); }}
+                                    >
+                                      <div className="kb-model-menu-item-text">
+                                        <span className="kb-model-menu-item-label">{m.label}</span>
+                                        {m.description && <span className="kb-model-menu-item-desc">{m.description}</span>}
+                                      </div>
+                                      {locked ? (
+                                        <span className="kb-plus-menu-badge">Pro</span>
+                                      ) : m.id === selectedModel ? (
+                                        <Check className="w-3.5 h-3.5" style={{ flexShrink: 0 }} />
+                                      ) : null}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        )}
+
                         {loading ? (
                           <button
                             type="button"
@@ -1538,19 +1552,20 @@ const styles = `
   @keyframes kbBlink  { 0%,100%{opacity:1} 50%{opacity:0.4} }
   .kb-ai-header-actions { display:flex; align-items:center; gap:4px; }
 
-  /* ── Model picker ── */
-  .kb-model-wrap { position:relative; margin-left:2px; }
+  /* ── Model picker (composer toolbar, next to mic/send) ── */
+  .kb-model-wrap { position:relative; }
   .kb-model-btn {
-    display:flex; align-items:center; gap:5px;
+    display:flex; align-items:center; gap:4px; height:30px; flex-shrink:0;
     background:rgba(200,200,220,0.07); border:1px solid rgba(0,229,255,0.16);
-    border-radius:50px; padding:4px 9px 4px 10px; cursor:pointer;
+    border-radius:50px; padding:0 9px 0 10px; cursor:pointer;
     color:rgba(200,200,220,0.75); transition:all 0.15s;
   }
-  .kb-model-btn:hover, .kb-model-btn-active { color:var(--kb-cyan); border-color:rgba(0,229,255,0.4); background:rgba(0,229,255,0.08); }
-  .kb-model-btn-label { font-size:10.5px; font-weight:700; font-family:'Plus Jakarta Sans',sans-serif; max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .kb-model-btn:hover:not(:disabled), .kb-model-btn-active { color:var(--kb-cyan); border-color:rgba(0,229,255,0.4); background:rgba(0,229,255,0.08); }
+  .kb-model-btn:disabled { opacity:0.5; cursor:not-allowed; }
+  .kb-model-btn-label { font-size:10.5px; font-weight:700; font-family:'Plus Jakarta Sans',sans-serif; max-width:100px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 
   .kb-model-menu {
-    position:absolute; top:calc(100% + 8px); left:0; z-index:30;
+    position:absolute; bottom:calc(100% + 8px); right:0; z-index:30;
     width:250px; max-height:320px; overflow-y:auto; padding:6px;
     background:var(--kb-card); border:1px solid rgba(0,229,255,0.18); border-radius:14px;
     box-shadow:0 10px 30px rgba(0,0,0,0.45); animation:kbWindowIn 0.15s ease;
@@ -1560,8 +1575,9 @@ const styles = `
     background:none; border:none; border-radius:9px; padding:8px 9px;
     text-align:left; cursor:pointer; transition:background 0.15s;
   }
-  .kb-model-menu-item:hover { background:rgba(0,229,255,0.1); }
+  .kb-model-menu-item:hover:not(:disabled) { background:rgba(0,229,255,0.1); }
   .kb-model-menu-item-active { background:rgba(0,229,255,0.07); }
+  .kb-model-menu-item:disabled { opacity:0.45; cursor:not-allowed; }
   .kb-model-menu-item-text { flex:1; display:flex; flex-direction:column; gap:1px; min-width:0; }
   .kb-model-menu-item-label { font-size:12px; font-weight:700; color:var(--kb-text); font-family:'Plus Jakarta Sans',sans-serif; }
   .kb-model-menu-item-desc { font-size:10px; color:rgba(200,200,220,0.5); font-weight:500; white-space:normal; line-height:1.3; }
