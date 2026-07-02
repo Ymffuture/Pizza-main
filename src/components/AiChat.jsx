@@ -174,7 +174,7 @@ function CopyOrderId({ orderId }) {
 const WELCOME_ACTIONS = [
   { Icon: TbSearch,   label: "Track an order" },
   { Icon: TbX,        label: "Cancel an order" },
-  { Icon: GiHamburger,label: "Suggest something lekker" },
+  { Icon: GiHamburger,label: "Suggest something Supa" },
   { Icon: TbMessage2, label: "Pass on feedback" },
 ];
 
