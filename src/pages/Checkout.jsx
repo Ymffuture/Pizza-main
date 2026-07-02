@@ -62,11 +62,16 @@ export default function Checkout() {
   // ── Billing / ProBite status — must be called inside the component ────
   const { isProBite, expiresAt, cancelAtPeriodEnd } = useBilling();
   const proExpiryLabel = isProBite ? formatExpiry(expiresAt) : null;
-
+  
+if (isProBite = false) {
+  toast.show({ type: "info", title: "Loading... ", message: "Activating ProBite. Please wait... " });
+}
   // ── Payment method limits (depend on ProBite status) ───────────────────
   const CASH_MAX = isProBite ? 2000 : 150;
   const CARD_MAX = isProBite ? 3000 : 250;
 
+  
+  
   const PAYMENT_METHODS = [
     {
       id:    "cash",
@@ -555,7 +560,7 @@ export default function Checkout() {
 
             <button
               type="submit"
-              disabled={loading || cardBlocked}
+              disabled={loading || (payMethod === "cash" ? cashBlocked : cardBlocked)}
               className="co-submit-btn"
             >
               {loading ? (
