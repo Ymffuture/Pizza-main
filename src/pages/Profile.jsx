@@ -380,7 +380,7 @@ export default function Profile() {
       <style>{css}</style>
       <div className="pf-page">
         <div className="pf-container">
-
+          <NotificationBell />
           {/* ── Header ── */}
           <div className="pf-header">
             <div className="pf-avatar-wrap" onClick={handleAvatarClick}>
@@ -409,7 +409,7 @@ export default function Profile() {
               </p>
             </div>
             <div className="pf-header-bell">
-              <NotificationBell />
+              
             </div>
           </div>
 
