@@ -275,7 +275,9 @@ export default function Profile() {
       <style>{css}</style>
       <div className="pf-page">
         <div className="pf-container">
-
+<div className="mn-notif-bell-wrapper right-4">
+        <NotificationBell />
+      </div>
           {/* ── Header ── */}
           <div className="pf-header">
             <div className="pf-avatar-wrap" onClick={handleAvatarClick}>
