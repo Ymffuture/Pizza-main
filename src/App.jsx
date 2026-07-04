@@ -38,6 +38,7 @@ const DeliverDashboard = lazy(() => import("./pages/DeliverDashboard"));
 const ClientWallet     = lazy(() => import("./pages/ClientWallet"));
 const Appeal = lazy(() => import("./pages/Appeal"));
 const Pricing = lazy(() => import("./pages/Pricing"));
+const Profile = lazy(() => import("./pages/Profile"));
 
 // inside <Routes>
 
@@ -152,6 +153,11 @@ export default function App() {
                       <Route path="/pricing"               element={<Pricing />} />
                       
 <Route path="/appeal" element={<RequireAuth><Appeal /></RequireAuth>} />
+
+                      {/* ── Profile — always accessible to a logged-in user ── */}
+                      <Route path="/profile" element={
+                        <RequireAuth><Profile /></RequireAuth>
+                      } />
 
                       {/* ── Cart — gated: canAddToCart ──────────────────────── */}
                       <Route path="/cart" element={
