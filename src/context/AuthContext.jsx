@@ -99,9 +99,22 @@ export function AuthProvider({ children }) {
     sessionStorage.removeItem("kb_user");
   }, []);
 
+  /**
+   * updateUser — merges a partial user object (e.g. from PATCH /users/me or
+   * POST /users/me/avatar) into the current session, so the sidebar/topbar
+   * avatar and name update immediately without a full reload.
+   */
+  const updateUser = useCallback((partial) => {
+    setUser((prev) => {
+      const next = { ...(prev || {}), ...partial };
+      sessionStorage.setItem("kb_user", JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
   return (
     <AuthContext.Provider
-      value={{ token, user, login, googleLogin, loginWithOAuth, register, logout, isAuth: !!token }}
+      value={{ token, user, login, googleLogin, loginWithOAuth, register, logout, updateUser, isAuth: !!token }}
     >
       {children}
     </AuthContext.Provider>
