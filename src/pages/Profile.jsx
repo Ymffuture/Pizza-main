@@ -5,6 +5,7 @@ import {
   User as UserIcon, Phone, MapPin, Lock, Camera, Save, Bell,
   Eye, EyeOff, CheckCheck, BellOff, ShieldCheck, Mail, LayoutGrid,
   AlertTriangle, RefreshCw, Wallet as WalletIcon, Package, Zap, ChevronRight,
+  ExternalLink, Pencil, X,
 } from "lucide-react";
 import { FaFacebook, FaGithub, FaXTwitter, FaInstagram, FaCircleNotch } from "react-icons/fa6";
 import { RiVerifiedBadgeFill } from "react-icons/ri";
@@ -56,6 +57,33 @@ function formatDate(dateStr) {
   return new Date(dateStr).toLocaleDateString("en-ZA", { day: "numeric", month: "short", year: "numeric" });
 }
 
+function isValidUrl(value) {
+  if (!value) return false;
+  try {
+    const u = new URL(value);
+    return u.protocol === "http:" || u.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+function extractHandle(url) {
+  try {
+    const u = new URL(url);
+    const segments = u.pathname.split("/").filter(Boolean);
+    return segments[segments.length - 1] || u.hostname;
+  } catch {
+    return url;
+  }
+}
+
+const SOCIAL_META = {
+  facebook:  { Icon: FaFacebook,  color: "#1877F2", label: "Facebook" },
+  github:    { Icon: FaGithub,    color: "#E6E6E6", label: "GitHub" },
+  x:         { Icon: FaXTwitter,  color: "#E6E6E6", label: "X (Twitter)" },
+  instagram: { Icon: FaInstagram, color: "#E1306C", label: "Instagram" },
+};
+
 export default function Profile() {
   const { user, updateUser } = useAuth();
   const billing = useBilling();
@@ -87,7 +115,8 @@ export default function Profile() {
 
   // ── Social links ─────────────────────────────────────────────────────
   const [social, setSocial] = useState({ facebook: "", github: "", x: "", instagram: "" });
-  const [savingSocial, setSavingSocial] = useState(false);
+  const [editingSocial, setEditingSocial] = useState({});
+  const [savingSocialField, setSavingSocialField] = useState(null); // platform currently saving, or null
 
   // ── Security / password ──────────────────────────────────────────────
   const [hasPassword, setHasPassword]   = useState(true);
@@ -271,23 +300,18 @@ export default function Profile() {
     }
   };
 
-  /* ── Save social links ────────────────────────────────────────────── */
-  const handleSaveSocial = async (e) => {
-    e.preventDefault();
-    setSavingSocial(true);
+  /* ── Save one social link at a time (inline chip editor) ────────────── */
+  const handleSaveSocialField = async (platform, value) => {
+    setSavingSocialField(platform);
     try {
-      const { data } = await axiosClient.patch("/users/me", { social_links: social });
-      setSocial({
-        facebook:  data.social_links?.facebook  || "",
-        github:    data.social_links?.github    || "",
-        x:         data.social_links?.x         || "",
-        instagram: data.social_links?.instagram || "",
-      });
-      toast.show({ type: "success", title: "Social links saved" });
+      const { data } = await axiosClient.patch("/users/me", { social_links: { [platform]: value } });
+      setSocial((prev) => ({ ...prev, [platform]: data.social_links?.[platform] || "" }));
+      setEditingSocial((prev) => ({ ...prev, [platform]: false }));
+      toast.show({ type: "success", title: value ? `${SOCIAL_META[platform].label} connected` : `${SOCIAL_META[platform].label} removed` });
     } catch (err) {
-      toast.show({ type: "error", title: "Couldn't save links", message: err?.response?.data?.detail || err.message });
+      toast.show({ type: "error", title: "Couldn't save link", message: err?.response?.data?.detail || err.message });
     } finally {
-      setSavingSocial(false);
+      setSavingSocialField(null);
     }
   };
 
@@ -485,6 +509,38 @@ export default function Profile() {
                 </div>
               </div>
 
+              {/* Connected social accounts */}
+              <div className="pf-card pf-connected-card">
+                <div className="pf-connected-header">
+                  <p className="pf-notifs-title" style={{ margin: 0 }}>Connected accounts</p>
+                  <Link to="#" onClick={(e) => { e.preventDefault(); setActiveTab("social"); }} className="pf-stat-link" style={{ marginTop: 0 }}>
+                    Manage →
+                  </Link>
+                </div>
+                {Object.keys(SOCIAL_META).filter((p) => isValidUrl(social[p])).length === 0 ? (
+                  <p className="pf-hint" style={{ margin: "8px 0 0" }}>No social accounts linked yet.</p>
+                ) : (
+                  <div className="pf-connected-icons">
+                    {Object.keys(SOCIAL_META).filter((p) => isValidUrl(social[p])).map((platform) => {
+                      const { Icon, color, label } = SOCIAL_META[platform];
+                      return (
+                        <a
+                          key={platform}
+                          href={social[platform]}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="pf-connected-icon-btn"
+                          title={`${label}: @${extractHandle(social[platform])}`}
+                          style={{ color }}
+                        >
+                          <Icon style={{ width: 20, height: 20 }} />
+                        </a>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
               {/* Recent orders */}
               <div className="pf-card pf-card-flush">
                 <div className="pf-notifs-header">
@@ -544,19 +600,23 @@ export default function Profile() {
 
           {/* ── Social tab ── */}
           {activeTab === "social" && (
-            <form className="pf-card" onSubmit={handleSaveSocial}>
-              <p className="pf-hint">Add your handle or a full profile URL — we'll fill in the rest.</p>
+            <div className="pf-card">
+              <p className="pf-hint">Add your handle or a full profile URL — we'll fill in the rest. Connected accounts show up as icons on your Overview tab.</p>
 
-              <SocialField Icon={FaFacebook} color="#1877F2" label="Facebook" placeholder="username" value={social.facebook} onChange={(v) => setSocial((s) => ({ ...s, facebook: v }))} />
-              <SocialField Icon={FaGithub} color="#e6e6e6" label="GitHub" placeholder="username" value={social.github} onChange={(v) => setSocial((s) => ({ ...s, github: v }))} />
-              <SocialField Icon={FaXTwitter} color="#e6e6e6" label="X (Twitter)" placeholder="username" value={social.x} onChange={(v) => setSocial((s) => ({ ...s, x: v }))} />
-              <SocialField Icon={FaInstagram} color="#E1306C" label="Instagram" placeholder="username" value={social.instagram} onChange={(v) => setSocial((s) => ({ ...s, instagram: v }))} />
-
-              <button type="submit" className="pf-save-btn" disabled={savingSocial || meLoading}>
-                {savingSocial ? <FaCircleNotch className="pf-spin" style={{ width: 14, height: 14 }} /> : <Save style={{ width: 14, height: 14 }} />}
-                Save links
-              </button>
-            </form>
+              {Object.keys(SOCIAL_META).map((platform) => (
+                <SocialField
+                  key={platform}
+                  platform={platform}
+                  value={social[platform]}
+                  editing={!!editingSocial[platform] || !isValidUrl(social[platform])}
+                  saving={savingSocialField === platform}
+                  onEdit={() => setEditingSocial((s) => ({ ...s, [platform]: true }))}
+                  onCancel={() => setEditingSocial((s) => ({ ...s, [platform]: false }))}
+                  onSave={(value) => handleSaveSocialField(platform, value)}
+                  onRemove={() => handleSaveSocialField(platform, "")}
+                />
+              ))}
+            </div>
           )}
 
           {/* ── Security tab ── */}
@@ -676,7 +736,37 @@ function FieldLabel({ Icon, label }) {
   );
 }
 
-function SocialField({ Icon, color, label, placeholder, value, onChange }) {
+function SocialField({ platform, value, editing, saving, onEdit, onCancel, onSave, onRemove }) {
+  const { Icon, color, label } = SOCIAL_META[platform];
+  const [draft, setDraft] = useState(value || "");
+
+  useEffect(() => { setDraft(value || ""); }, [value, editing]);
+
+  const connected = isValidUrl(value) && !editing;
+
+  if (connected) {
+    return (
+      <div className="pf-social-chip">
+        <div className="pf-social-icon" style={{ color }}>
+          <Icon style={{ width: 18, height: 18 }} />
+        </div>
+        <div className="pf-social-chip-text">
+          <p className="pf-social-chip-label">{label}</p>
+          <p className="pf-social-chip-handle">@{extractHandle(value)}</p>
+        </div>
+        <a href={value} target="_blank" rel="noopener noreferrer" className="pf-icon-btn" title="Open profile">
+          <ExternalLink style={{ width: 14, height: 14 }} />
+        </a>
+        <button className="pf-icon-btn" onClick={onEdit} title="Edit">
+          <Pencil style={{ width: 14, height: 14 }} />
+        </button>
+        <button className="pf-icon-btn pf-icon-btn-danger" onClick={onRemove} title="Remove">
+          <X style={{ width: 14, height: 14 }} />
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="pf-social-field">
       <div className="pf-social-icon" style={{ color }}>
@@ -684,212 +774,284 @@ function SocialField({ Icon, color, label, placeholder, value, onChange }) {
       </div>
       <div className="pf-social-input-wrap">
         <label className="pf-label" style={{ marginBottom: 4 }}>{label}</label>
-        <input className="pf-input" value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} />
+        <div className="pf-social-input-row">
+          <input
+            className="pf-input"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            placeholder="username or full URL"
+            onKeyDown={(e) => e.key === "Enter" && onSave(draft.trim())}
+          />
+          <button className="pf-chip-save-btn" disabled={saving} onClick={() => onSave(draft.trim())}>
+            {saving ? <FaCircleNotch className="pf-spin" style={{ width: 13, height: 13 }} /> : <Save style={{ width: 13, height: 13 }} />}
+          </button>
+          {isValidUrl(value) && (
+            <button className="pf-chip-cancel-btn" onClick={onCancel} title="Cancel">
+              <X style={{ width: 13, height: 13 }} />
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
 }
 
 const css = `
-  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
 
   .pf-page {
     min-height: 100vh;
     background: var(--background, #04111A);
-    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
-    padding: 32px 16px 80px;
+    font-family: 'Plus Jakarta Sans', -apple-system, system-ui, sans-serif;
+    padding: 40px 16px 80px;
+    -webkit-font-smoothing: antialiased;
   }
   .pf-spin { animation: pfSpin 0.8s linear infinite; }
   @keyframes pfSpin { to { transform: rotate(360deg); } }
 
-  .pf-container { max-width: 720px; margin: 0 auto; }
+  .pf-container { max-width: 680px; margin: 0 auto; }
 
   /* ── Header ── */
-  .pf-header { display:flex; align-items:center; gap:18px; margin-bottom:14px; }
+  .pf-header { display:flex; align-items:center; gap:16px; margin-bottom:20px; }
   .pf-avatar-wrap { position:relative; cursor:pointer; flex-shrink:0; border-radius:50%; }
   .pf-avatar-overlay {
     position:absolute; inset:0; border-radius:50%;
     background:rgba(0,0,0,0.5); color:#fff;
     display:flex; align-items:center; justify-content:center;
-    opacity:0; transition:opacity 0.18s;
+    opacity:0; transition:opacity 0.15s;
   }
   .pf-avatar-wrap:hover .pf-avatar-overlay { opacity:1; }
   .pf-header-info { min-width:0; flex:1; }
   .pf-header-bell { flex-shrink:0; }
   .pf-name {
-    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
-    font-family:'Bebas Neue',sans-serif; font-size:26px; letter-spacing:1.5px;
+    display:flex; align-items:center; gap:9px; flex-wrap:wrap;
+    font-family:'Plus Jakarta Sans',sans-serif; font-weight:800; font-size:20px; letter-spacing:-0.01em;
     color:var(--text,#F8F5EE); margin:0;
   }
   .pf-pro-badge {
     display:inline-flex; align-items:center; gap:4px;
-    background:rgba(6,182,212,0.15); border:1px solid rgba(6,182,212,0.35);
-    color:var(--gold,#06B6D4); font-size:11px; font-weight:800;
-    padding:3px 9px; border-radius:50px; letter-spacing:0.02em;
+    background:rgba(6,182,212,0.12); border:1px solid rgba(6,182,212,0.25);
+    color:var(--gold,#06B6D4); font-size:10.5px; font-weight:700;
+    padding:3px 8px; border-radius:50px; letter-spacing:0.01em;
   }
   .pf-email {
     display:flex; align-items:center; gap:6px; flex-wrap:wrap;
-    font-size:12.5px; color:var(--muted,rgba(248,245,238,0.45)); margin:6px 0 0;
+    font-size:12.5px; color:var(--muted,rgba(248,245,238,0.4)); margin:5px 0 0;
   }
-  .pf-verified { display:flex; align-items:center; gap:3px; color:#4ade80; font-weight:700; }
-  .pf-unverified { color:#fbbf24; font-weight:700; }
+  .pf-verified { display:flex; align-items:center; gap:3px; color:#4ade80; font-weight:600; }
+  .pf-unverified { color:#fbbf24; font-weight:600; }
 
   /* ── Error banner ── */
   .pf-error-banner {
     display:flex; align-items:center; gap:8px;
-    background:rgba(248,113,113,0.1); border:1px solid rgba(248,113,113,0.3);
-    color:#f87171; font-size:12.5px; font-weight:600;
-    padding:10px 14px; border-radius:12px; margin-bottom:16px;
+    background:rgba(248,113,113,0.08); border:1px solid rgba(248,113,113,0.2);
+    color:#f87171; font-size:12.5px; font-weight:500;
+    padding:11px 14px; border-radius:12px; margin-bottom:16px;
   }
   .pf-retry-btn {
     display:flex; align-items:center; gap:4px; margin-left:auto; flex-shrink:0;
-    background:rgba(248,113,113,0.15); border:1px solid rgba(248,113,113,0.35); color:#f87171;
-    font-size:11px; font-weight:700; padding:5px 10px; border-radius:8px; cursor:pointer;
+    background:rgba(248,113,113,0.12); border:none; color:#f87171;
+    font-size:11px; font-weight:700; padding:6px 11px; border-radius:8px; cursor:pointer;
   }
-  .pf-retry-btn:hover { background:rgba(248,113,113,0.25); }
+  .pf-retry-btn:hover { background:rgba(248,113,113,0.2); }
 
-  /* ── Tabs ── */
-  .pf-tabs { display:flex; gap:6px; margin-bottom:18px; overflow-x:auto; padding-bottom:2px; }
+  /* ── Tabs — single segmented pill, Claude.ai-style ── */
+  .pf-tabs {
+    display:flex; gap:2px; margin-bottom:20px; overflow-x:auto;
+    background:rgba(248,245,238,0.035); border:1px solid rgba(248,245,238,0.06);
+    border-radius:14px; padding:4px;
+  }
   .pf-tab {
     display:flex; align-items:center; gap:6px; flex-shrink:0;
-    background:var(--card,#071C26); border:1px solid var(--border,rgba(6,182,212,0.15));
-    color:var(--muted,rgba(248,245,238,0.45)); font-size:12.5px; font-weight:700;
-    padding:9px 14px; border-radius:11px; cursor:pointer; transition:all 0.18s;
+    background:transparent; border:none;
+    color:var(--muted,rgba(248,245,238,0.42)); font-size:12.5px; font-weight:600;
+    padding:8px 13px; border-radius:10px; cursor:pointer; transition:all 0.15s;
     font-family:'Plus Jakarta Sans',sans-serif;
   }
-  .pf-tab:hover { color:var(--text,#F8F5EE); border-color:rgba(6,182,212,0.3); }
-  .pf-tab-active { color:var(--gold,#06B6D4); border-color:rgba(6,182,212,0.5); background:rgba(6,182,212,0.08); }
+  .pf-tab:hover { color:var(--text,#F8F5EE); }
+  .pf-tab-active {
+    color:var(--text,#F8F5EE);
+    background:rgba(248,245,238,0.07);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  }
   .pf-tab-badge {
-    background:var(--red2,#EA6B0A); color:#fff; font-size:10px; font-weight:800;
+    background:var(--red2,#EA6B0A); color:#fff; font-size:9.5px; font-weight:800;
     min-width:16px; height:16px; border-radius:50px; display:flex; align-items:center; justify-content:center; padding:0 4px;
   }
 
   /* ── Overview ── */
-  .pf-overview { display:flex; flex-direction:column; gap:16px; }
+  .pf-overview { display:flex; flex-direction:column; gap:14px; }
   .pf-status-card {
     display:flex; align-items:flex-start; gap:10px;
-    border:1px solid; border-radius:14px; padding:14px 16px;
+    border:1px solid; border-radius:16px; padding:14px 16px;
   }
-  .pf-status-dot { width:9px; height:9px; border-radius:50%; margin-top:5px; flex-shrink:0; }
-  .pf-status-label { font-size:13px; font-weight:800; margin:0; }
-  .pf-status-reason { font-size:12px; color:var(--muted,rgba(248,245,238,0.6)); margin:4px 0 0; line-height:1.4; }
+  .pf-status-dot { width:8px; height:8px; border-radius:50%; margin-top:5px; flex-shrink:0; }
+  .pf-status-label { font-size:13px; font-weight:700; margin:0; }
+  .pf-status-reason { font-size:12px; color:var(--muted,rgba(248,245,238,0.55)); margin:4px 0 0; line-height:1.4; }
   .pf-appeal-link {
     display:flex; align-items:center; gap:2px; flex-shrink:0;
-    color:var(--text,#F8F5EE); font-size:11.5px; font-weight:700; text-decoration:none;
-    background:rgba(248,245,238,0.08); padding:6px 10px; border-radius:8px;
+    color:var(--text,#F8F5EE); font-size:11.5px; font-weight:600; text-decoration:none;
+    background:rgba(248,245,238,0.07); padding:6px 10px; border-radius:9px;
   }
 
-  .pf-stats-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:12px; }
+  .pf-stats-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; }
   .pf-stat-card {
-    background:var(--card,#071C26); border:1px solid var(--border,rgba(6,182,212,0.15));
-    border-radius:14px; padding:14px 16px; display:flex; flex-direction:column; gap:2px;
+    background:var(--card,#071C26); border:1px solid rgba(248,245,238,0.06);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+    border-radius:16px; padding:15px 16px; display:flex; flex-direction:column; gap:2px;
   }
-  .pf-stat-icon { color:var(--gold,#06B6D4); margin-bottom:4px; }
-  .pf-stat-label { font-size:10.5px; font-weight:800; text-transform:uppercase; letter-spacing:0.06em; color:var(--muted,rgba(248,245,238,0.45)); margin:0; }
-  .pf-stat-value { font-size:18px; font-weight:800; color:var(--text,#F8F5EE); margin:2px 0 0; font-family:'Plus Jakarta Sans',sans-serif; }
+  .pf-stat-icon { color:var(--gold,#06B6D4); margin-bottom:6px; opacity:0.85; }
+  .pf-stat-label { font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:var(--muted,rgba(248,245,238,0.4)); margin:0; }
+  .pf-stat-value { font-size:17px; font-weight:800; color:var(--text,#F8F5EE); margin:3px 0 0; font-family:'Plus Jakarta Sans',sans-serif; letter-spacing:-0.01em; }
   .pf-stat-loading { display:flex; }
-  .pf-stat-sub { font-size:11px; color:var(--muted,rgba(248,245,238,0.4)); margin:2px 0 0; }
-  .pf-stat-link { font-size:11px; font-weight:700; color:var(--gold,#06B6D4); text-decoration:none; margin-top:6px; }
+  .pf-stat-sub { font-size:11px; color:var(--muted,rgba(248,245,238,0.35)); margin:2px 0 0; }
+  .pf-stat-link { font-size:11px; font-weight:600; color:var(--gold,#06B6D4); text-decoration:none; margin-top:7px; }
+  .pf-stat-link:hover { text-decoration:underline; }
   .pf-stat-retry {
-    background:none; border:none; color:#f87171; font-size:12px; font-weight:700; cursor:pointer; padding:0; text-align:left;
+    background:none; border:none; color:#f87171; font-size:12px; font-weight:600; cursor:pointer; padding:0; text-align:left;
   }
+
+  /* ── Connected accounts ── */
+  .pf-connected-card { padding:16px; }
+  .pf-connected-header { display:flex; align-items:center; justify-content:space-between; }
+  .pf-connected-icons { display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; }
+  .pf-connected-icon-btn {
+    width:38px; height:38px; border-radius:11px;
+    background:rgba(248,245,238,0.05); border:1px solid rgba(248,245,238,0.07);
+    display:flex; align-items:center; justify-content:center;
+    text-decoration:none; transition:all 0.15s;
+  }
+  .pf-connected-icon-btn:hover { background:rgba(248,245,238,0.09); transform:translateY(-1px); }
 
   .pf-order-item {
     display:flex; align-items:flex-start; gap:10px; width:100%; text-align:left;
-    background:none; border:none; border-bottom:1px solid rgba(248,245,238,0.05);
+    background:none; border:none; border-bottom:1px solid rgba(248,245,238,0.045);
     padding:13px 18px; cursor:pointer; transition:background 0.15s; text-decoration:none;
   }
-  .pf-order-item:hover { background:rgba(248,245,238,0.03); }
+  .pf-order-item:last-child { border-bottom:none; }
+  .pf-order-item:hover { background:rgba(248,245,238,0.025); }
   .pf-order-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; margin-top:6px; }
 
   /* ── Card / form ── */
   .pf-card {
-    background:var(--card,#071C26); border:1px solid var(--border,rgba(6,182,212,0.15));
-    border-radius:18px; padding:22px; display:flex; flex-direction:column; gap:4px;
+    background:var(--card,#071C26); border:1px solid rgba(248,245,238,0.06);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+    border-radius:18px; padding:20px; display:flex; flex-direction:column; gap:4px;
   }
   .pf-card-flush { padding:0; overflow:hidden; }
-  .pf-hint { font-size:12.5px; color:var(--muted,rgba(248,245,238,0.45)); margin:0 0 12px; line-height:1.5; }
+  .pf-hint { font-size:12.5px; color:var(--muted,rgba(248,245,238,0.4)); margin:0 0 14px; line-height:1.5; }
   .pf-label {
-    display:flex; align-items:center; gap:6px; font-size:11px; font-weight:800;
-    text-transform:uppercase; letter-spacing:0.08em; color:var(--gold,#06B6D4);
+    display:flex; align-items:center; gap:6px; font-size:10.5px; font-weight:700;
+    text-transform:uppercase; letter-spacing:0.06em; color:var(--muted,rgba(248,245,238,0.5));
     margin:14px 0 6px;
   }
   .pf-input {
-    width:100%; background:rgba(248,245,238,0.04); border:1.5px solid var(--border,rgba(6,182,212,0.15));
+    width:100%; background:rgba(248,245,238,0.035); border:1px solid rgba(248,245,238,0.08);
     border-radius:11px; padding:10px 13px; color:var(--text,#F8F5EE); font-size:13.5px;
-    font-family:'Plus Jakarta Sans',sans-serif; outline:none; transition:border-color 0.18s;
+    font-family:'Plus Jakarta Sans',sans-serif; outline:none; transition:border-color 0.15s, background 0.15s;
   }
-  .pf-input:focus { border-color:var(--gold,#06B6D4); }
-  .pf-input::placeholder { color:rgba(248,245,238,0.3); }
+  .pf-input:focus { border-color:rgba(6,182,212,0.5); background:rgba(248,245,238,0.05); }
+  .pf-input::placeholder { color:rgba(248,245,238,0.25); }
   .pf-textarea { resize:vertical; min-height:70px; }
-  .pf-field-error { font-size:11.5px; color:#f87171; margin:6px 0 0; font-weight:600; }
+  .pf-field-error { font-size:11.5px; color:#f87171; margin:6px 0 0; font-weight:500; }
 
   .pf-save-btn {
     display:flex; align-items:center; justify-content:center; gap:8px;
-    margin-top:18px; background:linear-gradient(135deg,var(--gold,#06B6D4),var(--accent-hover,#0EA5E9));
-    color:#04111A; border:none; border-radius:11px; padding:11px 18px;
-    font-size:13px; font-weight:800; cursor:pointer; transition:all 0.18s;
-    font-family:'Plus Jakarta Sans',sans-serif;
+    margin-top:18px; background:var(--text,#F8F5EE);
+    color:#04111A; border:none; border-radius:50px; padding:10px 20px;
+    font-size:13px; font-weight:700; cursor:pointer; transition:all 0.15s;
+    font-family:'Plus Jakarta Sans',sans-serif; align-self:flex-start;
   }
-  .pf-save-btn:hover:not(:disabled) { filter:brightness(1.1); }
-  .pf-save-btn:disabled { opacity:0.6; cursor:not-allowed; }
+  .pf-save-btn:hover:not(:disabled) { filter:brightness(0.92); }
+  .pf-save-btn:disabled { opacity:0.5; cursor:not-allowed; }
 
   /* ── Password ── */
   .pf-pw-wrap { position:relative; }
   .pf-pw-wrap .pf-input { padding-right:38px; }
   .pf-pw-toggle {
     position:absolute; right:10px; top:50%; transform:translateY(-50%);
-    background:none; border:none; color:var(--muted,rgba(248,245,238,0.45)); cursor:pointer;
+    background:none; border:none; color:var(--muted,rgba(248,245,238,0.4)); cursor:pointer;
     display:flex; align-items:center; justify-content:center; padding:2px;
   }
   .pf-pw-toggle:hover { color:var(--text,#F8F5EE); }
 
-  /* ── Social ── */
-  .pf-social-field { display:flex; align-items:flex-end; gap:12px; margin-top:6px; }
+  /* ── Social — inline editor + connected chip ── */
+  .pf-social-field { display:flex; align-items:flex-end; gap:12px; margin-top:14px; }
   .pf-social-field:first-of-type { margin-top:0; }
   .pf-social-icon {
     width:38px; height:38px; border-radius:11px; flex-shrink:0;
-    background:rgba(248,245,238,0.05); display:flex; align-items:center; justify-content:center;
+    background:rgba(248,245,238,0.045); display:flex; align-items:center; justify-content:center;
     margin-bottom:1px;
   }
   .pf-social-input-wrap { flex:1; min-width:0; }
+  .pf-social-input-row { display:flex; gap:6px; }
+  .pf-social-input-row .pf-input { flex:1; min-width:0; }
+  .pf-chip-save-btn, .pf-chip-cancel-btn {
+    width:38px; height:38px; flex-shrink:0; border-radius:11px;
+    display:flex; align-items:center; justify-content:center; cursor:pointer;
+    border:1px solid rgba(248,245,238,0.08);
+  }
+  .pf-chip-save-btn { background:rgba(6,182,212,0.12); color:var(--gold,#06B6D4); }
+  .pf-chip-save-btn:hover:not(:disabled) { background:rgba(6,182,212,0.2); }
+  .pf-chip-save-btn:disabled { opacity:0.5; cursor:not-allowed; }
+  .pf-chip-cancel-btn { background:rgba(248,245,238,0.04); color:var(--muted,rgba(248,245,238,0.5)); }
+  .pf-chip-cancel-btn:hover { background:rgba(248,245,238,0.08); }
+
+  .pf-social-chip {
+    display:flex; align-items:center; gap:12px; margin-top:14px;
+    padding:10px 12px; border-radius:14px; background:rgba(248,245,238,0.03);
+    border:1px solid rgba(248,245,238,0.06);
+  }
+  .pf-social-chip:first-of-type { margin-top:0; }
+  .pf-social-chip-text { flex:1; min-width:0; }
+  .pf-social-chip-label { font-size:12.5px; font-weight:700; color:var(--text,#F8F5EE); margin:0; }
+  .pf-social-chip-handle { font-size:11.5px; color:var(--muted,rgba(248,245,238,0.45)); margin:1px 0 0; }
+  .pf-icon-btn {
+    width:30px; height:30px; border-radius:9px; flex-shrink:0;
+    background:rgba(248,245,238,0.04); color:var(--muted,rgba(248,245,238,0.55));
+    display:flex; align-items:center; justify-content:center; cursor:pointer;
+    border:none; text-decoration:none; transition:all 0.15s;
+  }
+  .pf-icon-btn:hover { background:rgba(248,245,238,0.09); color:var(--text,#F8F5EE); }
+  .pf-icon-btn-danger:hover { background:rgba(248,113,113,0.12); color:#f87171; }
 
   /* ── Notifications / lists ── */
   .pf-notifs-header {
     display:flex; align-items:center; justify-content:space-between;
-    padding:16px 18px; border-bottom:1px solid var(--border,rgba(6,182,212,0.15));
+    padding:15px 18px; border-bottom:1px solid rgba(248,245,238,0.06);
   }
-  .pf-notifs-title { font-size:12.5px; font-weight:700; color:var(--muted,rgba(248,245,238,0.45)); margin:0; }
+  .pf-notifs-title { font-size:12.5px; font-weight:600; color:var(--muted,rgba(248,245,238,0.42)); margin:0; }
   .pf-mark-all-btn {
     display:flex; align-items:center; gap:5px;
-    background:none; border:1px solid var(--border,rgba(6,182,212,0.15)); color:var(--gold,#06B6D4);
-    font-size:11px; font-weight:700; padding:5px 10px; border-radius:8px; cursor:pointer;
+    background:rgba(248,245,238,0.05); border:none; color:var(--gold,#06B6D4);
+    font-size:11px; font-weight:700; padding:6px 11px; border-radius:50px; cursor:pointer;
   }
-  .pf-mark-all-btn:hover:not(:disabled) { background:rgba(6,182,212,0.08); }
+  .pf-mark-all-btn:hover:not(:disabled) { background:rgba(6,182,212,0.12); }
   .pf-mark-all-btn:disabled { opacity:0.5; cursor:not-allowed; }
 
   .pf-notifs-empty {
     display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px;
-    padding:48px 24px; color:var(--muted,rgba(248,245,238,0.45)); font-size:13px; text-align:center;
+    padding:48px 24px; color:var(--muted,rgba(248,245,238,0.4)); font-size:13px; text-align:center;
   }
 
   .pf-notifs-list { display:flex; flex-direction:column; max-height:480px; overflow-y:auto; }
   .pf-notif-item {
     display:flex; align-items:flex-start; gap:10px; width:100%; text-align:left;
-    background:none; border:none; border-bottom:1px solid rgba(248,245,238,0.05);
+    background:none; border:none; border-bottom:1px solid rgba(248,245,238,0.045);
     padding:13px 18px; cursor:pointer; transition:background 0.15s;
   }
-  .pf-notif-item:hover { background:rgba(248,245,238,0.03); }
-  .pf-notif-unread { background:rgba(6,182,212,0.05); }
+  .pf-notif-item:last-child { border-bottom:none; }
+  .pf-notif-item:hover { background:rgba(248,245,238,0.025); }
+  .pf-notif-unread { background:rgba(6,182,212,0.04); }
   .pf-notif-dot { width:7px; height:7px; border-radius:50%; background:var(--gold,#06B6D4); flex-shrink:0; margin-top:6px; }
   .pf-notif-body { flex:1; min-width:0; }
   .pf-notif-title-text { font-size:13px; font-weight:700; color:var(--text,#F8F5EE); margin:0 0 3px; }
-  .pf-notif-msg { font-size:12.5px; color:var(--muted,rgba(248,245,238,0.45)); margin:0 0 5px; line-height:1.4; }
-  .pf-notif-time { font-size:10.5px; color:rgba(248,245,238,0.3); margin:0; font-weight:600; text-transform:capitalize; }
+  .pf-notif-msg { font-size:12.5px; color:var(--muted,rgba(248,245,238,0.4)); margin:0 0 5px; line-height:1.4; }
+  .pf-notif-time { font-size:10.5px; color:rgba(248,245,238,0.28); margin:0; font-weight:600; text-transform:capitalize; }
 
   @media (max-width: 480px) {
     .pf-header { gap:14px; }
-    .pf-name { font-size:21px; }
+    .pf-name { font-size:18px; }
     .pf-card { padding:16px; }
     .pf-stats-grid { grid-template-columns:1fr 1fr; }
   }
