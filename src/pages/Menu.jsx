@@ -180,12 +180,13 @@ export default function Menu() {
     <>
       <style>{styles}</style>
       <ActiveOrderTracker />
-{/*  <AccountStatusBanner />*/} 
-      {/* NotificationBell rendered at root level — outside any constrained/stacking contexts */}
+
+      {/* NotificationBell rendered at root level — outside any constrained/stacking contexts 
+      
       <div className="mn-notif-bell-wrapper right-4">
         <NotificationBell />
       </div>
-
+*/} 
       <div className="mn-root">
 
         {/* Mobile overlay */}
