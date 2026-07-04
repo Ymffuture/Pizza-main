@@ -315,8 +315,8 @@ export default function Menu() {
             {/* User row */}
             <div className={`mn-sidebar-user${collapsed ? " mn-sidebar-user-collapsed" : ""}`}>
               {isAuth ? (
-                <Tooltip title={collapsed ? (user?.email || "User") : ""} placement="right">
-                  <div className="mn-user-row">
+                <Tooltip title={collapsed ? (user?.email || "User") : "Go to your profile"} placement="right">
+                  <Link to="/profile" className="mn-user-row" style={{ textDecoration: "none" }}>
                     <Avatar picture={user?.picture || user?.avatar} name={user?.full_name} email={user?.email} size={32} />
                     {!collapsed && (
                       <>
@@ -326,12 +326,16 @@ export default function Menu() {
                         </Tooltip>
                           <span className="mn-user-email">{user?.email}</span>
                         </div>
-                        <button className="mn-logout-btn" onClick={handleLogout} title="Sign out">
+                        <button
+                          className="mn-logout-btn"
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleLogout(); }}
+                          title="Sign out"
+                        >
                           <LogOut className="w-3.5 h-3.5" />
                         </button>
                       </>
                     )}
-                  </div>
+                  </Link>
                 </Tooltip>
               ) : (
                 <Tooltip title={collapsed ? "Sign In" : ""} placement="right">
@@ -370,10 +374,10 @@ export default function Menu() {
               <ShoppingBag className="w-5 h-5" />
               {count > 0 && <span className="mn-topbar-cart-badge">{count}</span>}
             </button>
-            <Tooltip title={user?.full_name} placement="top">
-              <span style={{ flexShrink: 0 }}>
+            <Tooltip title="Your profile" placement="top">
+              <Link to="/profile" style={{ flexShrink: 0, display: "flex" }}>
                 <Avatar picture={user?.picture || user?.avatar} name={user?.full_name} email={user?.email} size={30} />
-              </span>
+              </Link>
             </Tooltip>
           </header>
 
