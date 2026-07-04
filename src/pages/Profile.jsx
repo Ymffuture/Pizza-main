@@ -11,6 +11,7 @@ import { useAuth } from "../context/AuthContext";
 import { useBilling } from "../context/BillingContext";
 import { useToast } from "../components/Toast";
 import Avatar from "../components/Avatar";
+import NotificationBell from "../components/NotificationBell";
 
 const TABS = [
   { id: "profile",       label: "Profile",       Icon: UserIcon },
