@@ -379,6 +379,10 @@ export default function Profile() {
     <>
       <style>{css}</style>
       <div className="pf-page">
+        <button className="pf-back-btn" onClick={() => window.history.back()}>
+            <ArrowLeft style={{ width: 16, height: 16 }} />
+            <span>Back</span>
+          </button>
         <div className="pf-container">
           <NotificationBell />
           {/* ── Header ── */}
