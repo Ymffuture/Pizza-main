@@ -1,19 +1,21 @@
 // src/pages/Profile.jsx
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   User as UserIcon, Phone, MapPin, Lock, Camera, Save, Bell,
   Eye, EyeOff, CheckCheck, BellOff, ShieldCheck, Mail, LayoutGrid,
   AlertTriangle, RefreshCw, Wallet as WalletIcon, Package, Zap, ChevronRight,
-  ExternalLink, Pencil,ArrowLeft, X,
+  ExternalLink, Pencil,ArrowLeft, X, Copy, Check, Gift, Users,
 } from "lucide-react";
 import { FaFacebook, FaGithub, FaXTwitter, FaInstagram, FaCircleNotch } from "react-icons/fa6";
 import { RiVerifiedBadgeFill } from "react-icons/ri";
 import axiosClient from "../api/axiosClient";
 import { getMyOrders } from "../api/orders.api";
+import { getMenu } from "../api/menu.api";
 import { getWallet } from "../api/rewards.api";
 import { useAuth } from "../context/AuthContext";
 import { useBilling } from "../context/BillingContext";
+import { useCart } from "../context/CartContext";
 import { useToast } from "../components/Toast";
 import Avatar from "../components/Avatar";
 import NotificationBell from "../components/NotificationBell";
@@ -85,13 +87,16 @@ const SOCIAL_META = {
 };
 
 export default function Profile() {
+  const navigate = useNavigate();
   const { user, updateUser } = useAuth();
   const billing = useBilling();
   const { isProBite, credits, expiresAt, cancelAtPeriodEnd } = billing;
+  const { addItem } = useCart();
   const toast = useToast();
   const fileInputRef = useRef(null);
 
   const [activeTab, setActiveTab] = useState("overview");
+  const [reorderingId, setReorderingId] = useState(null); // order id currently being reordered
 
   // ── Core profile (name/phone/address/social/etc.) — drives the whole
   //    page's "loaded" state, but every OTHER section (orders, wallet,
@@ -143,6 +148,12 @@ export default function Profile() {
   const [wallet, setWallet]           = useState(null);
   const [walletLoading, setWalletLoading] = useState(true);
   const [walletError, setWalletError]     = useState("");
+
+  // ── Referrals (Overview tab, retention feature) ──────────────────────
+  const [referral, setReferral]           = useState(null);
+  const [referralLoading, setReferralLoading] = useState(true);
+  const [referralError, setReferralError]     = useState("");
+  const [copiedReferral, setCopiedReferral]   = useState(false);
 
   const unreadCount = useMemo(() => notifications.filter((n) => !n.is_read).length, [notifications]);
 
@@ -223,6 +234,48 @@ export default function Profile() {
 
   useEffect(() => { loadOrders(); }, [loadOrders]);
 
+  /* ── Reorder (engagement) — re-adds a past order's items to the cart,
+       validated against the CURRENT menu so stale prices/removed items
+       never sneak through. ─────────────────────────────────────────── */
+  const handleReorder = async (order) => {
+    setReorderingId(order.id);
+    try {
+      const { data: menuItems } = await getMenu();
+      const menuById = new Map((menuItems || []).map((m) => [m.id || m._id, m]));
+
+      let added = 0;
+      let unavailable = 0;
+
+      for (const item of order.items || []) {
+        const current = menuById.get(item.menu_item_id);
+        if (!current || current.is_available === false) {
+          unavailable++;
+          continue;
+        }
+        for (let i = 0; i < (item.quantity || 1); i++) {
+          addItem({ id: current.id || current._id, name: current.name, price: current.price, image_url: current.image_url });
+        }
+        added++;
+      }
+
+      if (added === 0) {
+        toast.show({ type: "error", title: "Can't reorder", message: "None of these items are available anymore." });
+        return;
+      }
+
+      toast.show({
+        type: "success",
+        title: `${added} item${added === 1 ? "" : "s"} added to cart`,
+        message: unavailable ? `${unavailable} item${unavailable === 1 ? " is" : "s are"} no longer available and was skipped.` : undefined,
+      });
+      navigate("/checkout");
+    } catch (err) {
+      toast.show({ type: "error", title: "Couldn't reorder", message: err?.response?.data?.detail || err.message });
+    } finally {
+      setReorderingId(null);
+    }
+  };
+
   /* ── Load KotaPoints wallet ────────────────────────────────────────── */
   const loadWallet = useCallback(async () => {
     setWalletLoading(true);
@@ -238,6 +291,38 @@ export default function Profile() {
   }, []);
 
   useEffect(() => { loadWallet(); }, [loadWallet]);
+
+  /* ── Load referral stats ──────────────────────────────────────────── */
+  const loadReferral = useCallback(async () => {
+    setReferralLoading(true);
+    setReferralError("");
+    try {
+      const { data } = await axiosClient.get("/referrals/me");
+      setReferral(data);
+    } catch (err) {
+      setReferralError(err?.response?.data?.detail || err.message || "Couldn't load your referral info.");
+    } finally {
+      setReferralLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadReferral(); }, [loadReferral]);
+
+  const referralLink = referral?.referral_code
+    ? `${window.location.origin}/register?ref=${referral.referral_code}`
+    : "";
+
+  const copyReferralLink = async () => {
+    if (!referralLink) return;
+    try {
+      await navigator.clipboard.writeText(referralLink);
+      setCopiedReferral(true);
+      toast.show({ type: "success", title: "Referral link copied" });
+      setTimeout(() => setCopiedReferral(false), 2000);
+    } catch {
+      toast.show({ type: "error", title: "Couldn't copy", message: "Copy the link manually instead." });
+    }
+  };
 
   /* ── Avatar upload ────────────────────────────────────────────────── */
   const handleAvatarClick = () => fileInputRef.current?.click();
@@ -545,6 +630,52 @@ export default function Profile() {
                 )}
               </div>
 
+              {/* Refer friends (retention) */}
+              <div className="pf-card pf-referral-card">
+                <div className="pf-connected-header">
+                  <p className="pf-notifs-title" style={{ margin: 0, display: "flex", alignItems: "center", gap: 6 }}>
+                    <Gift style={{ width: 14, height: 14 }} /> Refer friends, earn KotaPoints
+                  </p>
+                </div>
+
+                {referralLoading ? (
+                  <p className="pf-hint" style={{ margin: "10px 0 0", display: "flex", alignItems: "center", gap: 6 }}>
+                    <FaCircleNotch className="pf-spin" style={{ width: 13, height: 13 }} /> Loading…
+                  </p>
+                ) : referralError ? (
+                  <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 8 }}>
+                    <p className="pf-hint" style={{ margin: 0 }}>{referralError}</p>
+                    <button className="pf-mark-all-btn" onClick={loadReferral}><RefreshCw style={{ width: 12, height: 12 }} /> Retry</button>
+                  </div>
+                ) : (
+                  <>
+                    <p className="pf-hint" style={{ margin: "6px 0 12px" }}>
+                      Share your link — you and your friend both get {referral?.bonus_per_referral ?? 50} KotaPoints once their first order is delivered.
+                    </p>
+                    <div className="pf-referral-link-row">
+                      <input className="pf-input" readOnly value={referralLink} onFocus={(e) => e.target.select()} />
+                      <button className="pf-chip-save-btn" onClick={copyReferralLink} title="Copy link">
+                        {copiedReferral ? <Check style={{ width: 14, height: 14 }} /> : <Copy style={{ width: 14, height: 14 }} />}
+                      </button>
+                    </div>
+                    <div className="pf-referral-stats">
+                      <div className="pf-referral-stat">
+                        <Users style={{ width: 13, height: 13 }} />
+                        <span>{referral?.total_referred ?? 0} referred</span>
+                      </div>
+                      <div className="pf-referral-stat">
+                        <CheckCheck style={{ width: 13, height: 13 }} />
+                        <span>{referral?.total_converted ?? 0} converted</span>
+                      </div>
+                      <div className="pf-referral-stat">
+                        <Zap style={{ width: 13, height: 13 }} />
+                        <span>{referral?.bonus_points_earned ?? 0} pts earned</span>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+
               {/* Recent orders */}
               <div className="pf-card pf-card-flush">
                 <div className="pf-notifs-header">
@@ -573,6 +704,16 @@ export default function Profile() {
                           <p className="pf-notif-msg">{o.items?.length || 0} item{o.items?.length === 1 ? "" : "s"} · {o.payment_method}</p>
                           <p className="pf-notif-time">{o.status.replace(/_/g, " ")} · {timeAgo(o.created_at)}</p>
                         </div>
+                        {o.status === "delivered" && (
+                          <button
+                            className="pf-reorder-btn"
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleReorder(o); }}
+                            disabled={reorderingId === o.id}
+                            title="Reorder"
+                          >
+                            {reorderingId === o.id ? <FaCircleNotch className="pf-spin" style={{ width: 12, height: 12 }} /> : "Reorder"}
+                          </button>
+                        )}
                         <ChevronRight style={{ width: 14, height: 14, opacity: 0.4, flexShrink: 0 }} />
                       </Link>
                     ))}
@@ -943,6 +1084,15 @@ const css = `
 
   /* ── Connected accounts ── */
   .pf-connected-card { padding:16px; }
+  .pf-referral-card { padding:16px; }
+  .pf-referral-link-row { display:flex; gap:6px; }
+  .pf-referral-link-row .pf-input { flex:1; min-width:0; font-size:12px; color:var(--muted,rgba(248,245,238,0.6)); cursor:text; }
+  .pf-referral-stats { display:flex; gap:14px; margin-top:12px; flex-wrap:wrap; }
+  .pf-referral-stat {
+    display:flex; align-items:center; gap:5px;
+    font-size:11.5px; font-weight:600; color:var(--muted,rgba(248,245,238,0.5));
+  }
+  .pf-referral-stat svg { color:var(--gold,#06B6D4); opacity:0.8; }
   .pf-connected-header { display:flex; align-items:center; justify-content:space-between; }
   .pf-connected-icons { display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; }
   .pf-connected-icon-btn {
@@ -961,6 +1111,13 @@ const css = `
   .pf-order-item:last-child { border-bottom:none; }
   .pf-order-item:hover { background:rgba(248,245,238,0.025); }
   .pf-order-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; margin-top:6px; }
+  .pf-reorder-btn {
+    flex-shrink:0; background:rgba(6,182,212,0.1); border:1px solid rgba(6,182,212,0.25);
+    color:var(--gold,#06B6D4); font-size:11px; font-weight:700; padding:6px 12px;
+    border-radius:50px; cursor:pointer; white-space:nowrap; align-self:center;
+  }
+  .pf-reorder-btn:hover:not(:disabled) { background:rgba(6,182,212,0.18); }
+  .pf-reorder-btn:disabled { opacity:0.6; cursor:not-allowed; }
 
   /* ── Card / form ── */
   .pf-card {
