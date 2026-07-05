@@ -824,6 +824,32 @@ const css = `
     display:flex; align-items:center; justify-content:center;
     opacity:0; transition:opacity 0.15s;
   }
+    .pf-back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(248,245,238,0.04);
+    border: 1px solid rgba(6,182,212,0.12);
+    color: var(--muted, rgba(248,245,238,0.5));
+    font-size: 12.5px;
+    font-weight: 700;
+    padding: 8px 14px;
+    border-radius: 10px;
+    cursor: pointer;
+    margin-bottom: 20px;
+    transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+    font-family: 'Plus Jakarta Sans', sans-serif;
+  }
+  .pf-back-btn:hover {
+    background: rgba(6,182,212,0.08);
+    border-color: rgba(6,182,212,0.3);
+    color: var(--gold, #06B6D4);
+    transform: translateX(-3px);
+  }
+  .pf-back-btn:active {
+    transform: translateX(-1px) scale(0.97);
+  }
+  
   .pf-avatar-wrap:hover .pf-avatar-overlay { opacity:1; }
   .pf-header-info { min-width:0; flex:1; }
   .pf-header-bell { flex-shrink:0; }
