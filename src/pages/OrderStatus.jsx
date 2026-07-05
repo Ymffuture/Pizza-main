@@ -169,6 +169,8 @@ export default function OrderStatus() {
   const [loadError,   setLoadError]  = useState(null);
   const [lastUpdated, setLast]       = useState(null);
   const [copiedId,    setCopiedId]   = useState(false);
+  const [liveConnected, setLiveConnected] = useState(false);
+  const eventSourceRef = useRef(null);
 
   const load = useCallback(async () => {
     try {
@@ -200,15 +202,54 @@ export default function OrderStatus() {
 
   useEffect(() => { load(); }, [load]);
 
+  /* ── Real-time updates via Server-Sent Events ─────────────────────────
+     Pushes a status change the instant it happens instead of waiting for
+     the next poll. EventSource can't set an Authorization header, so the
+     token rides along as a query param (validated the same way server-side). */
   useEffect(() => {
-    intervalRef.current = setInterval(load, 5000);
+    const token = sessionStorage.getItem("kb_token");
+    if (!token || !id) return;
+
+    const url = `${import.meta.env.VITE_API_URL}/orders/${id}/stream?token=${encodeURIComponent(token)}`;
+    const es = new EventSource(url);
+    eventSourceRef.current = es;
+
+    es.addEventListener("update", (ev) => {
+      try {
+        const payload = JSON.parse(ev.data);
+        setLast(new Date());
+        setOrder((prev) => (prev ? { ...prev, status: payload.status, total_amount: payload.total_amount } : prev));
+        if (payload.assignment) {
+          setDriverInfo((prev) => ({ ...(prev || {}), ...payload.assignment }));
+        }
+      } catch {
+        /* malformed event — the fallback poll below will catch up */
+      }
+    });
+
+    es.addEventListener("done", () => es.close());
+    es.onopen  = () => setLiveConnected(true);
+    es.onerror = () => setLiveConnected(false); // EventSource auto-reconnects; fallback poll covers the gap meanwhile
+
+    return () => {
+      es.close();
+      eventSourceRef.current = null;
+    };
+  }, [id]);
+
+  /* ── Fallback poll — safety net in case SSE stalls silently (corporate
+     proxies buffering the stream, etc.). Slows way down once SSE is
+     confirmed live since it's just a backstop at that point. ────────── */
+  useEffect(() => {
+    intervalRef.current = setInterval(load, liveConnected ? 30000 : 5000);
     return () => clearInterval(intervalRef.current);
-  }, [load]);
+  }, [load, liveConnected]);
 
   useEffect(() => {
     if (order?.status === "delivered" || order?.status === "cancelled") {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
+      eventSourceRef.current?.close();
     }
   }, [order?.status]);
 
@@ -337,8 +378,11 @@ export default function OrderStatus() {
           <h2 className="os-status-label" style={{ color: cfg.color }}>{cfg.label}</h2>
           {lastUpdated && (
             <p className="os-status-updated">
-              <RefreshCw className="w-3 h-3 os-refresh-icon" />
-              {lastUpdated.toLocaleTimeString()} · live every 5s
+              {liveConnected ? (
+                <><span className="os-live-dot" /> Live · updated {lastUpdated.toLocaleTimeString()}</>
+              ) : (
+                <><RefreshCw className="w-3 h-3 os-refresh-icon" /> {lastUpdated.toLocaleTimeString()} · reconnecting…</>
+              )}
             </p>
           )}
         </section>
@@ -593,6 +637,8 @@ const styles = `
   .os-status-label{font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:2px;position:relative;}
   .os-status-updated{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:5px;position:relative;}
   .os-refresh-icon{animation:osSpin 3s linear infinite;opacity:0.6;}
+  .os-live-dot{width:7px;height:7px;border-radius:50%;background:#4ade80;box-shadow:0 0 0 0 rgba(74,222,128,0.6);animation:osLivePulse 1.8s ease-out infinite;}
+  @keyframes osLivePulse{0%{box-shadow:0 0 0 0 rgba(74,222,128,0.5);}70%{box-shadow:0 0 0 6px rgba(74,222,128,0);}100%{box-shadow:0 0 0 0 rgba(74,222,128,0);}}
 
   /* Cash notice */
   .os-cash-notice{display:flex;align-items:flex-start;gap:12px;background:rgba(255,199,44,0.07);border:1px solid rgba(255,199,44,0.25);border-radius:16px;padding:16px 18px;}
