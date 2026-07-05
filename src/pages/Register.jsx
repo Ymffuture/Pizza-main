@@ -64,7 +64,8 @@ export default function Register() {
   const [showCf,  setShowCf]    = useState(false);
   const [registered, setRegistered] = useState(false);
 
-  const redirect   = new URLSearchParams(window.location.search).get("redirect") || "/menu";
+  const redirect     = new URLSearchParams(window.location.search).get("redirect") || "/menu";
+  const referralCode = new URLSearchParams(window.location.search).get("ref") || "";
   const strength   = getStrength(form.password);
   const pwMatch    = form.confirm && form.confirm === form.password;
 
@@ -99,6 +100,7 @@ export default function Register() {
         email:     form.email.trim().toLowerCase(),
         phone:     form.phone.replace(/\s/g, ""),
         password:  form.password,
+        ...(referralCode ? { referral_code: referralCode } : {}),
       });
       toast.show({ type: "success", title: "Account created!", message: "Check your email to verify." });
       setRegistered(true);
@@ -152,6 +154,12 @@ export default function Register() {
         </div>
 
         <form onSubmit={handleSubmit} className="ds-form">
+
+          {referralCode && (
+            <div className="ds-referral-banner">
+              <ShieldCheck size={14} /> You were referred by a friend — sign up and you'll both earn 50 KotaPoints!
+            </div>
+          )}
 
           {/* Full name */}
           <div className="ds-field">
@@ -360,6 +368,12 @@ const styles = `
   /* requirements checklist */
   .ds-reqs { display:flex; flex-direction:column; gap:5px; padding:6px 8px 2px; }
   .ds-req { display:flex; align-items:center; gap:6px; font-size:11px; }
+  .ds-referral-banner {
+    display:flex; align-items:center; gap:8px;
+    background:rgba(74,222,128,0.1); border:1px solid rgba(74,222,128,0.3);
+    color:#4ade80; font-size:12px; font-weight:600; line-height:1.4;
+    padding:10px 12px; border-radius:10px; margin-bottom:14px;
+  }
 
   .ds-terms { font-size:12px; color:var(--kb-muted); line-height:1.5; margin:2px 0 0; }
   .ds-terms-link { color:var(--kb-text); font-weight:600; text-decoration:underline; text-underline-offset:2px; text-decoration-color:rgba(255,248,231,0.25); }
