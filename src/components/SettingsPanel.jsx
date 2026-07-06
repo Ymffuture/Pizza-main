@@ -3,11 +3,12 @@ import { useEffect, useRef } from "react";
 import { X, Palette, Moon, Fingerprint, ChevronRight, Shield, Settings } from "lucide-react";
 import { THEMES, useTheme } from "../hooks/useTheme";
 import { Link } from "react-router-dom";
+import { useBilling } from '../context/BillingContext';
 
 export default function SettingsPanel({ open, onClose }) {
   const { themeId, changeTheme } = useTheme();
   const panelRef = useRef(null);
-
+const {isProBite} = useBillng() 
   useEffect(() => {
     const handler = (e) => { if (e.key === "Escape") onClose(); };
     window.addEventListener("keydown", handler);
