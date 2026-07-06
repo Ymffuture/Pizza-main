@@ -9,6 +9,7 @@ import Footer from "../components/Footer";
 import Avatar from "../components/Avatar";
 import NotificationBell from "../components/NotificationBell";
 import { RiVerifiedBadgeFill } from "react-icons/ri";
+import { IoDiamondSharp } from "react-icons/io5";
 // import AccountStatusBanner from "../components/AccountStatusBanner" 
 import { useBilling } from '../context/BillingContext';
 import {
@@ -46,7 +47,9 @@ const NAV_ITEMS = [
   { to: "/rewards",         label: "Rewards",        Icon: WalletCards,   section: "main", badge: "new" },
   { to: "/driver-dashboard",label: "Dashboard",      Icon: LayoutDashboard,section: "main"},
   { to: "/wallet",          label: "Wallet",         Icon: Wallet,        section: "main" },
-  { to: "/appeal",          label: "Appeal",         Icon: Scale,         section: "main", badge:"new" },
+  { to: "/appeal",          label: "Appeal",         Icon: Scale,         section: "main" },
+  { to: "/pricing",          label: "Premium plan",  Icon: IoDiamondSharp,   section: "main", badge:"new" },
+  
 ];
 
 export default function Menu() {
