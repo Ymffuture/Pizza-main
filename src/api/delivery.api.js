@@ -56,6 +56,14 @@ export const getActiveDelivery = () =>
 export const getAssignmentByOrder = (orderId) =>
   axiosClient.get(`/delivery/assignment/order/${orderId}`);
 
+// ── Post-delivery rating ────────────────────────────────────────────────────
+export const rateDriver = (assignmentId, rating, comment = null) =>
+  axiosClient.post("/delivery/rate-driver", {
+    assignment_id: assignmentId,
+    rating,
+    ...(comment && comment.trim() ? { comment: comment.trim() } : {}),
+  });
+
 // ── Admin ──────────────────────────────────────────────────────────────────
 export const getPendingDrivers = () =>
   axiosClient.get("/delivery/admin/pending");
