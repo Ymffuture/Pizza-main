@@ -1,6 +1,6 @@
 // src/components/SettingsPanel.jsx
 import { useEffect, useRef } from "react";
-import { X, Palette, Moon, Fingerprint, ChevronRight, Shield, Settings } from "lucide-react";
+import { X, Palette, Moon, Fingerprint, ChevronRight, Shield, Settings, Lock } from "lucide-react";
 import { THEMES, useTheme } from "../hooks/useTheme";
 import { Link } from "react-router-dom";
 import { useBilling } from '../context/BillingContext';
@@ -8,7 +8,8 @@ import { useBilling } from '../context/BillingContext';
 export default function SettingsPanel({ open, onClose }) {
   const { themeId, changeTheme } = useTheme();
   const panelRef = useRef(null);
-const {isProBite} = useBillng() 
+  const { isProBite } = useBilling();
+
   useEffect(() => {
     const handler = (e) => { if (e.key === "Escape") onClose(); };
     window.addEventListener("keydown", handler);
