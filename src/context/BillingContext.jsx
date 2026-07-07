@@ -12,6 +12,7 @@ import {
 } from "react";
 import { useAuth } from "./AuthContext";
 import { getMyBilling } from "../api/billing.api";
+import { THEMES, applyTheme, FREE_THEME_ID } from "../hooks/useTheme";
 
 const BLANK_CREDITS = {
   unlimited: false,
@@ -81,6 +82,25 @@ export function BillingProvider({ children }) {
     if (isAuth) fetchBilling();
     else setData(BLANK);
   }, [isAuth, fetchBilling]);
+
+  /**
+   * Theme gating (ProBite perk) — most themes are locked to ProBite; if
+   * this account isn't (or is no longer) ProBite but has a locked theme
+   * saved (e.g. subscription lapsed), revert to the free theme as soon as
+   * we know the real plan. Runs here rather than in SettingsPanel so it
+   * takes effect immediately rather than only once Settings is opened.
+   */
+  useEffect(() => {
+    if (isLoading) return;
+    const isProBite = data.plan === "probite";
+    if (isProBite) return;
+    const savedThemeId = localStorage.getItem("kb_theme");
+    if (savedThemeId && savedThemeId !== FREE_THEME_ID) {
+      const freeTheme = THEMES.find((t) => t.id === FREE_THEME_ID) || THEMES[0];
+      localStorage.setItem("kb_theme", freeTheme.id);
+      applyTheme(freeTheme);
+    }
+  }, [isLoading, data.plan]);
 
   /**
    * Called right after /ai/chat or /ai/chat/read-file returns its
