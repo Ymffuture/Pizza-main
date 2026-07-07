@@ -5,7 +5,7 @@ import {
   User as UserIcon, Phone, MapPin, Lock, Camera, Save, Bell,
   Eye, EyeOff, CheckCheck, BellOff, ShieldCheck, Mail, LayoutGrid,
   AlertTriangle, RefreshCw, Wallet as WalletIcon, Package, Zap, ChevronRight,
-  ExternalLink, Pencil,ArrowLeft, X, Copy, Check, Gift, Users,
+  ExternalLink, Pencil,ArrowLeft, X, Copy, Check, Gift, Users, Plus, Star,
 } from "lucide-react";
 import { FaFacebook, FaGithub, FaXTwitter, FaInstagram, FaCircleNotch } from "react-icons/fa6";
 import { RiVerifiedBadgeFill } from "react-icons/ri";
@@ -13,6 +13,7 @@ import axiosClient from "../api/axiosClient";
 import { getMyOrders } from "../api/orders.api";
 import { getMenu } from "../api/menu.api";
 import { getWallet } from "../api/rewards.api";
+import { getMyAddresses, createAddress, updateAddress, deleteAddress } from "../api/addresses.api";
 import { useAuth } from "../context/AuthContext";
 import { useBilling } from "../context/BillingContext";
 import { useCart } from "../context/CartContext";
@@ -23,6 +24,7 @@ import NotificationBell from "../components/NotificationBell";
 const TABS = [
   { id: "overview",      label: "Overview",      Icon: LayoutGrid },
   { id: "profile",       label: "Profile",       Icon: UserIcon },
+  { id: "addresses",     label: "Addresses",     Icon: MapPin },
   { id: "social",        label: "Social",        Icon: FaFacebook },
   { id: "security",      label: "Security",      Icon: Lock },
   { id: "notifications", label: "Notifications", Icon: Bell },
@@ -153,6 +155,14 @@ export default function Profile() {
   const [referral, setReferral]           = useState(null);
   const [referralLoading, setReferralLoading] = useState(true);
   const [referralError, setReferralError]     = useState("");
+
+  // ── Saved addresses ──────────────────────────────────────────────────
+  const [addresses, setAddresses]           = useState([]);
+  const [addressesLoading, setAddressesLoading] = useState(true);
+  const [addressesError, setAddressesError]     = useState("");
+  const [addressForm, setAddressForm]           = useState(null); // null = closed; {} = new; {id,...} = editing
+  const [savingAddress, setSavingAddress]       = useState(false);
+  const [deletingAddressId, setDeletingAddressId] = useState(null);
   const [copiedReferral, setCopiedReferral]   = useState(false);
 
   const unreadCount = useMemo(() => notifications.filter((n) => !n.is_read).length, [notifications]);
@@ -321,6 +331,73 @@ export default function Profile() {
       setTimeout(() => setCopiedReferral(false), 2000);
     } catch {
       toast.show({ type: "error", title: "Couldn't copy", message: "Copy the link manually instead." });
+    }
+  };
+
+  /* ── Saved addresses ───────────────────────────────────────────────── */
+  const loadAddresses = useCallback(async () => {
+    setAddressesLoading(true);
+    setAddressesError("");
+    try {
+      const { data } = await getMyAddresses();
+      setAddresses(Array.isArray(data) ? data : []);
+    } catch (err) {
+      setAddressesError(err?.response?.data?.detail || err.message || "Couldn't load your addresses.");
+    } finally {
+      setAddressesLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadAddresses(); }, [loadAddresses]);
+
+  const handleSaveAddress = async (e) => {
+    e.preventDefault();
+    if (!addressForm?.address?.trim() || addressForm.address.trim().length < 5) {
+      toast.show({ type: "error", title: "Address too short" });
+      return;
+    }
+    setSavingAddress(true);
+    try {
+      const payload = {
+        label: (addressForm.label || "Home").trim(),
+        address: addressForm.address.trim(),
+        phone: addressForm.phone?.trim() || null,
+        is_default: !!addressForm.is_default,
+      };
+      if (addressForm.id) {
+        await updateAddress(addressForm.id, payload);
+      } else {
+        await createAddress(payload);
+      }
+      setAddressForm(null);
+      await loadAddresses();
+      toast.show({ type: "success", title: addressForm.id ? "Address updated" : "Address saved" });
+    } catch (err) {
+      toast.show({ type: "error", title: "Couldn't save address", message: err?.response?.data?.detail || err.message });
+    } finally {
+      setSavingAddress(false);
+    }
+  };
+
+  const handleDeleteAddress = async (id) => {
+    setDeletingAddressId(id);
+    try {
+      await deleteAddress(id);
+      setAddresses((prev) => prev.filter((a) => a.id !== id));
+      toast.show({ type: "success", title: "Address removed" });
+    } catch (err) {
+      toast.show({ type: "error", title: "Couldn't remove address", message: err?.response?.data?.detail || err.message });
+    } finally {
+      setDeletingAddressId(null);
+    }
+  };
+
+  const handleSetDefaultAddress = async (id) => {
+    try {
+      await updateAddress(id, { is_default: true });
+      setAddresses((prev) => prev.map((a) => ({ ...a, is_default: a.id === id })));
+    } catch (err) {
+      toast.show({ type: "error", title: "Couldn't set default", message: err?.response?.data?.detail || err.message });
     }
   };
 
@@ -741,6 +818,127 @@ export default function Profile() {
                 Save changes
               </button>
             </form>
+          )}
+
+          {/* ── Addresses tab ── */}
+          {activeTab === "addresses" && (
+            <div className="pf-card pf-card-flush">
+              <div className="pf-notifs-header">
+                <p className="pf-notifs-title">Saved addresses</p>
+                {!addressForm && (
+                  <button
+                    className="pf-mark-all-btn"
+                    onClick={() => setAddressForm({ label: "Home", address: "", phone: "", is_default: addresses.length === 0 })}
+                  >
+                    <Plus style={{ width: 12, height: 12 }} /> Add address
+                  </button>
+                )}
+              </div>
+
+              {addressForm && (
+                <form className="pf-address-form" onSubmit={handleSaveAddress}>
+                  <div className="pf-address-label-row">
+                    {["Home", "Work", "Other"].map((l) => (
+                      <button
+                        type="button"
+                        key={l}
+                        className={`pf-address-label-btn${addressForm.label === l ? " pf-address-label-active" : ""}`}
+                        onClick={() => setAddressForm((f) => ({ ...f, label: l }))}
+                      >
+                        {l}
+                      </button>
+                    ))}
+                  </div>
+                  <input
+                    className="pf-input"
+                    style={{ marginTop: 10 }}
+                    placeholder="Custom label (optional)"
+                    value={["Home", "Work", "Other"].includes(addressForm.label) ? "" : addressForm.label}
+                    onChange={(e) => setAddressForm((f) => ({ ...f, label: e.target.value }))}
+                  />
+                  <textarea
+                    className="pf-input pf-textarea"
+                    style={{ marginTop: 10 }}
+                    rows={2}
+                    placeholder="Street, unit, suburb, city…"
+                    value={addressForm.address}
+                    onChange={(e) => setAddressForm((f) => ({ ...f, address: e.target.value }))}
+                  />
+                  <input
+                    className="pf-input"
+                    style={{ marginTop: 10 }}
+                    placeholder="Contact number for this address (optional)"
+                    value={addressForm.phone || ""}
+                    onChange={(e) => setAddressForm((f) => ({ ...f, phone: e.target.value }))}
+                  />
+                  <label className="pf-address-default-check">
+                    <input
+                      type="checkbox"
+                      checked={!!addressForm.is_default}
+                      onChange={(e) => setAddressForm((f) => ({ ...f, is_default: e.target.checked }))}
+                    />
+                    Set as default
+                  </label>
+                  <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+                    <button type="submit" className="pf-save-btn" style={{ marginTop: 0 }} disabled={savingAddress}>
+                      {savingAddress ? <FaCircleNotch className="pf-spin" style={{ width: 14, height: 14 }} /> : <Save style={{ width: 14, height: 14 }} />}
+                      {addressForm.id ? "Update" : "Save"}
+                    </button>
+                    <button type="button" className="pf-chip-cancel-btn" style={{ width: "auto", padding: "0 16px" }} onClick={() => setAddressForm(null)}>
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {addressesLoading ? (
+                <div className="pf-notifs-empty"><FaCircleNotch className="pf-spin" style={{ width: 20, height: 20 }} /></div>
+              ) : addressesError ? (
+                <div className="pf-notifs-empty">
+                  <AlertTriangle style={{ width: 22, height: 22, opacity: 0.4 }} />
+                  <p>{addressesError}</p>
+                  <button className="pf-mark-all-btn" onClick={loadAddresses}><RefreshCw style={{ width: 12, height: 12 }} /> Retry</button>
+                </div>
+              ) : addresses.length === 0 && !addressForm ? (
+                <div className="pf-notifs-empty">
+                  <MapPin style={{ width: 26, height: 26, opacity: 0.35 }} />
+                  <p>No saved addresses yet</p>
+                </div>
+              ) : (
+                <div className="pf-notifs-list">
+                  {addresses.map((a) => (
+                    <div key={a.id} className="pf-address-item">
+                      <div className="pf-notif-body">
+                        <p className="pf-notif-title-text">
+                          {a.label}
+                          {a.is_default && <span className="pf-address-default-badge"><Star style={{ width: 10, height: 10 }} /> Default</span>}
+                        </p>
+                        <p className="pf-notif-msg">{a.address}</p>
+                        {a.phone && <p className="pf-notif-time">{a.phone}</p>}
+                      </div>
+                      <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+                        {!a.is_default && (
+                          <button className="pf-icon-btn" title="Set as default" onClick={() => handleSetDefaultAddress(a.id)}>
+                            <Star style={{ width: 14, height: 14 }} />
+                          </button>
+                        )}
+                        <button className="pf-icon-btn" title="Edit" onClick={() => setAddressForm(a)}>
+                          <Pencil style={{ width: 14, height: 14 }} />
+                        </button>
+                        <button
+                          className="pf-icon-btn pf-icon-btn-danger"
+                          title="Delete"
+                          onClick={() => handleDeleteAddress(a.id)}
+                          disabled={deletingAddressId === a.id}
+                        >
+                          {deletingAddressId === a.id ? <FaCircleNotch className="pf-spin" style={{ width: 13, height: 13 }} /> : <X style={{ width: 14, height: 14 }} />}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
 
           {/* ── Social tab ── */}
@@ -1183,6 +1381,23 @@ const css = `
   .pf-chip-save-btn:disabled { opacity:0.5; cursor:not-allowed; }
   .pf-chip-cancel-btn { background:rgba(248,245,238,0.04); color:var(--muted,rgba(248,245,238,0.5)); }
   .pf-chip-cancel-btn:hover { background:rgba(248,245,238,0.08); }
+
+  /* ── Saved addresses ── */
+  .pf-address-form { padding:16px 18px; border-bottom:1px solid rgba(248,245,238,0.06); }
+  .pf-address-label-row { display:flex; gap:6px; }
+  .pf-address-label-btn {
+    flex:1; background:rgba(248,245,238,0.04); border:1px solid rgba(248,245,238,0.08);
+    color:var(--muted,rgba(248,245,238,0.5)); font-size:12px; font-weight:700; padding:8px; border-radius:9px; cursor:pointer;
+  }
+  .pf-address-label-active { color:var(--gold,#06B6D4); border-color:rgba(6,182,212,0.4); background:rgba(6,182,212,0.08); }
+  .pf-address-default-check { display:flex; align-items:center; gap:7px; margin-top:12px; font-size:12px; color:var(--muted,rgba(248,245,238,0.5)); font-weight:600; cursor:pointer; }
+  .pf-address-item { display:flex; align-items:flex-start; gap:10px; padding:13px 18px; border-bottom:1px solid rgba(248,245,238,0.045); }
+  .pf-address-item:last-child { border-bottom:none; }
+  .pf-address-default-badge {
+    display:inline-flex; align-items:center; gap:3px; margin-left:8px;
+    font-size:9.5px; font-weight:800; color:var(--gold,#06B6D4);
+    background:rgba(6,182,212,0.12); padding:2px 7px; border-radius:50px; vertical-align:middle;
+  }
 
   .pf-social-chip {
     display:flex; align-items:center; gap:12px; margin-top:14px;

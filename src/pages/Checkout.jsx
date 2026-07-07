@@ -1,5 +1,5 @@
 // src/pages/Checkout.jsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCart }         from "../context/CartContext";
 import { useOrderContext } from "../context/OrderContext";
@@ -9,6 +9,7 @@ import usePayment          from "../hooks/usePayment";
 import { useToast }        from "../components/Toast";
 import { formatCurrency }  from "../utils/formatCurrency";
 import { validateRewardCode, useRewardCode } from "../api/rewards.api"; // ← was localStorage helpers
+import { getMyAddresses } from "../api/addresses.api";
 import { getBusinessHoursStatus } from "../utils/businessHours";
 import { useBilling } from "../context/BillingContext";
 import {
@@ -31,6 +32,12 @@ function formatExpiry(dateStr) {
   const d = new Date(dateStr);
   if (Number.isNaN(d.getTime())) return null;
   return d.toLocaleDateString("en-ZA", { day: "numeric", month: "short", year: "numeric" });
+}
+
+// ── Format a Date as "YYYY-MM-DDTHH:mm" in LOCAL time, for <input type="datetime-local"> ──
+function toLocalInputValue(date) {
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
 function parseError(err) {
@@ -89,7 +96,31 @@ if (isLoading) {
 
   const [hoursStatus] = useState(() => getBusinessHoursStatus());
   const [payMethod,    setPayMethod]    = useState("cash");
+  const [scheduleMode, setScheduleMode] = useState("now");   // "now" | "later"
+  const [scheduledAt,  setScheduledAt]  = useState("");      // datetime-local input value
   const [form,         setForm]         = useState({ phone: "", delivery_address: "" });
+  const [savedAddresses, setSavedAddresses] = useState([]);
+  const [selectedAddressId, setSelectedAddressId] = useState(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data } = await getMyAddresses();
+        setSavedAddresses(Array.isArray(data) ? data : []);
+        const defaultAddr = data?.find((a) => a.is_default);
+        if (defaultAddr) {
+          setForm((f) => ({
+            ...f,
+            delivery_address: f.delivery_address || defaultAddr.address,
+            phone: f.phone || defaultAddr.phone || f.phone,
+          }));
+          setSelectedAddressId(defaultAddr.id);
+        }
+      } catch {
+        /* not fatal — checkout still works with manual entry */
+      }
+    })();
+  }, []);
   const [errors,       setErrors]       = useState({});
   const [serverError,  setServerError]  = useState(null);
 
@@ -202,6 +233,17 @@ if (isLoading) {
     if (payMethod === "paystack" && cardBlocked)
       e.payment = `Online payment is only available for orders up to ${formatCurrency(CARD_MAX)}. Please call us to arrange a large order.`;
 
+    if (scheduleMode === "later") {
+      if (!scheduledAt) {
+        e.scheduled = "Pick a date and time.";
+      } else {
+        const target = new Date(scheduledAt).getTime();
+        const now = Date.now();
+        if (target <= now + 20 * 60 * 1000) e.scheduled = "Must be at least 20 minutes from now.";
+        else if (target > now + 7 * 24 * 60 * 60 * 1000) e.scheduled = "Can only schedule up to 7 days ahead.";
+      }
+    }
+
     return e;
   };
 
@@ -229,6 +271,7 @@ if (isLoading) {
         delivery_fee:     deliveryFee,
         discount:         effectiveDiscount,
         items: items.map(i => ({ menu_item_id: i.id, quantity: i.quantity })),
+        ...(scheduleMode === "later" && scheduledAt ? { scheduled_for: new Date(scheduledAt).toISOString() } : {}),
       };
 
       const order = await submitOrder(payload);
@@ -523,6 +566,50 @@ if (isLoading) {
           )}
         </section>
 
+        {/* ── Schedule for later ── */}
+        <section className="co-card">
+          <h2 className="co-section-label"><Clock className="w-4 h-4" /> When?</h2>
+          <div className="co-schedule-toggle">
+            <button
+              type="button"
+              className={`co-schedule-option${scheduleMode === "now" ? " co-schedule-active" : ""}`}
+              onClick={() => setScheduleMode("now")}
+            >
+              As soon as possible
+            </button>
+            <button
+              type="button"
+              className={`co-schedule-option${scheduleMode === "later" ? " co-schedule-active" : ""}`}
+              onClick={() => setScheduleMode("later")}
+            >
+              Schedule for later
+            </button>
+          </div>
+
+          {scheduleMode === "later" && (
+            <div style={{ marginTop: 12 }}>
+              <input
+                type="datetime-local"
+                className="co-schedule-input"
+                value={scheduledAt}
+                min={toLocalInputValue(new Date(Date.now() + 20 * 60 * 1000))}
+                max={toLocalInputValue(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000))}
+                onChange={(e) => { setScheduledAt(e.target.value); if (errors.scheduled) setErrors(prev => ({ ...prev, scheduled: "" })); }}
+              />
+              {errors.scheduled && (
+                <div className="co-server-error" style={{ marginTop: 8 }}>
+                  <AlertCircle className="w-4 h-4" style={{ color: "#f87171", flexShrink: 0 }} />
+                  <p>{errors.scheduled}</p>
+                </div>
+              )}
+              <p className="co-note co-note-gold" style={{ marginTop: 8 }}>
+                <Clock className="w-4 h-4 co-note-icon" style={{ color: "#FFC72C" }} />
+                <span>We'll start preparing your order at the time you pick — at least 20 minutes from now, up to 7 days ahead.</span>
+              </p>
+            </div>
+          )}
+        </section>
+
         {/* ── Delivery Details ── */}
         <section className="co-card">
           <h2 className="co-section-label"><MapPin className="w-4 h-4" /> Delivery Details</h2>
@@ -540,11 +627,30 @@ if (isLoading) {
 
             <div className="co-field">
               <label className="co-label">Delivery Address <span className="co-req">*</span></label>
+
+              {savedAddresses.length > 0 && (
+                <div className="co-saved-address-chips">
+                  {savedAddresses.map((a) => (
+                    <button
+                      key={a.id}
+                      type="button"
+                      className={`co-saved-address-chip${selectedAddressId === a.id ? " co-saved-address-chip-active" : ""}`}
+                      onClick={() => {
+                        setForm((f) => ({ ...f, delivery_address: a.address, phone: a.phone || f.phone }));
+                        setSelectedAddressId(a.id);
+                      }}
+                    >
+                      {a.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+
               <div className={"co-input-wrap co-textarea-wrap" + (errors.delivery_address ? " co-input-error" : "")}>
                 <MapPin className="co-input-icon co-input-icon-top" />
                 <textarea className="co-input co-textarea" rows={3}
                   placeholder="123 Main Street, Johannesburg…"
-                  value={form.delivery_address} onChange={handleChange("delivery_address")} />
+                  value={form.delivery_address} onChange={(e) => { handleChange("delivery_address")(e); setSelectedAddressId(null); }} />
               </div>
               {errors.delivery_address && <p className="co-error-msg">{errors.delivery_address}</p>}
             </div>
@@ -689,6 +795,16 @@ const styles = `
   .co-label{font-size:11px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted);}
   .co-req{color:var(--red);}
   .co-input-wrap{display:flex;align-items:center;gap:10px;background:var(--input-bg);border:1.5px solid var(--border);border-radius:12px;padding:0 14px;transition:border-color 0.2s;}
+  .co-schedule-toggle{display:flex;gap:8px;}
+  .co-schedule-option{flex:1;background:var(--input-bg);border:1.5px solid var(--border);border-radius:12px;padding:12px;color:var(--muted);font-size:13px;font-weight:700;cursor:pointer;transition:all 0.18s;font-family:'Plus Jakarta Sans',sans-serif;}
+  .co-schedule-option:hover{border-color:rgba(255,199,44,0.3);}
+  .co-schedule-active{border-color:var(--gold);color:var(--text);background:rgba(255,199,44,0.08);}
+  .co-schedule-input{width:100%;background:var(--input-bg);border:1.5px solid var(--border);border-radius:12px;padding:12px 14px;color:var(--text);font-size:14px;font-weight:500;font-family:'Plus Jakarta Sans',sans-serif;outline:none;transition:border-color 0.2s;}
+  .co-schedule-input:focus{border-color:rgba(255,199,44,0.4);}
+  .co-saved-address-chips{display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;}
+  .co-saved-address-chip{background:var(--input-bg);border:1.5px solid var(--border);border-radius:50px;padding:6px 13px;font-size:12px;font-weight:700;color:var(--muted);cursor:pointer;transition:all 0.15s;font-family:'Plus Jakarta Sans',sans-serif;}
+  .co-saved-address-chip:hover{border-color:rgba(255,199,44,0.3);}
+  .co-saved-address-chip-active{border-color:var(--gold);color:var(--text);background:rgba(255,199,44,0.1);}
   .co-input-wrap:focus-within{border-color:rgba(255,199,44,0.4);}
   .co-input-error{border-color:rgba(218,41,28,0.5)!important;}
   .co-textarea-wrap{align-items:flex-start;padding-top:12px;padding-bottom:12px;}
