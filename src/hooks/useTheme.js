@@ -1,6 +1,11 @@
 // src/hooks/useTheme.js
 import { useState, useEffect, useCallback } from "react";
 
+// The only theme available on the FREE plan — every other theme is a
+// ProBite perk. Referenced by SettingsPanel.jsx (gating the picker) and
+// BillingContext.jsx (reverting a lapsed/non-ProBite account).
+export const FREE_THEME_ID = "fire";
+
 export const THEMES = [
   {
     id:    "fire",
