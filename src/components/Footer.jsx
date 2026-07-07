@@ -66,7 +66,7 @@ export default function Footer() {
         <div className="kb-footer-brand">
           <div className="kb-footer-logo-row">
             <div className="kb-footer-badge">
-              <Flame className="w-5 h-5" style={{ color: "#0e0700" }} />
+              <Flame className="w-5 h-5" style={{ color: "var(--dark, #0e0700)" }} />
             </div>
             <div>
               <span className="kb-footer-name">KOTABITES</span>
@@ -166,10 +166,10 @@ const styles = `
   @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
   .kb-footer {
-    background: #0a0500;
-    border-top: 1px solid rgba(255,199,44,0.1);
+    background: var(--dark, #0a0500);
+    border-top: 1px solid var(--border, rgba(255,199,44,0.1));
     font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
-    color: #fff8e7;
+    color: var(--text, #fff8e7);
   }
 
   .kb-footer-inner {
@@ -186,20 +186,20 @@ const styles = `
     display: flex; align-items: center; gap: 10px; margin-bottom: 14px;
   }
   .kb-footer-badge {
-    width: 38px; height: 38px; background: #FFC72C; border-radius: 10px;
+    width: 38px; height: 38px; background: var(--gold, #FFC72C); border-radius: 10px;
     display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-    box-shadow: 0 0 18px rgba(255,199,44,0.3);
+    box-shadow: 0 0 18px color-mix(in srgb, var(--gold, #FFC72C) 30%, transparent);
   }
   .kb-footer-name {
     font-family: 'Bebas Neue', sans-serif;
-    font-size: 22px; letter-spacing: 3px; color: #fff8e7; display: block; line-height: 1;
+    font-size: 22px; letter-spacing: 3px; color: var(--text, #fff8e7); display: block; line-height: 1;
   }
   .kb-footer-tagline {
-    font-size: 10px; font-weight: 700; color: #FFC72C;
+    font-size: 10px; font-weight: 700; color: var(--gold, #FFC72C);
     letter-spacing: 0.18em; text-transform: uppercase; margin-top: 1px;
   }
   .kb-footer-desc {
-    font-size: 13px; color: rgba(255,248,231,0.42); line-height: 1.65; margin-bottom: 16px;
+    font-size: 13px; color: var(--muted, rgba(255,248,231,0.42)); line-height: 1.65; margin-bottom: 16px;
     max-width: 320px;
   }
 
@@ -209,7 +209,7 @@ const styles = `
   }
   .kb-social-title {
     font-size: 10px; font-weight: 800; letter-spacing: 0.12em;
-    text-transform: uppercase; color: #FFC72C; margin-bottom: 10px;
+    text-transform: uppercase; color: var(--gold, #FFC72C); margin-bottom: 10px;
   }
   .kb-social-icons {
     display: flex; gap: 10px;
@@ -218,9 +218,9 @@ const styles = `
     display: flex; align-items: center; justify-content: center;
     width: 40px; height: 40px;
     background: rgba(255,248,231,0.05);
-    border: 1px solid rgba(255,199,44,0.15);
+    border: 1px solid var(--border, rgba(255,199,44,0.15));
     border-radius: 12px;
-    color: rgba(255,248,231,0.6);
+    color: var(--muted, rgba(255,248,231,0.6));
     transition: all 0.3s ease;
   }
   .kb-social-icon:hover {
@@ -233,69 +233,69 @@ const styles = `
   }
   .kb-footer-contact-item {
     display: flex; align-items: center; gap: 7px;
-    font-size: 12px; color: rgba(255,248,231,0.38); font-weight: 600;
+    font-size: 12px; color: var(--muted, rgba(255,248,231,0.38)); font-weight: 600;
   }
 
   /* Columns */
   .kb-footer-links-col { display: flex; flex-direction: column; gap: 12px; }
   .kb-footer-col-title {
     font-size: 10px; font-weight: 800; letter-spacing: 0.12em;
-    text-transform: uppercase; color: #FFC72C; margin-bottom: 4px;
+    text-transform: uppercase; color: var(--gold, #FFC72C); margin-bottom: 4px;
   }
   .kb-footer-links { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
   .kb-footer-link {
     display: inline-flex; align-items: center; gap: 6px;
-    font-size: 13px; font-weight: 600; color: rgba(255,248,231,0.55);
+    font-size: 13px; font-weight: 600; color: var(--muted, rgba(255,248,231,0.55));
     text-decoration: none; transition: color 0.2s;
   }
-  .kb-footer-link:hover { color: #fff8e7; }
+  .kb-footer-link:hover { color: var(--gold, #FFC72C); }
 
   /* Bottom bar */
   .kb-footer-bottom {
     max-width: 1200px; margin: 0 auto;
     padding: 16px 24px;
-    border-top: 1px solid rgba(255,199,44,0.07);
+    border-top: 1px solid color-mix(in srgb, var(--gold, #FFC72C) 7%, transparent);
     display: flex; align-items: center; justify-content: space-between;
     flex-wrap: wrap; gap: 12px;
   }
   .kb-footer-copy {
-    font-size: 12px; color: rgba(255,248,231,0.28); font-weight: 600;
+    font-size: 12px; color: var(--muted, rgba(255,248,231,0.28)); font-weight: 600;
   }
 
-  /* Powered by SwiftMeta */
+  /* Powered by SwiftMeta — the footer's one real "button" */
   .kb-powered {
     display: inline-flex; align-items: center; gap: 7px;
     text-decoration: none;
-    background: rgba(255,199,44,0.06);
-    border: 1px solid rgba(255,199,44,0.15);
+    background: color-mix(in srgb, var(--gold, #FFC72C) 6%, transparent);
+    border: 1px solid var(--border, rgba(255,199,44,0.15));
     border-radius: 50px;
     padding: 6px 14px;
     transition: all 0.22s;
   }
   .kb-powered:hover {
-    background: rgba(255,199,44,0.12);
-    border-color: rgba(255,199,44,0.35);
+    background: color-mix(in srgb, var(--gold, #FFC72C) 12%, transparent);
+    border-color: color-mix(in srgb, var(--gold, #FFC72C) 35%, transparent);
   }
   .kb-powered-text {
     font-size: 11px; font-weight: 600;
-    color: rgba(255,248,231,0.45); letter-spacing: 0.02em;
+    color: var(--muted, rgba(255,248,231,0.45)); letter-spacing: 0.02em;
   }
   .kb-powered-brand {
     display: flex; align-items: center; gap: 5px;
     font-family: 'Bebas Neue', sans-serif;
-    font-size: 14px; letter-spacing: 2px; color: #FFC72C;
+    font-size: 14px; letter-spacing: 2px; color: var(--gold, #FFC72C);
   }
   .kb-powered-dot {
     width: 6px; height: 6px; border-radius: 50%;
-    background: #FFC72C;
-    box-shadow: 0 0 8px rgba(255,199,44,0.8);
+    background: var(--gold, #FFC72C);
+    box-shadow: 0 0 8px color-mix(in srgb, var(--gold, #FFC72C) 80%, transparent);
     animation: kbDotPulse 1.8s ease infinite;
   }
   @keyframes kbDotPulse {
     0%, 100% { opacity: 1; transform: scale(1); }
     50%       { opacity: 0.5; transform: scale(1.5); }
   }
-  .kb-powered-icon { color: rgba(255,248,231,0.35); }
+  .kb-powered-icon { color: var(--muted, rgba(255,248,231,0.35)); }
 
   @media (max-width: 768px) {
     .kb-footer-inner {
