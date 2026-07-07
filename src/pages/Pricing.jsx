@@ -4,7 +4,7 @@ import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import {
   Flame, Check, X, Sparkles, MessageCircle, Pencil, Bell,
   Loader2, ArrowRight, ShieldCheck, Mic, Paperclip, Minimize2,
-  Zap, CreditCard, ShoppingBag,
+  Zap, CreditCard, ShoppingBag, Palette, MapPin, Gift, Clock, Bot,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useBilling } from "../context/BillingContext";
@@ -157,7 +157,7 @@ export default function Pricing() {
                   {/* KotaBot credits */}
                   <li>
                     <Sparkles className="w-4 h-4 pr-feat-icon" />
-                    <span>{free?.features?.[0] ?? "100 KotaBot credits, refilling every 3 hours"}</span>
+                    <span>{free?.features?.[0] ?? "20 KotaBot credits, refilling every 3 hours"}</span>
                   </li>
                   {/* AI typing speed */}
                   <li>
@@ -174,28 +174,41 @@ export default function Pricing() {
                     <X className="w-4 h-4 pr-feat-icon-off" />
                     <span>File &amp; image uploads in chat</span>
                   </li>
-                  {/* Minimize — ProBite only */}
+                  {/* Advanced AI models — ProBite only */}
                   <li className="pr-feat-muted">
                     <X className="w-4 h-4 pr-feat-icon-off" />
-                    <span>Minimisable chat widget</span>
+                    <span>Advanced AI models (Coder, Reasoning, Thinking)</span>
+                  </li>
+                  {/* Themes — ProBite only */}
+                  <li className="pr-feat-muted">
+                    <Palette className="w-4 h-4 pr-feat-icon-off" />
+                    <span>1 app theme (Fire 🔥) — 5 more with ProBite</span>
                   </li>
                   {/* Order thresholds */}
                   <li>
                     <ShoppingBag className="w-4 h-4 pr-feat-icon" />
-                    <span>Order online — minimum R250 card / R150 cash</span>
+                    <span>Cash up to <strong>R150</strong> · card up to <strong>R250</strong></span>
+                  </li>
+                  {/* Scheduled orders */}
+                  <li>
+                    <Clock className="w-4 h-4 pr-feat-icon" />
+                    <span>Schedule orders ahead of time</span>
+                  </li>
+                  {/* Saved addresses */}
+                  <li>
+                    <MapPin className="w-4 h-4 pr-feat-icon" />
+                    <span>Save multiple delivery addresses</span>
+                  </li>
+                  {/* Referrals */}
+                  <li>
+                    <Gift className="w-4 h-4 pr-feat-icon" />
+                    <span>Refer friends — earn 50 KotaPoints each</span>
                   </li>
                   {/* Social */}
                   <li>
                     <MessageCircle className="w-4 h-4 pr-feat-icon" />
-                    <span>{free?.features?.[1] ?? "Like & comment on menu items"}</span>
+                    <span>Like &amp; comment on menu items</span>
                   </li>
-                  {/* Extra features from backend list */}
-                  {free?.features?.slice(2).map((f) => (
-                    <li key={f}>
-                      <Check className="w-4 h-4 pr-feat-icon" />
-                      <span>{f}</span>
-                    </li>
-                  ))}
                   {/* ProBite-only — shown greyed */}
                   <li className="pr-feat-muted">
                     <X className="w-4 h-4 pr-feat-icon-off" />
@@ -258,6 +271,16 @@ export default function Pricing() {
                     <Paperclip className="w-4 h-4 pr-feat-icon-gold" />
                     <span>File &amp; image uploads in chat</span>
                   </li>
+                  {/* Advanced AI models */}
+                  <li>
+                    <Bot className="w-4 h-4 pr-feat-icon-gold" />
+                    <span>Advanced AI models — Coder, Reasoning, Thinking &amp; more</span>
+                  </li>
+                  {/* Themes */}
+                  <li>
+                    <Palette className="w-4 h-4 pr-feat-icon-gold" />
+                    <span>All 6 app themes unlocked</span>
+                  </li>
                   {/* Minimize */}
                   <li>
                     <Minimize2 className="w-4 h-4 pr-feat-icon-gold" />
@@ -266,7 +289,7 @@ export default function Pricing() {
                   {/* Order thresholds */}
                   <li>
                     <ShoppingBag className="w-4 h-4 pr-feat-icon-gold" />
-                    <span>Order online — over R250 card / R150 cash</span>
+                    <span>Cash up to <strong>R2,000</strong> · card up to <strong>R3,000</strong></span>
                   </li>
                   {/* Edit comments */}
                   <li>
@@ -283,16 +306,10 @@ export default function Pricing() {
                     <CreditCard className="w-4 h-4 pr-feat-icon-gold" />
                     <span>Secure card billing via Paystack — cancel anytime</span>
                   </li>
-                  {/* Extra ProBite perks from backend */}
-                  {(probite?.features?.slice(3) ?? []).map((f) => (
-                    <li key={f}>
-                      <Check className="w-4 h-4 pr-feat-icon-gold" />
-                      <span>{f}</span>
-                    </li>
-                  ))}
+                  {/* Everything in Free */}
                   <li>
                     <Check className="w-4 h-4 pr-feat-icon-gold" />
-                    <span>More AI models to explore</span>
+                    <span>Everything in Free — scheduling, saved addresses, referrals</span>
                   </li>
                 </>
               ) : (
