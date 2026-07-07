@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { getMenu } from "../api/menu.api";
 import MenuCard from "../components/MenuCard";
 import {Loader3} from "../components/Loader";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { useToast } from "../components/Toast";
 import Footer from "../components/Footer";
@@ -14,7 +14,7 @@ import { IoDiamondSharp } from "react-icons/io5";
 import { useBilling } from '../context/BillingContext';
 import {
   ShoppingBag, RefreshCw, UtensilsCrossed, Zap, PanelLeftClose, MessagesSquare, LayoutDashboard,
-  ChevronRight, Flame, Search,Scale, SlidersHorizontal, LogOut,
+  ChevronRight, Flame, Search,Scale, SlidersHorizontal, LogOut, ChevronDown,
   PanelLeftOpen, X, Info, Home, Phone, Wallet, WalletCards, Bike,
   Settings, ChevronLeft, ChevronRight as ChevRight,
 } from "lucide-react";
@@ -39,7 +39,9 @@ const CATEGORIES = [
   { label: "Desserts", image: dessertsImg },
 ];
 
-// Nav items for sidebar
+// Nav items for sidebar. Items with `children` render as an expandable
+// dropdown instead of a direct link (collapses to a flyout-free direct
+// link to the first child when the sidebar itself is collapsed).
 const NAV_ITEMS = [
   { to: "/",                label: "Home",           Icon: Home,          section: "main" },
   { to: "/info",            label: "Policies",       Icon: Info,          section: "main" },
@@ -48,11 +50,17 @@ const NAV_ITEMS = [
   { to: "/driver-dashboard",label: "Dashboard",      Icon: LayoutDashboard,section: "main"},
   { to: "/wallet",          label: "Wallet",         Icon: Wallet,        section: "main" },
   { to: "/appeal",          label: "Appeal",         Icon: Scale,         section: "main" },
-  { to: "/subscribe/u",         label: "Subscription",   Icon: IoDiamondSharp,   section: "main", badge:"new" },
-  
+  {
+    label: "Subscription", Icon: IoDiamondSharp, section: "main", badge: "new",
+    children: [
+      { to: "/subscription", label: "My Plan" },
+      { to: "/pricing",      label: "Pricing & Plans" },
+    ],
+  },
 ];
 
 export default function Menu() {
+  const location            = useLocation();
   const [menu,           setMenu]           = useState([]);
   const [loading,        setLoading]        = useState(true);
   const [error,          setError]          = useState(null);
@@ -62,6 +70,7 @@ export default function Menu() {
   const [sidebarOpen,    setSidebarOpen]    = useState(false);
   const [collapsed,      setCollapsed]      = useState(false); // desktop collapse
   const [settingsOpen,   setSettingsOpen]   = useState(false);
+  const [openSubmenu,    setOpenSubmenu]    = useState(null); // label of the currently-expanded nav dropdown
 
   const navigate           = useNavigate();
   const { addItem, count } = useCart();
@@ -106,6 +115,15 @@ export default function Menu() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    const activeParent = NAV_ITEMS.find((item) =>
+      item.children?.some((c) => location.pathname === c.to)
+    );
+    setOpenSubmenu(activeParent ? activeParent.label : null);
+  }, [location.pathname]);
+
+  useEffect(() => { if (collapsed) setOpenSubmenu(null); }, [collapsed]);
 
   const handleAddToCart = (item) => {
     addItem(item);
@@ -229,34 +247,89 @@ export default function Menu() {
 
             {/* Nav items */}
             <nav className="mn-nav">
-              {NAV_ITEMS.map(({ to, label, Icon, badge }) => (
-                <Tooltip
-                  key={to}
-                  title={collapsed ? label : ""}
-                  placement="right"
-                  overlayStyle={{ fontSize: 12 }}
-                >
-                  <Link
-                    to={to}
-                    className={`mn-nav-link${collapsed ? " mn-nav-link-collapsed" : ""}`}
-                    title={collapsed ? label : undefined}
-                  >
-                    <div className="mn-nav-icon-wrap">
-                      <Icon className="w-4 h-4" />
+              {NAV_ITEMS.map((item) => {
+                const hasChildren = !!item.children?.length;
+
+                // Collapsed sidebar has no room for an inline dropdown —
+                // jump straight to the first child instead.
+                if (hasChildren && collapsed) {
+                  return (
+                    <Tooltip key={item.label} title={item.label} placement="right" overlayStyle={{ fontSize: 12 }}>
+                      <Link to={item.children[0].to} className="mn-nav-link mn-nav-link-collapsed" title={item.label}>
+                        <div className="mn-nav-icon-wrap">
+                          <item.Icon className="w-4 h-4" />
+                        </div>
+                      </Link>
+                    </Tooltip>
+                  );
+                }
+
+                if (hasChildren) {
+                  const isOpen = openSubmenu === item.label;
+                  const isChildActive = item.children.some((c) => location.pathname === c.to);
+                  return (
+                    <div key={item.label} className="mn-nav-group">
+                      <button
+                        type="button"
+                        className={`mn-nav-link mn-nav-link-btn${isChildActive ? " mn-nav-link-active" : ""}`}
+                        onClick={() => setOpenSubmenu(isOpen ? null : item.label)}
+                        aria-expanded={isOpen}
+                      >
+                        <div className="mn-nav-icon-wrap">
+                          <item.Icon className="w-4 h-4" />
+                        </div>
+                        <span className="mn-nav-label">{item.label}</span>
+                        {item.badge === "new" && <span className="mn-nav-badge mn-nav-badge-new">New</span>}
+                        <ChevronDown className={`mn-nav-chevron${isOpen ? " mn-nav-chevron-open" : ""}`} style={{ width: 14, height: 14 }} />
+                      </button>
+                      {isOpen && (
+                        <div className="mn-nav-submenu">
+                          {item.children.map((child) => (
+                            <Link
+                              key={child.to}
+                              to={child.to}
+                              className={`mn-nav-sublink${location.pathname === child.to ? " mn-nav-sublink-active" : ""}`}
+                            >
+                              <span className="mn-nav-subdot" />
+                              {child.label}
+                            </Link>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                    {!collapsed && <span className="mn-nav-label">{label}</span>}
-                    {!collapsed && badge === "cart" && count > 0 && (
-                      <span className="mn-nav-badge">{count}</span>
-                    )}
-                    {!collapsed && badge === "new" && (
-                      <span className="mn-nav-badge mn-nav-badge-new">New</span>
-                    )}
-                    {collapsed && badge === "cart" && count > 0 && (
-                      <span className="mn-nav-badge-dot" />
-                    )}
-                  </Link>
-                </Tooltip>
-              ))}
+                  );
+                }
+
+                const { to, label, Icon, badge } = item;
+                return (
+                  <Tooltip
+                    key={to}
+                    title={collapsed ? label : ""}
+                    placement="right"
+                    overlayStyle={{ fontSize: 12 }}
+                  >
+                    <Link
+                      to={to}
+                      className={`mn-nav-link${collapsed ? " mn-nav-link-collapsed" : ""}`}
+                      title={collapsed ? label : undefined}
+                    >
+                      <div className="mn-nav-icon-wrap">
+                        <Icon className="w-4 h-4" />
+                      </div>
+                      {!collapsed && <span className="mn-nav-label">{label}</span>}
+                      {!collapsed && badge === "cart" && count > 0 && (
+                        <span className="mn-nav-badge">{count}</span>
+                      )}
+                      {!collapsed && badge === "new" && (
+                        <span className="mn-nav-badge mn-nav-badge-new">New</span>
+                      )}
+                      {collapsed && badge === "cart" && count > 0 && (
+                        <span className="mn-nav-badge-dot" />
+                      )}
+                    </Link>
+                  </Tooltip>
+                );
+              })}
             </nav>
 
             {/* Earn with us — hidden when collapsed */}
@@ -662,6 +735,39 @@ const styles = `
     width: 7px; height: 7px; border-radius: 50%;
     background: var(--red); border: 1.5px solid var(--dark);
   }
+
+  /* ── Nav dropdown (expandable submenu) ── */
+  .mn-nav-group { display: flex; flex-direction: column; }
+  .mn-nav-link-btn {
+    width: 100%; background: none; border: none; cursor: pointer;
+    font-family: inherit; text-align: left;
+  }
+  .mn-nav-link-active { background: rgba(255,199,44,0.08); color: var(--gold); }
+  .mn-nav-link-active .mn-nav-icon-wrap { background: rgba(255,199,44,0.14); color: var(--gold); }
+  .mn-nav-chevron { flex-shrink: 0; transition: transform 0.2s; opacity: 0.55; }
+  .mn-nav-chevron-open { transform: rotate(180deg); opacity: 0.9; }
+  .mn-nav-submenu {
+    display: flex; flex-direction: column; gap: 1px;
+    padding: 2px 0 4px 30px;
+    animation: mnSubmenuIn 0.16s ease;
+  }
+  @keyframes mnSubmenuIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .mn-nav-sublink {
+    display: flex; align-items: center; gap: 9px;
+    padding: 7px 10px; border-radius: 9px;
+    color: var(--muted); font-size: 12.5px; font-weight: 600;
+    text-decoration: none; transition: all 0.15s;
+  }
+  .mn-nav-sublink:hover { background: rgba(255,248,231,0.06); color: var(--text); }
+  .mn-nav-sublink-active { color: var(--gold); background: rgba(255,199,44,0.07); }
+  .mn-nav-subdot {
+    width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0;
+    background: currentColor; opacity: 0.5;
+  }
+  .mn-nav-sublink-active .mn-nav-subdot { opacity: 1; }
 
   /* Driver card */
   .mn-driver-card {
