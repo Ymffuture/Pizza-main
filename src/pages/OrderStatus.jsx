@@ -1,21 +1,24 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
+import { useBilling } from "../context/BillingContext";
 import { useToast } from "../components/Toast";
 import { formatCurrency } from "../utils/formatCurrency";
-import { getOrderById } from "../api/orders.api";
+import { getOrderById, cancelOrder } from "../api/orders.api";
 import { getAssignmentByOrder } from "../api/delivery.api";
 import {
   ArrowLeft, Flame, LogOut, RefreshCw, BotMessageSquare,
   Clock, CheckCircle2, ChefHat, Package, Truck,
   XCircle, MapPin, Receipt, Copy, Check, Phone,
   User, Bike, Navigation, CheckCheck, Banknote,
+  CalendarClock, Ban, Lock,
 } from "lucide-react";
 import Footer from "../components/Footer";
 import { BsCashCoin } from "react-icons/bs";
 import { FaCcMastercard } from "react-icons/fa";
 /* ── Status config ── */
 const STATUS_CFG = {
+  scheduled: { label: "Order Scheduled",  Icon: CalendarClock, color: "#818cf8" },
   pending:   { label: "Order Placed",     Icon: Clock,        color: "#FFC72C" },
   paid:      { label: "Payment Received", Icon: CheckCircle2, color: "#60a5fa" },
   preparing: { label: "Being Prepared",   Icon: ChefHat,      color: "#fb923c" },
@@ -40,6 +43,19 @@ const CASH_STEPS = [
   { key: "ready",     label: "Ready"     },
   { key: "delivered", label: "Delivered" },
 ];
+
+function formatCountdown(ms) {
+  if (ms <= 0) return "Starting now";
+  const totalSeconds = Math.floor(ms / 1000);
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  if (days > 0) return `${days}d ${hours}h ${minutes}m`;
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  if (minutes > 0) return `${minutes}m ${seconds}s`;
+  return `${seconds}s`;
+}
 
 /* ── Delivery assignment sub-steps ── */
 const DELIVERY_STEPS = [
@@ -161,6 +177,7 @@ export default function OrderStatus() {
   const { id }   = useParams();
   const navigate = useNavigate();
   const { logout, user } = useAuth();
+  const { isProBite } = useBilling();
   const toast    = useToast();
   const intervalRef = useRef(null);
 
@@ -170,7 +187,36 @@ export default function OrderStatus() {
   const [lastUpdated, setLast]       = useState(null);
   const [copiedId,    setCopiedId]   = useState(false);
   const [liveConnected, setLiveConnected] = useState(false);
+  const [cancelling,  setCancelling] = useState(false);
+  const [confirmCancel, setConfirmCancel] = useState(false);
+  const [countdownNow, setCountdownNow] = useState(Date.now());
   const eventSourceRef = useRef(null);
+
+  // Live countdown tick — only needed while a ProBite user is looking at a
+  // still-SCHEDULED order (free plan never sees the countdown/details).
+  useEffect(() => {
+    if (order?.status !== "scheduled" || !isProBite || !order?.scheduled_for) return;
+    const tick = setInterval(() => setCountdownNow(Date.now()), 1000);
+    return () => clearInterval(tick);
+  }, [order?.status, order?.scheduled_for, isProBite]);
+
+  const handleCancel = async () => {
+    setCancelling(true);
+    try {
+      await cancelOrder(id);
+      toast.show({ type: "success", title: "Order cancelled" });
+      setConfirmCancel(false);
+      await load();
+    } catch (err) {
+      toast.show({
+        type: "error",
+        title: "Couldn't cancel",
+        message: err?.response?.data?.detail || err.message,
+      });
+    } finally {
+      setCancelling(false);
+    }
+  };
 
   const load = useCallback(async () => {
     try {
@@ -386,6 +432,89 @@ export default function OrderStatus() {
             </p>
           )}
         </section>
+
+        {/* ── Scheduled order — details/countdown/cancel differ by plan ── */}
+        {order.status === "scheduled" && (
+          isProBite ? (
+            <div className="os-scheduled-card">
+              <div className="os-scheduled-header">
+                <CalendarClock className="w-5 h-5" style={{ color: "#818cf8" }} />
+                <div>
+                  <p className="os-scheduled-title">Scheduled for</p>
+                  <p className="os-scheduled-time">
+                    {order.scheduled_for
+                      ? new Date(order.scheduled_for).toLocaleString("en-ZA", {
+                          weekday: "short", day: "numeric", month: "short",
+                          hour: "2-digit", minute: "2-digit",
+                        })
+                      : "—"}
+                  </p>
+                </div>
+              </div>
+
+              {order.scheduled_for && (
+                <div className="os-scheduled-countdown">
+                  <span className="os-scheduled-countdown-label">Starts in</span>
+                  <span className="os-scheduled-countdown-value">
+                    {formatCountdown(new Date(order.scheduled_for).getTime() - countdownNow)}
+                  </span>
+                </div>
+              )}
+
+              {confirmCancel ? (
+                <div className="os-scheduled-confirm">
+                  <span>Cancel this scheduled order now?</span>
+                  <button className="os-scheduled-confirm-btn" onClick={handleCancel} disabled={cancelling}>
+                    {cancelling ? <RefreshCw className="w-3.5 h-3.5 os-refresh-icon" /> : "Yes, cancel"}
+                  </button>
+                  <button className="os-scheduled-cancel-btn-ghost" onClick={() => setConfirmCancel(false)}>
+                    Never mind
+                  </button>
+                </div>
+              ) : (
+                <button className="os-scheduled-cancel-btn" onClick={() => setConfirmCancel(true)}>
+                  <Ban className="w-4 h-4" /> Cancel scheduled order
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="os-scheduled-card os-scheduled-card-locked">
+              <div className="os-scheduled-header">
+                <CalendarClock className="w-5 h-5" style={{ color: "#818cf8" }} />
+                <div>
+                  <p className="os-scheduled-title">Your order is scheduled</p>
+                  <p className="os-scheduled-locked-text">
+                    It'll move to preparation automatically at the requested time.
+                  </p>
+                </div>
+              </div>
+              <Link to="/pricing" className="os-scheduled-upsell">
+                <Lock className="w-3.5 h-3.5" />
+                ProBite shows the exact time, a live countdown, and lets you cancel immediately
+                <span className="os-scheduled-upsell-arrow">→</span>
+              </Link>
+            </div>
+          )
+        )}
+
+        {/* ── Cancel — pending/paid orders (free plan's only cancel window) ── */}
+        {(order.status === "pending" || order.status === "paid") && (
+          confirmCancel ? (
+            <div className="os-scheduled-confirm" style={{ margin: "0 0 16px" }}>
+              <span>Cancel this order now?</span>
+              <button className="os-scheduled-confirm-btn" onClick={handleCancel} disabled={cancelling}>
+                {cancelling ? <RefreshCw className="w-3.5 h-3.5 os-refresh-icon" /> : "Yes, cancel"}
+              </button>
+              <button className="os-scheduled-cancel-btn-ghost" onClick={() => setConfirmCancel(false)}>
+                Never mind
+              </button>
+            </div>
+          ) : (
+            <button className="os-scheduled-cancel-btn" style={{ marginBottom: 16 }} onClick={() => setConfirmCancel(true)}>
+              <Ban className="w-4 h-4" /> Cancel order
+            </button>
+          )
+        )}
 
         {/* ── Cash payment pending notice ── */}
         {isCash && order.status === "pending" && (
@@ -646,6 +775,54 @@ const styles = `
   .os-cash-notice-content{flex:1;}
   .os-cash-notice-title{font-size:13px;font-weight:800;color:var(--gold);margin-bottom:4px;}
   .os-cash-notice-text{font-size:12px;color:var(--muted);line-height:1.55;}
+
+  /* ── Scheduled order card ── */
+  .os-scheduled-card{
+    display:flex;flex-direction:column;gap:14px;margin-bottom:16px;
+    background:rgba(129,140,248,0.07);border:1px solid rgba(129,140,248,0.25);
+    border-radius:16px;padding:16px 18px;
+  }
+  .os-scheduled-card-locked{ background:rgba(248,245,238,0.03); border-color:rgba(248,245,238,0.08); }
+  .os-scheduled-header{display:flex;align-items:flex-start;gap:12px;}
+  .os-scheduled-title{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#818cf8;margin:0 0 3px;}
+  .os-scheduled-time{font-size:15px;font-weight:800;color:var(--text);margin:0;}
+  .os-scheduled-locked-text{font-size:12.5px;color:var(--muted);line-height:1.5;margin:0;}
+  .os-scheduled-countdown{
+    display:flex;align-items:center;justify-content:space-between;
+    background:rgba(129,140,248,0.1);border-radius:11px;padding:10px 14px;
+  }
+  .os-scheduled-countdown-label{font-size:11.5px;font-weight:600;color:var(--muted);}
+  .os-scheduled-countdown-value{font-size:15px;font-weight:800;color:#818cf8;font-variant-numeric:tabular-nums;}
+  .os-scheduled-cancel-btn{
+    display:flex;align-items:center;justify-content:center;gap:7px;
+    background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.3);color:#f87171;
+    font-size:13px;font-weight:700;padding:10px 16px;border-radius:11px;cursor:pointer;
+  }
+  .os-scheduled-cancel-btn:hover{background:rgba(248,113,113,0.18);}
+  .os-scheduled-cancel-btn-ghost{
+    background:none;border:1px solid rgba(248,245,238,0.15);color:var(--muted);
+    font-size:12px;font-weight:600;padding:7px 12px;border-radius:9px;cursor:pointer;
+  }
+  .os-scheduled-cancel-btn-ghost:hover{color:var(--text);}
+  .os-scheduled-confirm{
+    display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+    font-size:12.5px;color:var(--muted);
+    background:rgba(248,113,113,0.06);border:1px solid rgba(248,113,113,0.2);
+    padding:10px 14px;border-radius:11px;
+  }
+  .os-scheduled-confirm-btn{
+    background:rgba(248,113,113,0.15);border:1px solid rgba(248,113,113,0.35);color:#f87171;
+    font-size:12px;font-weight:700;padding:6px 13px;border-radius:8px;cursor:pointer;
+  }
+  .os-scheduled-confirm-btn:hover:not(:disabled){background:rgba(248,113,113,0.25);}
+  .os-scheduled-upsell{
+    display:flex;align-items:center;gap:8px;text-decoration:none;
+    font-size:11.5px;font-weight:600;color:#818cf8;
+    background:rgba(129,140,248,0.08);border:1px solid rgba(129,140,248,0.2);
+    padding:9px 12px;border-radius:10px;line-height:1.4;
+  }
+  .os-scheduled-upsell:hover{background:rgba(129,140,248,0.14);}
+  .os-scheduled-upsell-arrow{margin-left:auto;flex-shrink:0;}
 
   /* Card */
   .os-card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:20px;display:flex;flex-direction:column;gap:14px;}
