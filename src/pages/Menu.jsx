@@ -48,7 +48,7 @@ const NAV_ITEMS = [
   { to: "/driver-dashboard",label: "Dashboard",      Icon: LayoutDashboard,section: "main"},
   { to: "/wallet",          label: "Wallet",         Icon: Wallet,        section: "main" },
   { to: "/appeal",          label: "Appeal",         Icon: Scale,         section: "main" },
-  { to: "/pricing",         label: "Subscription",   Icon: IoDiamondSharp,   section: "main", badge:"new" },
+  { to: "/subscribe/u",         label: "Subscription",   Icon: IoDiamondSharp,   section: "main", badge:"new" },
   
 ];
 
