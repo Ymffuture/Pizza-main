@@ -152,7 +152,7 @@ export default function App() {
                       <Route path="/support"               element={<SupportPage />} />
                       <Route path="/success"               element={<Success />} />
                       <Route path="/pricing"               element={<Pricing />} />
-                      <Route path="/subscribe/u"               element={<Pricing />} />
+                      <Route path="/subscribe/u"           element={<Subscribe />} />
                       
 <Route path="/appeal" element={<RequireAuth><Appeal /></RequireAuth>} />
 
