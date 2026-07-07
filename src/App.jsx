@@ -38,6 +38,7 @@ const DeliverDashboard = lazy(() => import("./pages/DeliverDashboard"));
 const ClientWallet     = lazy(() => import("./pages/ClientWallet"));
 const Appeal = lazy(() => import("./pages/Appeal"));
 const Pricing = lazy(() => import("./pages/Pricing"));
+const Subscribe = lazy(() => import("./pages/Subscription"));
 const Profile = lazy(() => import("./pages/Profile"));
 
 // inside <Routes>
@@ -151,6 +152,7 @@ export default function App() {
                       <Route path="/support"               element={<SupportPage />} />
                       <Route path="/success"               element={<Success />} />
                       <Route path="/pricing"               element={<Pricing />} />
+                      <Route path="/subscribe/u"               element={<Pricing />} />
                       
 <Route path="/appeal" element={<RequireAuth><Appeal /></RequireAuth>} />
 
