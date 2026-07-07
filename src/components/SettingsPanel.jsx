@@ -1,14 +1,17 @@
 // src/components/SettingsPanel.jsx
 import { useEffect, useRef } from "react";
 import { X, Palette, Moon, Fingerprint, ChevronRight, Shield, Settings, Lock } from "lucide-react";
-import { THEMES, useTheme } from "../hooks/useTheme";
-import { Link } from "react-router-dom";
-import { useBilling } from '../context/BillingContext';
+import { THEMES, useTheme, FREE_THEME_ID } from "../hooks/useTheme";
+import { Link, useNavigate } from "react-router-dom";
+import { useBilling } from "../context/BillingContext";
+import { useToast } from "./Toast";
 
 export default function SettingsPanel({ open, onClose }) {
   const { themeId, changeTheme } = useTheme();
-  const panelRef = useRef(null);
   const { isProBite } = useBilling();
+  const navigate = useNavigate();
+  const toast = useToast();
+  const panelRef = useRef(null);
 
   useEffect(() => {
     const handler = (e) => { if (e.key === "Escape") onClose(); };
@@ -51,24 +54,48 @@ export default function SettingsPanel({ open, onClose }) {
           {/* Theme Section */}
           <section className="sp-section">
             <SectionLabel icon={<Palette style={{ width: 12, height: 12 }} />} label="App Theme" />
+            {!isProBite && (
+              <p className="sp-theme-hint">
+                <Lock style={{ width: 11, height: 11 }} /> 1 free theme · unlock all {THEMES.length} with ProBite
+              </p>
+            )}
             <div className="sp-theme-grid">
               {THEMES.map(theme => {
                 const active = themeId === theme.id;
+                const locked = !isProBite && theme.id !== FREE_THEME_ID;
                 return (
                   <button
                     key={theme.id}
-                    onClick={() => changeTheme(theme.id)}
-                    className={`sp-theme-card${active ? " sp-theme-active" : ""}`}
-                    title={theme.name}
+                    onClick={() => {
+                      if (locked) {
+                        toast.show({
+                          type: "info",
+                          title: "ProBite theme",
+                          message: `${theme.name} is a ProBite perk — upgrade to unlock every theme.`,
+                        });
+                        onClose();
+                        navigate("/pricing");
+                        return;
+                      }
+                      changeTheme(theme.id);
+                    }}
+                    className={`sp-theme-card${active ? " sp-theme-active" : ""}${locked ? " sp-theme-locked" : ""}`}
+                    title={locked ? `${theme.name} — ProBite only` : theme.name}
                   >
                     <div className="sp-swatch">
                       {theme.preview.map((c, i) => (
                         <div key={i} style={{ flex: 1, height: "100%", background: c, borderRadius: i === 0 ? "6px 0 0 6px" : i === 2 ? "0 6px 6px 0" : 0 }} />
                       ))}
+                      {locked && (
+                        <div className="sp-theme-lock-overlay">
+                          <Lock style={{ width: 13, height: 13 }} />
+                        </div>
+                      )}
                     </div>
                     <div className="sp-theme-label-row">
                       <span className="sp-theme-emoji">{theme.emoji}</span>
                       <span className={`sp-theme-name${active ? " sp-theme-name-active" : ""}`}>{theme.name}</span>
+                      {locked && <span className="sp-theme-pro-badge">PRO</span>}
                     </div>
                     {active && <div className="sp-active-ring" />}
                     {active && <div className="sp-active-check">✓</div>}
@@ -219,7 +246,23 @@ const css = `
   }
   .sp-theme-card:hover { background:rgba(255,199,44,0.06); border-color:rgba(255,199,44,0.22); transform:translateY(-1px); }
   .sp-theme-active { background:rgba(255,199,44,0.07)!important; border-color:transparent!important; }
-  .sp-swatch { width:100%; height:28px; border-radius:7px; overflow:hidden; display:flex; border:1px solid rgba(255,255,255,0.08); }
+  .sp-theme-locked { opacity:0.72; }
+  .sp-theme-locked:hover { transform:none; border-color:rgba(255,199,44,0.15); }
+  .sp-theme-hint {
+    display:flex; align-items:center; gap:5px; margin:-2px 0 2px;
+    font-size:10.5px; font-weight:600; color:var(--muted,rgba(255,248,231,0.42));
+  }
+  .sp-theme-lock-overlay {
+    position:absolute; inset:0; border-radius:7px;
+    background:rgba(0,0,0,0.5); color:#fff8e7;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .sp-theme-pro-badge {
+    margin-left:auto; font-size:8.5px; font-weight:900; letter-spacing:0.05em;
+    color:#0e0700; background:var(--gold,#FFC72C);
+    padding:2px 5px; border-radius:5px; flex-shrink:0;
+  }
+  .sp-swatch { width:100%; height:28px; border-radius:7px; overflow:hidden; display:flex; border:1px solid rgba(255,255,255,0.08); position:relative; }
   .sp-theme-label-row { display:flex; align-items:center; gap:5px; margin-top:8px; }
   .sp-theme-emoji { font-size:13px; }
   .sp-theme-name { font-size:11px; font-weight:600; color:var(--muted,rgba(255,248,231,0.42)); }
