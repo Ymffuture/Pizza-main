@@ -53,7 +53,7 @@ const NAV_ITEMS = [
   {
     label: "Subscription", Icon: IoDiamondSharp, section: "main", badge: "new",
     children: [
-      { to: "/subscription", label: "My Plan" },
+      { to: "/subscribe/u", label: "My Plan" },
       { to: "/pricing",      label: "Pricing & Plans" },
     ],
   },
