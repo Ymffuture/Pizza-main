@@ -2232,9 +2232,9 @@ const styles = `
 }
 
 .kb-md-table{
-    width:100%;
+    width:105%;
     border-collapse:collapse;
-    font-size:.95rem;
+    font-size:8px;
 }
 
 .kb-md-th{
