@@ -4,7 +4,8 @@ import {
   X,Sparkles,Send, BotMessageSquare, Forward, CornerRightUp,
   Loader, Minimize2, Maximize2, XCircle, CheckCircle, Clock,
   CircleUser, Copy, Check, Link as LinkIcon, ChevronDown, ChevronRight,
-  Brain, Paperclip, FileText, Mic, Square, Plus, StopCircle, ArrowUp
+  Brain, Paperclip, FileText, Mic, Square, Plus, StopCircle, ArrowUp,
+  RefreshCw, WifiOff
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -109,6 +110,16 @@ function formatRecordTime(totalSeconds) {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
+/* Small clock label under each bubble — "14:32" style, localised */
+function formatTime(ts) {
+  if (!ts) return "";
+  try {
+    return new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  } catch {
+    return "";
+  }
+}
+
 function useTypewriter(target, enabled, speed = 18, charsPerFrame = 3, slow = false) {
   const effectiveSpeed = slow ? 55 : speed;
   const effectiveChars = slow ? 1  : charsPerFrame;
@@ -167,6 +178,34 @@ function CopyOrderId({ orderId }) {
         ? <Check className="w-3 h-3" style={{ color: "#4ade80" }} />
         : <Copy className="w-3 h-3" />}
       <span className="kb-copy-text">{copied ? "Copied!" : "Copy ID"}</span>
+    </button>
+  );
+}
+
+/* Copy button for a whole message (user or AI) — sits in the bubble footer */
+function CopyMessageButton({ text }) {
+  const [copied, setCopied] = useState(false);
+  if (!text) return null;
+
+  const handleCopy = async (e) => {
+    e.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+    }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1600);
+  };
+
+  return (
+    <button className="kb-msg-copy-btn" onClick={handleCopy} title={copied ? "Copied!" : "Copy message"}>
+      {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
     </button>
   );
 }
@@ -307,7 +346,7 @@ function RotatingActions({ actions, interval = 2000 }) {
   );
   }
 
-function Bubble({ msg, onCancelConfirm, cancellingId, user, isProBite }) {
+function Bubble({ msg, index, onCancelConfirm, cancellingId, user, isProBite, onResend }) {
   const isUser  = msg.role === "user";
   const orderId = !isUser ? extractOrderId(msg.content) : null;
 
@@ -322,6 +361,7 @@ function Bubble({ msg, onCancelConfirm, cancellingId, user, isProBite }) {
 
   const renderContent = !isUser && msg.streaming ? displayed : msg.content;
   const stillStreaming = !isUser && msg.streaming && !twDone;
+  const canCopy = !!msg.content && !msg.reasoning?.thinking && !stillStreaming;
 
   return (
     <div className={`kb-ai-bubble-row ${isUser ? "kb-ai-bubble-user" : "kb-ai-bubble-bot"}`}>
@@ -350,7 +390,7 @@ function Bubble({ msg, onCancelConfirm, cancellingId, user, isProBite }) {
 
         {/* Main bubble */}
         {msg.content && (
-          <div className={`kb-ai-bubble ${isUser ? "kb-ai-bubble-u" : "kb-ai-bubble-b"}`}>
+          <div className={`kb-ai-bubble ${isUser ? "kb-ai-bubble-u" : "kb-ai-bubble-b"} ${msg.networkError ? "kb-ai-bubble-error" : ""}`}>
             {isUser ? (
               <>
                 {msg.attachment && (
@@ -390,6 +430,21 @@ function Bubble({ msg, onCancelConfirm, cancellingId, user, isProBite }) {
                   </div>
                 )}
 
+                {/* Network-error retry row — auto-retry in progress, or manual resend */}
+                {!stillStreaming && msg.networkError && (
+                  <div className="kb-resend-row">
+                    <WifiOff className="w-3 h-3" />
+                    <span className="kb-resend-text">
+                      {msg.retrying ? "Connection issue — retrying automatically…" : "Network error — couldn't reach KotaBot."}
+                    </span>
+                    {!msg.retrying && (
+                      <button className="kb-resend-btn" onClick={() => onResend(index)} title="Resend message">
+                        <RefreshCw className="w-3 h-3" /> Resend
+                      </button>
+                    )}
+                  </div>
+                )}
+
                 {/* Cancel confirm */}
                 {!stillStreaming && msg.pendingCancelId && (
                   <div className="kb-confirm-row">
@@ -412,6 +467,14 @@ function Bubble({ msg, onCancelConfirm, cancellingId, user, isProBite }) {
                 )}
               </>
             )}
+          </div>
+        )}
+
+        {/* Footer row — timestamp + copy, shown once the message has settled */}
+        {msg.content && !stillStreaming && !msg.reasoning?.thinking && (
+          <div className={`kb-msg-meta ${isUser ? "kb-msg-meta-user" : "kb-msg-meta-bot"}`}>
+            {msg.timestamp && <span className="kb-msg-time">{formatTime(msg.timestamp)}</span>}
+            {canCopy && <CopyMessageButton text={msg.content} />}
           </div>
         )}
       </div>
@@ -546,15 +609,15 @@ export default function AiChat() {
      fails, so the picker always has something to show. `probite_only`
      models are greyed out for FREE users — enforced server-side too. */
   const FALLBACK_MODELS = [
-    { id: "nvidia/nemotron-3-nano-30b-a3b:free",                          label: "Nemotron 3 Nano",         description: "Default — fast, well-rounded for KotaBot chat", probite_only: false },
-    { id: "cohere/north-mini-code:free",                                   label: "North Mini Code",         description: "Cohere — lightweight, code-leaning",            probite_only: true },
-    { id: "nvidia/llama-nemotron-rerank-vl-1b-v2:free",                    label: "Nemotron Rerank VL",      description: "NVIDIA — vision-language reranking",            probite_only: false },
-    { id: "nvidia/nemotron-3.5-content-safety:free",                       label: "Nemotron Content Safety", description: "NVIDIA — safety-tuned moderation model",         probite_only: true },
-    { id: "poolside/laguna-m.1:free",                                      label: "Laguna M.1",              description: "Poolside — general purpose",                     probite_only: false },
-    { id: "liquid/lfm-2.5-1.2b-thinking:free",                             label: "LFM 2.5 Thinking",        description: "Liquid — small, chain-of-thought tuned",         probite_only: true },
-    { id: "cognitivecomputations/dolphin-mistral-24b-venice-edition:free", label: "Dolphin Mistral 24B",     description: "Uncensored-tuned Mistral fine-tune",             probite_only: true },
-    { id: "qwen/qwen3-coder:free",                                         label: "Qwen3 Coder",             description: "Alibaba — strong at code",                       probite_only: true },
-    { id: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",            label: "Nemotron Omni Reasoning", description: "NVIDIA — multimodal reasoning",                  probite_only: true },
+    { id: "liquid/lfm-2.5-1.2b-thinking:free",                             label: "LFM 2.5 Thinking",        description: "Default — chain-of-thought tuned, free plan",    probite_only: false },
+    { id: "nvidia/llama-nemotron-rerank-vl-1b-v2:free",                    label: "Nemotron Rerank VL",      description: "NVIDIA — vision-language reranking, free plan",  probite_only: false },
+    { id: "nvidia/nemotron-3-nano-30b-a3b:free",                           label: "Nemotron 3 Nano",         description: "Fast, well-rounded for KotaBot chat",             probite_only: false },
+    { id: "cohere/north-mini-code:free",                                   label: "North Mini Code",         description: "Cohere — lightweight, code-leaning",              probite_only: true },
+    { id: "nvidia/nemotron-3.5-content-safety:free",                       label: "Nemotron Content Safety", description: "NVIDIA — safety-tuned moderation model",          probite_only: true },
+    { id: "poolside/laguna-m.1:free",                                      label: "Laguna M.1",              description: "Poolside — general purpose",                      probite_only: false },
+    { id: "cognitivecomputations/dolphin-mistral-24b-venice-edition:free", label: "Dolphin Mistral 24B",     description: "Uncensored-tuned Mistral fine-tune",              probite_only: true },
+    { id: "qwen/qwen3-coder:free",                                         label: "Qwen3 Coder",             description: "Alibaba — strong at code",                        probite_only: true },
+    { id: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",            label: "Nemotron Omni Reasoning", description: "NVIDIA — multimodal reasoning",                   probite_only: true },
   ];
   const [availableModels, setAvailableModels] = useState(FALLBACK_MODELS);
   const [selectedModel,   setSelectedModel]   = useState(FALLBACK_MODELS[0].id);
@@ -571,6 +634,7 @@ export default function AiChat() {
     content: "Hello! 👋 I'm **KotaBot**. I can help you:",
     actions: WELCOME_ACTIONS,
     footer: "What can I do for you?",
+    timestamp: Date.now(),
   },
 ]);
 
@@ -860,20 +924,18 @@ export default function AiChat() {
       setInput("");
       setMessages((prev) => [
         ...prev,
-        { role: "user", content: text || "Sent a file" },
+        { role: "user", content: text || "Sent a file", timestamp: Date.now() },
         {
           role: "assistant",
           content: "You're out of free KotaBot credits for now. They refill automatically every few hours, or go **[ProBite](/pricing)** for unlimited chat — no waiting. 🍕",
           preTyping: false,
           streaming: true,
+          timestamp: Date.now(),
         },
       ]);
       if (!open) setUnread((u) => u + 1);
       return;
     }
-
-    const detectedId = extractOrderId(text);
-    if (detectedId) setCtxId(detectedId);
 
     const fileToSend = attachedFile;
     const linkToSend = attachedLink;
@@ -884,24 +946,57 @@ export default function AiChat() {
     const userMsg = {
       role: "user",
       content: text || (fileToSend ? `Sent a file: ${fileToSend.name}` : `Shared a link`),
+      timestamp: Date.now(),
       ...(fileToSend ? { attachment: { filename: fileToSend.name, mimeType: fileToSend.type } } : {}),
       ...(linkToSend ? { link: linkToSend } : {}),
     };
     const updated = [...messages, userMsg];
     setMessages(updated);
     setInput("");
+
+    await runTurn(text, fileToSend, linkToSend, updated);
+  };
+
+  /* ── Resend — reuses the exact text/file/link from a failed turn.
+       `baseMessages` is everything up to (not including) the failed bot
+       bubble, which still ends with the original user message, so it's
+       not re-added. ── */
+  const handleResend = (idx) => {
+    const failedMsg = messages[idx];
+    if (!failedMsg?.retry || loading) return;
+    const { text, fileToSend, linkToSend } = failedMsg.retry;
+    const baseMessages = messages.slice(0, idx);
+    runTurn(text, fileToSend, linkToSend, baseMessages);
+  };
+
+  /* ─────────────────────────────────────────────────────────
+     RUN TURN — reasoning gen + chat API fire in true parallel
+     Flow: [OpenRouter reasoning] ┐
+                               ├─ steps resolved first → animate them in
+           [/ai/chat]    ──────┘  await chat if still pending → close thinking
+                               → preTyping dots → typewriter
+
+     On a genuine network error (request never reached the server — no
+     `response` on the axios error) this auto-retries ONCE after a short
+     delay before falling back to a manual "Resend" button on the bubble.
+  ───────────────────────────────────────────────────────── */
+  const runTurn = async (text, fileToSend, linkToSend, baseMessages, isAutoRetry = false) => {
     setLoading(true);
     setCancelResult(null);
 
+    const detectedId = extractOrderId(text);
+    if (detectedId) setCtxId(detectedId);
+
     /* ── 1. Insert placeholder — thinking block open, steps empty ── */
     startTimeRef.current = Date.now();
-    setMessages([...updated, {
+    setMessages([...baseMessages, {
       role: "assistant", content: "", preTyping: false, streaming: false,
       reasoning: { thinking: true, steps: [], elapsed: 0 },
+      ...(isAutoRetry ? { retrying: true, networkError: true } : {}),
     }]);
 
     /* ── 2. Fire BOTH calls simultaneously ── */
-    const firstUserIdx = updated.findIndex((m) => m.role === "user");
+    const firstUserIdx = baseMessages.findIndex((m) => m.role === "user");
 
     abortRef.current?.abort();
     const controller = new AbortController();
@@ -937,7 +1032,7 @@ export default function AiChat() {
         }
       }
 
-      const apiMessages = (firstUserIdx >= 0 ? updated.slice(firstUserIdx) : updated).map((m, i, arr) => ({
+      const apiMessages = (firstUserIdx >= 0 ? baseMessages.slice(firstUserIdx) : baseMessages).map((m, i, arr) => ({
         role: m.role,
         content: i === arr.length - 1 ? `${m.content}${attachmentContext}` : m.content,
       }));
@@ -958,26 +1053,28 @@ export default function AiChat() {
     const reasoningSteps = await reasoningPromise;
     const STEP_INTERVAL  = isProBite ? 360 : 900;
 
-    await new Promise((resolve) => {
-      let idx = 0;
-      const tick = () => {
-        if (idx < reasoningSteps.length) {
-          const slice = reasoningSteps.slice(0, idx + 1);
-          idx++;
-          setMessages((prev) => {
-            const next = [...prev];
-            const last = { ...next[next.length - 1] };
-            last.reasoning = { ...last.reasoning, steps: slice };
-            next[next.length - 1] = last;
-            return next;
-          });
-          thinkTimerRef.current = setTimeout(tick, STEP_INTERVAL);
-        } else {
-          resolve();
-        }
-      };
-      thinkTimerRef.current = setTimeout(tick, STEP_INTERVAL);
-    });
+    if (!isAutoRetry) {
+      await new Promise((resolve) => {
+        let idx = 0;
+        const tick = () => {
+          if (idx < reasoningSteps.length) {
+            const slice = reasoningSteps.slice(0, idx + 1);
+            idx++;
+            setMessages((prev) => {
+              const next = [...prev];
+              const last = { ...next[next.length - 1] };
+              last.reasoning = { ...last.reasoning, steps: slice };
+              next[next.length - 1] = last;
+              return next;
+            });
+            thinkTimerRef.current = setTimeout(tick, STEP_INTERVAL);
+          } else {
+            resolve();
+          }
+        };
+        thinkTimerRef.current = setTimeout(tick, STEP_INTERVAL);
+      });
+    }
 
     /* ── 4. Await chat (may already be resolved, or still pending) ── */
     let apiData  = null;
@@ -994,7 +1091,26 @@ export default function AiChat() {
       apiError = err;
     }
 
-    /* ── 4. Close reasoning block → show elapsed ── */
+    /* A genuine network error never reached the server — no `response`
+       on the axios error (DNS failure, offline, CORS, timeout, etc). A
+       402/401/500 etc DOES have a response and isn't retried automatically. */
+    const isNetworkError = !!apiError && !apiError.response;
+
+    /* ── Auto-retry once on network error, then fall back to a manual
+         "Resend" button rather than retrying forever ── */
+    if (isNetworkError && !isAutoRetry) {
+      setMessages((prev) => {
+        const next = [...prev];
+        const last = { ...next[next.length - 1], retrying: true, networkError: true };
+        next[next.length - 1] = last;
+        return next;
+      });
+      await new Promise((r) => setTimeout(r, 1400));
+      await runTurn(text, fileToSend, linkToSend, baseMessages, true);
+      return;
+    }
+
+    /* ── 4b. Close reasoning block → show elapsed ── */
     const elapsed = ((Date.now() - startTimeRef.current) / 1000).toFixed(1);
     setMessages((prev) => {
       const next = [...prev];
@@ -1017,8 +1133,9 @@ export default function AiChat() {
     /* ── 6. Inject final reply for typewriter ── */
     if (apiError) {
       const status = apiError?.response?.status;
-      const errMsg =
-        status === 401
+      const errMsg = isNetworkError
+        ? "Eish, couldn't reach KotaBot — check your connection and try again."
+        : status === 401
           ? "Please **sign in** to chat with KotaBot."
           : status === 402
           ? "You're out of free KotaBot credits for now. They refill automatically, or go **[ProBite](/pricing)** for unlimited chat — no waiting. 🍕"
@@ -1031,7 +1148,15 @@ export default function AiChat() {
       }
       setMessages((prev) => {
         const next = [...prev];
-        const last = { ...next[next.length - 1], content: errMsg, preTyping: false, streaming: true };
+        const last = {
+          ...next[next.length - 1],
+          content: errMsg,
+          preTyping: false,
+          streaming: true,
+          timestamp: Date.now(),
+          retrying: false,
+          ...(isNetworkError ? { networkError: true, retry: { text, fileToSend, linkToSend } } : {}),
+        };
         next[next.length - 1] = last;
         return next;
       });
@@ -1052,6 +1177,9 @@ export default function AiChat() {
           content: apiData.reply,
           preTyping: false,
           streaming: true,
+          timestamp: Date.now(),
+          retrying: false,
+          networkError: false,
           ...(pendingId ? { pendingCancelId: pendingId } : {}),
         };
         next[next.length - 1] = last;
@@ -1175,10 +1303,12 @@ export default function AiChat() {
                       <Bubble
                         key={i}
                         msg={m}
+                        index={i}
                         onCancelConfirm={handleCancelConfirm}
                         cancellingId={cancellingId}
                         user={user}
                         isProBite={isProBite}
+                        onResend={handleResend}
                       />
                     ))}
                 <div ref={bottomRef} />
@@ -1722,6 +1852,40 @@ const styles = `
   .kb-copy-order-btn { display:flex; align-items:center; gap:5px; padding:5px 10px; border-radius:8px; background:rgba(0,229,255,0.1); border:1px solid rgba(0,229,255,0.25); color:rgba(200,200,220,0.7); font-size:10px; font-weight:700; cursor:pointer; transition:all 0.18s; font-family:'Plus Jakarta Sans',sans-serif; }
   .kb-copy-order-btn:hover { background:rgba(0,229,255,0.2); border-color:rgba(0,229,255,0.4); color:var(--kb-text); }
   .kb-copy-text { white-space:nowrap; }
+
+  /* ── Message meta row — timestamp + copy button under each bubble ── */
+  .kb-msg-meta {
+    display:flex; align-items:center; gap:6px; margin-top:4px; padding:0 2px;
+  }
+  .kb-msg-meta-user { justify-content:flex-end; }
+  .kb-msg-meta-bot  { justify-content:flex-start; }
+  .kb-msg-time {
+    font-size:9.5px; font-weight:600; color:rgba(200,200,220,0.4);
+    font-family:'Plus Jakarta Sans',sans-serif; letter-spacing:0.02em;
+  }
+  .kb-msg-copy-btn {
+    display:flex; align-items:center; justify-content:center;
+    width:18px; height:18px; padding:0; border-radius:5px;
+    background:none; border:none; color:rgba(200,200,220,0.4); cursor:pointer;
+    transition:all 0.15s;
+  }
+  .kb-msg-copy-btn:hover { color:var(--kb-cyan); background:rgba(0,229,255,0.1); }
+
+  /* ── Network error + resend ── */
+  .kb-ai-bubble-error { border:1px solid rgba(255,64,129,0.35) !important; }
+  .kb-resend-row {
+    display:flex; align-items:center; flex-wrap:wrap; gap:7px;
+    margin-top:10px; padding-top:10px; border-top:1px solid rgba(255,64,129,0.2);
+    color:#FF9EB8;
+  }
+  .kb-resend-text { font-size:10.5px; font-weight:600; flex:1; min-width:120px; }
+  .kb-resend-btn {
+    display:flex; align-items:center; gap:5px; padding:5px 10px; border-radius:8px;
+    background:rgba(255,64,129,0.12); border:1px solid rgba(255,64,129,0.35);
+    color:#FF4081; font-size:10px; font-weight:800; cursor:pointer;
+    transition:all 0.18s; font-family:'Plus Jakarta Sans',sans-serif; flex-shrink:0;
+  }
+  .kb-resend-btn:hover { background:rgba(255,64,129,0.22); border-color:rgba(255,64,129,0.55); }
 
   /* ── Cancel confirm ── */
   .kb-confirm-row  { margin-top:10px; padding-top:10px; border-top:1px solid rgba(0,229,255,0.12); }
