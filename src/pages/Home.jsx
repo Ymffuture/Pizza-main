@@ -1,5 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useState, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "../context/AuthContext";
 import axiosClient from "../api/axiosClient";
 import Footer from "../components/Footer";
@@ -12,34 +13,20 @@ import {
 
 /* ── Stats ── */
 const STATS = [
-  { value: "20–30",  unit: "min",  label: "Average delivery" },
-  { value: "1.3",    unit: "km",   label: "Delivery radius"  },
-  { value: "4.9",    unit: "★",    label: "Customer rating"  },
+  { value: "20–30",  unit: "min",  key: "delivery" },
+  { value: "1.3",    unit: "km",   key: "radius"  },
+  { value: "4.9",    unit: "★",    key: "rating"  },
 ];
 
 /* ── Features ── */
 const FEATURES = [
-  {
-    Icon: Zap,
-    title: "Fast Delivery",
-    desc:  "Hot food at your door in under 30 minutes. Every time.",
-    color: "#FFC72C",
-  },
-  {
-    Icon: ShieldCheck,
-    title: "Freshly Made",
-    desc:  "Every kota is made to order — never pre-packed or reheated.",
-    color: "#4ade80",
-  },
-  {
-    Icon: Star,
-    title: "Best Value",
-    desc:  "Quality street food at honest prices. No hidden fees.",
-    color: "#60a5fa",
-  },
+  { Icon: Zap,         key: "fast",  color: "#FFC72C" },
+  { Icon: ShieldCheck, key: "fresh", color: "#4ade80" },
+  { Icon: Star,        key: "value", color: "#60a5fa" },
 ];
 
 export default function Home() {
+  const { t } = useTranslation();
   const [trackId,  setTrackId]  = useState("");
   const [trackErr, setTrackErr] = useState("");
   const [tracking, setTracking] = useState(false);
@@ -67,12 +54,12 @@ export default function Home() {
       const res = await axiosClient.get("/orders/search", { params: { short_id: raw } });
       const fullId = res.data?.id;
       if (fullId) navigate(`/order/${fullId}`);
-      else setTrackErr("Order not found — try your full Order ID.");
+      else setTrackErr(t("home.track.errNotFound"));
     } catch (err) {
       const status = err?.response?.status;
-      if (status === 404)       setTrackErr("Order not found. Check the ID and try again.");
+      if (status === 404)       setTrackErr(t("home.track.errNotFoundShort"));
       else if (status === 401)  navigate(`/login?redirect=/order/${encodeURIComponent(raw)}`);
-      else                      setTrackErr("Could not look up order. Try again shortly.");
+      else                      setTrackErr(t("home.track.errGeneric"));
     } finally { setTracking(false); }
   };
 
@@ -95,10 +82,10 @@ export default function Home() {
 
             {/* Nav links — desktop */}
             <nav className="hm-nav-links">
-              <Link to="/menu"     className="hm-nav-link">Menu</Link>
-              <Link to="/coverage" className="hm-nav-link">Coverage</Link>
-              <Link to="/deliver"  className="hm-nav-link">Deliver with us</Link>
-              <Link to="/info"     className="hm-nav-link">Help</Link>
+              <Link to="/menu"     className="hm-nav-link">{t("home.nav.menu")}</Link>
+              <Link to="/coverage" className="hm-nav-link">{t("home.nav.coverage")}</Link>
+              <Link to="/deliver"  className="hm-nav-link">{t("home.nav.deliver")}</Link>
+              <Link to="/info"     className="hm-nav-link">{t("home.nav.help")}</Link>
             </nav>
 
             {/* Actions */}
@@ -106,12 +93,12 @@ export default function Home() {
               {isAuth ? (
                 <Link to="/menu" className="hm-nav-order-btn">
                   <ShoppingBag size={15} />
-                  Order now
+                  {t("home.nav.orderNow")}
                 </Link>
               ) : (
                 <>
-                  <Link to="/login"    className="hm-nav-link hm-nav-link-muted">Sign in</Link>
-                  <Link to="/register" className="hm-nav-order-btn">Sign up</Link>
+                  <Link to="/login"    className="hm-nav-link hm-nav-link-muted">{t("home.nav.signIn")}</Link>
+                  <Link to="/register" className="hm-nav-order-btn">{t("home.nav.signUp")}</Link>
                 </>
               )}
             </div>
@@ -133,39 +120,38 @@ export default function Home() {
               <div className="hm-badge">
                 <span className="hm-badge-dot" />
                 <MapPin size={11} />
-                <span>Delivering in Johannesburg</span>
+                <span>{t("home.badge")}</span>
               </div>
 
               {/* Headline */}
               <h1 className="hm-headline">
-                Food that hits<br />
-                <span className="hm-headline-accent">different.</span>
+                {t("home.headline1")}<br />
+                <span className="hm-headline-accent">{t("home.headlineAccent")}</span>
               </h1>
 
               <p className="hm-subline">
-                Johannesburg's freshest kota, delivered hot to your door
-                in under 30 minutes. No fuss, no waiting.
+                {t("home.subline")}
               </p>
 
               {/* CTAs */}
               <div className="hm-ctas">
                 <Link to="/menu" className="hm-cta-primary">
-                  Order now
+                  {t("home.ctaOrderNow")}
                   <ArrowRight size={17} />
                 </Link>
                 <Link to="/coverage" className="hm-cta-ghost">
-                  Check coverage
+                  {t("home.ctaCheckCoverage")}
                 </Link>
               </div>
 
               {/* Stats row */}
               <div className="hm-stats">
-                {STATS.map(({ value, unit, label }, i) => (
+                {STATS.map(({ value, unit, key }, i) => (
                   <div key={i} className="hm-stat">
                     <p className="hm-stat-value">
                       {value}<span className="hm-stat-unit">{unit}</span>
                     </p>
-                    <p className="hm-stat-label">{label}</p>
+                    <p className="hm-stat-label">{t(`home.stats.${key}`)}</p>
                   </div>
                 ))}
               </div>
@@ -178,9 +164,9 @@ export default function Home() {
               <div className="hm-track-card">
                 <div className="hm-track-header">
                   <Clock size={16} style={{ color: "#FFC72C" }} />
-                  <span className="hm-track-title">Track your order</span>
+                  <span className="hm-track-title">{t("home.track.title")}</span>
                 </div>
-                <p className="hm-track-sub">Paste your Order ID or short code below</p>
+                <p className="hm-track-sub">{t("home.track.sub")}</p>
 
                 <form onSubmit={handleTrack} className="hm-track-form">
                   <div className={`hm-track-input-wrap${trackErr ? " hm-track-err" : ""}`}>
@@ -189,7 +175,7 @@ export default function Home() {
                       ref={inputRef}
                       type="text"
                       className="hm-track-input"
-                      placeholder="e.g. A1B2C3 or full ID…"
+                      placeholder={t("home.track.placeholder")}
                       value={trackId}
                       onChange={(e) => { setTrackId(e.target.value); setTrackErr(""); }}
                     />
@@ -204,21 +190,21 @@ export default function Home() {
 
                   <button type="submit" disabled={tracking} className="hm-track-btn">
                     {tracking
-                      ? <><span className="hm-spinner" /> Looking up…</>
-                      : <><Search size={15} /> Track Order</>}
+                      ? <><span className="hm-spinner" /> {t("home.track.buttonLoading")}</>
+                      : <><Search size={15} /> {t("home.track.button")}</>}
                   </button>
                 </form>
 
                 <div className="hm-track-footer">
                   <ShieldCheck size={11} style={{ color: "#4ade80" }} />
-                  <span>Secure · real-time updates</span>
+                  <span>{t("home.track.footer")}</span>
                 </div>
               </div>
 
               {/* Promo chip */}
               <div className="hm-promo-chip">
                 <Flame size={14} style={{ color: "#FFC72C" }} />
-                <span>Free delivery on your first order 🎉</span>
+                <span>{t("home.promoChip")}</span>
               </div>
             </div>
 
@@ -228,16 +214,16 @@ export default function Home() {
         {/* ════════════════════ FEATURES ════════════════════ */}
         <section className="hm-features">
           <div className="hm-features-inner">
-            <div className="hm-section-label">Why KotaBites</div>
-            <h2 className="hm-section-title">Built around you</h2>
+            <div className="hm-section-label">{t("home.features.label")}</div>
+            <h2 className="hm-section-title">{t("home.features.title")}</h2>
             <div className="hm-features-grid">
-              {FEATURES.map(({ Icon, title, desc, color }) => (
-                <div key={title} className="hm-feature-card">
+              {FEATURES.map(({ Icon, key, color }) => (
+                <div key={key} className="hm-feature-card">
                   <div className="hm-feature-icon" style={{ background: `${color}14`, border: `1px solid ${color}25` }}>
                     <Icon size={22} style={{ color }} />
                   </div>
-                  <h3 className="hm-feature-title">{title}</h3>
-                  <p className="hm-feature-desc">{desc}</p>
+                  <h3 className="hm-feature-title">{t(`home.features.${key}.title`)}</h3>
+                  <p className="hm-feature-desc">{t(`home.features.${key}.desc`)}</p>
                 </div>
               ))}
             </div>
@@ -254,16 +240,16 @@ export default function Home() {
                 </div>
                 <div>
                   <div className="hm-policy-heading">
-                    <span className="hm-policy-title">Cancellation Policy</span>
-                    <span className="hm-policy-new">Updated</span>
+                    <span className="hm-policy-title">{t("home.policy.title")}</span>
+                    <span className="hm-policy-new">{t("home.policy.badge")}</span>
                   </div>
                   <p className="hm-policy-desc">
-                    5 free cancellations per month · R20 charge after limit · Cancellations via KotaBot only
+                    {t("home.policy.desc")}
                   </p>
                 </div>
               </div>
               <div className="hm-policy-cta">
-                Read policy <ChevronRight size={14} />
+                {t("home.policy.cta")} <ChevronRight size={14} />
               </div>
             </div>
           </div>
@@ -272,23 +258,19 @@ export default function Home() {
         {/* ════════════════════ HOW IT WORKS ════════════════════ */}
         <section className="hm-how">
           <div className="hm-how-inner">
-            <div className="hm-section-label">How it works</div>
-            <h2 className="hm-section-title">Order in 3 steps</h2>
+            <div className="hm-section-label">{t("home.how.label")}</div>
+            <h2 className="hm-section-title">{t("home.how.title")}</h2>
             <div className="hm-how-steps">
-              {[
-                { n: "01", title: "Browse the menu",   desc: "Pick your kota, add sides and drinks"  },
-                { n: "02", title: "Pay securely",       desc: "Cash on delivery or pay online via Paystack" },
-                { n: "03", title: "Track & enjoy",      desc: "Live order tracking until it hits your door" },
-              ].map(({ n, title, desc }) => (
-                <div key={n} className="hm-how-step">
-                  <span className="hm-how-num">{n}</span>
-                  <h3 className="hm-how-title">{title}</h3>
-                  <p className="hm-how-desc">{desc}</p>
+              {["step1", "step2", "step3"].map((key, i) => (
+                <div key={key} className="hm-how-step">
+                  <span className="hm-how-num">{String(i + 1).padStart(2, "0")}</span>
+                  <h3 className="hm-how-title">{t(`home.how.${key}.title`)}</h3>
+                  <p className="hm-how-desc">{t(`home.how.${key}.desc`)}</p>
                 </div>
               ))}
             </div>
             <Link to="/menu" className="hm-cta-primary hm-cta-center">
-              Start your order <ArrowRight size={17} />
+              {t("home.how.cta")} <ArrowRight size={17} />
             </Link>
           </div>
         </section>
