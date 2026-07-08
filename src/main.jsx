@@ -4,6 +4,7 @@ import App from "./App.jsx";
 import "./index.css";
 import "leaflet/dist/leaflet.css";
 import "antd/dist/reset.css";
+import "./i18n";
 
 import { THEMES, applyTheme } from "./hooks/useTheme";
 
