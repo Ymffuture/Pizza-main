@@ -222,24 +222,114 @@ const WELCOME_ACTIONS = [
 /* ─────────────────────────────────────────────────────────────────────────── */
 
 const markdownComponents = {
-  p:          ({ children }) => <p className="kb-md-p">{children}</p>,
-  strong:     ({ children }) => <strong className="kb-md-strong">{children}</strong>,
-  em:         ({ children }) => <em className="kb-md-em">{children}</em>,
-  ul:         ({ children }) => <ul className="kb-md-ul">{children}</ul>,
-  ol:         ({ children }) => <ol className="kb-md-ol">{children}</ol>,
-  li:         ({ children }) => <li className="kb-md-li">{children}</li>,
-  a:          ({ href, children }) => (
-    <a href={href} target="_blank" rel="noopener noreferrer" className="kb-md-a">{children}</a>
+  p: ({ children }) => <p className="kb-md-p">{children}</p>,
+
+  strong: ({ children }) => (
+    <strong className="kb-md-strong">{children}</strong>
   ),
-  code:       ({ inline, children }) =>
-    inline
-      ? <code className="kb-md-code-inline">{children}</code>
-      : <pre className="kb-md-pre"><code>{children}</code></pre>,
-  blockquote: ({ children }) => <blockquote className="kb-md-blockquote">{children}</blockquote>,
-  h1:  ({ children }) => <p className="kb-md-h">{children}</p>,
-  h2:  ({ children }) => <p className="kb-md-h">{children}</p>,
-  h3:  ({ children }) => <p className="kb-md-h3">{children}</p>,
-  hr:  () => <hr className="kb-md-hr" />,
+
+  em: ({ children }) => (
+    <em className="kb-md-em">{children}</em>
+  ),
+
+  ul: ({ children }) => (
+    <ul className="kb-md-ul">{children}</ul>
+  ),
+
+  ol: ({ children }) => (
+    <ol className="kb-md-ol">{children}</ol>
+  ),
+
+  li: ({ children }) => (
+    <li className="kb-md-li">{children}</li>
+  ),
+
+  a: ({ href, children }) => (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="kb-md-a"
+    >
+      {children}
+    </a>
+  ),
+
+  table: ({ children }) => (
+    <div className="kb-md-table-wrapper">
+      <table className="kb-md-table">{children}</table>
+    </div>
+  ),
+
+  thead: ({ children }) => (
+    <thead className="kb-md-thead">{children}</thead>
+  ),
+
+  tbody: ({ children }) => (
+    <tbody>{children}</tbody>
+  ),
+
+  tr: ({ children }) => (
+    <tr className="kb-md-tr">{children}</tr>
+  ),
+
+  th: ({ children }) => (
+    <th className="kb-md-th">{children}</th>
+  ),
+
+  td: ({ children }) => (
+    <td className="kb-md-td">{children}</td>
+  ),
+
+  blockquote: ({ children }) => (
+    <blockquote className="kb-md-blockquote">
+      {children}
+    </blockquote>
+  ),
+
+  hr: () => <hr className="kb-md-hr" />,
+
+  h1: ({ children }) => <h1 className="kb-md-h1">{children}</h1>,
+  h2: ({ children }) => <h2 className="kb-md-h2">{children}</h2>,
+  h3: ({ children }) => <h3 className="kb-md-h3">{children}</h3>,
+  h4: ({ children }) => <h4 className="kb-md-h4">{children}</h4>,
+
+  img: ({ src, alt }) => (
+    <img
+      src={src}
+      alt={alt}
+      className="kb-md-img"
+      loading="lazy"
+    />
+  ),
+
+  code({ inline, className, children }) {
+    const language = className?.replace("language-", "");
+
+    if (inline) {
+      return (
+        <code className="kb-md-code-inline">
+          {children}
+        </code>
+      );
+    }
+
+    return (
+      <div className="kb-md-code-block">
+        {language && (
+          <div className="kb-md-code-header">
+            {language.toUpperCase()}
+          </div>
+        )}
+
+        <pre className="kb-md-pre">
+          <code className={className}>
+            {children}
+          </code>
+        </pre>
+      </div>
+    );
+  },
 };
 
 /* ─────────────────────────────────────────────────────────────────────────── */
@@ -2131,4 +2221,133 @@ const styles = `
   to   { opacity: 1; transform: translateY(0); }
 }
 .kb-welcome-footer { margin-top: 8px !important; color: rgba(200,200,220,0.7); }
+
+
+/* Tables */
+
+.kb-md-table-wrapper{
+    overflow-x:auto;
+    margin:18px 0;
+    border-radius:12px;
+}
+
+.kb-md-table{
+    width:100%;
+    border-collapse:collapse;
+    font-size:.95rem;
+}
+
+.kb-md-th{
+    background:#202123;
+    color:#fff;
+    padding:12px 16px;
+    text-align:left;
+    font-weight:600;
+    border:1px solid #3d3d3d;
+}
+
+.kb-md-td{
+    padding:12px 16px;
+    border:1px solid #3d3d3d;
+    background:#2b2d31;
+    color:#ececec;
+}
+
+.kb-md-tr:nth-child(even) .kb-md-td{
+    background:#25262b;
+}
+
+.kb-md-tr:hover .kb-md-td{
+    background:#343541;
+}
+.kb-md-code-block{
+    margin:16px 0;
+    overflow:hidden;
+    border-radius:12px;
+    border:1px solid #3c3c3c;
+    background:#0d1117;
+}
+
+.kb-md-code-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:10px 14px;
+    font-size:.8rem;
+    font-weight:600;
+    letter-spacing:.05em;
+    color:#9ca3af;
+    background:#161b22;
+    border-bottom:1px solid #30363d;
+}
+
+.kb-md-pre{
+    margin:0;
+    padding:18px;
+    overflow:auto;
+    background:#0d1117;
+    color:#e6edf3;
+}
+
+.kb-md-pre code{
+    font-family:
+        "JetBrains Mono",
+        "Fira Code",
+        monospace;
+    font-size:14px;
+    line-height:1.7;
+}
+
+.kb-md-code-inline{
+    background:#2d333b;
+    color:#ff7b72;
+    padding:2px 6px;
+    border-radius:6px;
+    font-size:.9em;
+}
+.kb-md-img[src$=".svg"]{
+    background:#fff;
+    border-radius:12px;
+    padding:16px;
+    max-width:100%;
+}
+.kb-md-blockquote{
+    margin:18px 0;
+    padding:12px 18px;
+    border-left:4px solid #10a37f;
+    background:#202123;
+    color:#d1d5db;
+    font-style:italic;
+}
+.kb-md-img{
+    display:block;
+    max-width:100%;
+    margin:16px auto;
+    border-radius:12px;
+}
+.kb-md-a{
+    color:#3b82f6;
+    text-decoration:none;
+}
+
+.kb-md-a:hover{
+    text-decoration:underline;
+}
+.kb-md-h1,
+.kb-md-h2,
+.kb-md-h3,
+.kb-md-h4{
+    margin:24px 0 12px;
+    font-weight:700;
+    color:#fff;
+}
+.kb-md-ul,
+.kb-md-ol{
+    margin:14px 0;
+    padding-left:24px;
+}
+
+.kb-md-li{
+    margin:8px 0;
+}
 `;
