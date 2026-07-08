@@ -9,6 +9,7 @@ import {
   MessageCircle
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 // Custom Moya App Icon (since it's not in Lucide)
 const MoyaIcon = ({ className }) => (
@@ -26,6 +27,7 @@ const WhatsAppIcon = ({ className }) => (
 );
 
 export default function Footer() {
+  const { t } = useTranslation();
   const year = new Date().getFullYear();
 
   // Social media links
@@ -70,17 +72,16 @@ export default function Footer() {
             </div>
             <div>
               <span className="kb-footer-name">KOTABITES</span>
-              <p className="kb-footer-tagline">Fresh · Fast · Fire</p>
+              <p className="kb-footer-tagline">{t("footer.tagline")}</p>
             </div>
           </div>
           <p className="kb-footer-desc">
-            Delicious kota sandwiches delivered hot to your door across
-            Johannesburg. Order online in seconds.
+            {t("footer.description")}
           </p>
           
           {/* Social Media Links */}
           <div className="kb-social-links">
-            <p className="kb-social-title">Follow Us</p>
+            <p className="kb-social-title">{t("footer.followUs")}</p>
             <div className="kb-social-icons">
               {socialLinks.map((social) => (
                 <a
@@ -100,36 +101,36 @@ export default function Footer() {
 
           <div className="kb-footer-contact">
             <span className="kb-footer-contact-item">
-              <MapPin className="w-3.5 h-3.5" /> Johannesburg, South Africa
+              <MapPin className="w-3.5 h-3.5" /> {t("footer.location")}
             </span>
             <span className="kb-footer-contact-item">
-              <Phone className="w-3.5 h-3.5" /> Available via order form
+              <Phone className="w-3.5 h-3.5" /> {t("footer.availableViaForm")}
             </span>
           </div>
         </div>
 
         {/* ── Quick links ── */}
         <div className="kb-footer-links-col">
-          <h4 className="kb-footer-col-title">Quick Links</h4>
+          <h4 className="kb-footer-col-title">{t("footer.quickLinks")}</h4>
           <ul className="kb-footer-links">
-            <li><Link to="/"        className="kb-footer-link">Home</Link></li>
-            <li><Link to="/menu"    className="kb-footer-link">Menu</Link></li>
-            <li><Link to="/cart"    className="kb-footer-link">Cart</Link></li>
-            <li><Link to="/login"   className="kb-footer-link">Sign In</Link></li>
-            <li><Link to="/register" className="kb-footer-link">Create Account</Link></li>
-            <li><Link to="/coverage" className="kb-footer-link">Coverage delivery</Link></li>
+            <li><Link to="/"        className="kb-footer-link">{t("common.home")}</Link></li>
+            <li><Link to="/menu"    className="kb-footer-link">{t("common.menu")}</Link></li>
+            <li><Link to="/cart"    className="kb-footer-link">{t("common.cart")}</Link></li>
+            <li><Link to="/login"   className="kb-footer-link">{t("common.signIn")}</Link></li>
+            <li><Link to="/register" className="kb-footer-link">{t("common.createAccount")}</Link></li>
+            <li><Link to="/coverage" className="kb-footer-link">{t("nav.coverage")}</Link></li>
           </ul>
         </div>
 
         {/* ── Order links ── */}
         <div className="kb-footer-links-col">
-          <h4 className="kb-footer-col-title">Orders</h4>
+          <h4 className="kb-footer-col-title">{t("footer.orders")}</h4>
           <ul className="kb-footer-links">
-            <li><Link to="/menu"     className="kb-footer-link"><ShoppingBag className="w-3.5 h-3.5" /> Order Now</Link></li>
-            <li><Link to="/checkout" className="kb-footer-link">Checkout</Link></li>
+            <li><Link to="/menu"     className="kb-footer-link"><ShoppingBag className="w-3.5 h-3.5" /> {t("footer.orderNow")}</Link></li>
+            <li><Link to="/checkout" className="kb-footer-link">{t("common.checkout")}</Link></li>
             <li>
               <a href="https://kotabites.onrender.com/docs" target="_blank" rel="noopener noreferrer" className="kb-footer-link">
-                API Docs <ExternalLink className="w-3 h-3" />
+                {t("footer.apiDocs")} <ExternalLink className="w-3 h-3" />
               </a>
             </li>
           </ul>
@@ -140,7 +141,7 @@ export default function Footer() {
       {/* ── Bottom bar ── */}
       <div className="kb-footer-bottom">
         <p className="kb-footer-copy">
-          © {year} KotaBites. All rights reserved.
+          © {year} KotaBites. {t("footer.allRightsReserved")}
         </p>
 
         {/* Powered by SwiftMeta */}
@@ -150,7 +151,7 @@ export default function Footer() {
           rel="noopener noreferrer"
           className="kb-powered"
         >
-          <span className="kb-powered-text">Powered by</span>
+          <span className="kb-powered-text">{t("footer.poweredBy")}</span>
           <span className="kb-powered-brand">
             <span className="kb-powered-dot" />
             SwiftMeta

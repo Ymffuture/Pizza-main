@@ -1,12 +1,15 @@
 // src/components/SettingsPanel.jsx
 import { useEffect, useRef } from "react";
-import { X, Palette, Moon, Fingerprint, ChevronRight, Shield, Settings, Lock } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { X, Palette, Moon, Fingerprint, ChevronRight, Shield, Settings, Lock, Globe } from "lucide-react";
 import { THEMES, useTheme, FREE_THEME_ID } from "../hooks/useTheme";
 import { Link, useNavigate } from "react-router-dom";
 import { useBilling } from "../context/BillingContext";
 import { useToast } from "./Toast";
+import { SUPPORTED_LANGUAGES } from "../i18n";
 
 export default function SettingsPanel({ open, onClose }) {
+  const { t, i18n } = useTranslation();
   const { themeId, changeTheme } = useTheme();
   const { isProBite } = useBilling();
   const navigate = useNavigate();
@@ -40,8 +43,8 @@ export default function SettingsPanel({ open, onClose }) {
               <Settings style={{ width: 16, height: 16, color: "var(--gold, #FFC72C)" }} />
             </div>
             <div>
-              <h2 className="sp-title">Settings</h2>
-              <p className="sp-subtitle">Personalise your experience</p>
+              <h2 className="sp-title">{t("settings.title")}</h2>
+              <p className="sp-subtitle">{t("settings.subtitle")}</p>
             </div>
           </div>
           <button className="sp-close" onClick={onClose} aria-label="Close settings">
@@ -53,10 +56,10 @@ export default function SettingsPanel({ open, onClose }) {
 
           {/* Theme Section */}
           <section className="sp-section">
-            <SectionLabel icon={<Palette style={{ width: 12, height: 12 }} />} label="App Theme" />
+            <SectionLabel icon={<Palette style={{ width: 12, height: 12 }} />} label={t("settings.appTheme")} />
             {!isProBite && (
               <p className="sp-theme-hint">
-                <Lock style={{ width: 11, height: 11 }} /> 1 free theme · unlock all {THEMES.length} with ProBite
+                <Lock style={{ width: 11, height: 11 }} /> {t("settings.themeHint", { count: THEMES.length })}
               </p>
             )}
             <div className="sp-theme-grid">
@@ -107,32 +110,54 @@ export default function SettingsPanel({ open, onClose }) {
 
           {/* Security Section */}
           <section className="sp-section">
-            <SectionLabel icon={<Shield style={{ width: 12, height: 12 }} />} label="Security" />
+            <SectionLabel icon={<Shield style={{ width: 12, height: 12 }} />} label={t("settings.security")} />
             <div className="sp-list">
               <Link to="/pkm" onClick={onClose} className="sp-list-item">
                 <div className="sp-list-icon sp-list-icon-green">
                   <Fingerprint style={{ width: 15, height: 15, color: "#4ade80" }} />
                 </div>
                 <div className="sp-list-text">
-                  <p className="sp-list-title">Passkeys & Fingerprints</p>
-                  <p className="sp-list-sub">Manage biometric login</p>
+                  <p className="sp-list-title">{t("settings.passkeys")}</p>
+                  <p className="sp-list-sub">{t("settings.passkeysSub")}</p>
                 </div>
                 <ChevronRight style={{ width: 14, height: 14, color: "var(--muted, rgba(255,248,231,0.42))", flexShrink: 0 }} />
               </Link>
             </div>
           </section>
 
+          {/* Language Section */}
+          <section className="sp-section">
+            <SectionLabel icon={<Globe style={{ width: 12, height: 12 }} />} label={t("settings.language")} />
+            <p className="sp-theme-hint" style={{ margin: "-2px 0 2px" }}>{t("settings.languageSub")}</p>
+            <div className="sp-lang-grid">
+              {SUPPORTED_LANGUAGES.map((lang) => {
+                const active = i18n.resolvedLanguage === lang.code || i18n.language === lang.code;
+                return (
+                  <button
+                    key={lang.code}
+                    className={`sp-lang-card${active ? " sp-lang-active" : ""}`}
+                    onClick={() => i18n.changeLanguage(lang.code)}
+                  >
+                    <span className="sp-lang-flag">{lang.flag}</span>
+                    <span className="sp-lang-name">{lang.nativeLabel}</span>
+                    {active && <div className="sp-active-check sp-lang-check">✓</div>}
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
           {/* Display Section */}
           <section className="sp-section">
-            <SectionLabel icon={<Moon style={{ width: 12, height: 12 }} />} label="Display" />
+            <SectionLabel icon={<Moon style={{ width: 12, height: 12 }} />} label={t("settings.display")} />
             <div className="sp-list">
               <div className="sp-list-item" style={{ cursor: "default" }}>
                 <div className="sp-list-icon sp-list-icon-blue">
                   <Moon style={{ width: 15, height: 15, color: "#60a5fa" }} />
                 </div>
                 <div className="sp-list-text">
-                  <p className="sp-list-title">Dark Mode</p>
-                  <p className="sp-list-sub">Always on — KotaBites is dark by design</p>
+                  <p className="sp-list-title">{t("settings.darkMode")}</p>
+                  <p className="sp-list-sub">{t("settings.darkModeSub")}</p>
                 </div>
                 <div className="sp-toggle-on" />
               </div>
@@ -280,6 +305,20 @@ const css = `
     font-size:9px; font-weight:900;
     display:flex; align-items:center; justify-content:center;
   }
+
+  /* Language grid */
+  .sp-lang-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+  .sp-lang-card {
+    position:relative; display:flex; flex-direction:column; align-items:center; gap:4px;
+    background:rgba(255,248,231,0.03); border:1.5px solid rgba(255,248,231,0.08);
+    border-radius:12px; padding:10px 8px; cursor:pointer; transition:all 0.2s;
+  }
+  .sp-lang-card:hover { background:rgba(255,199,44,0.06); border-color:rgba(255,199,44,0.22); transform:translateY(-1px); }
+  .sp-lang-active { background:rgba(255,199,44,0.07); border-color:var(--gold,#FFC72C); }
+  .sp-lang-flag { font-size:20px; line-height:1; }
+  .sp-lang-name { font-size:11px; font-weight:700; color:var(--muted,rgba(255,248,231,0.42)); }
+  .sp-lang-active .sp-lang-name { color:var(--gold,#FFC72C); }
+  .sp-lang-check { position:absolute; top:5px; right:5px; width:14px; height:14px; font-size:8px; }
 
   /* List */
   .sp-list { display:flex; flex-direction:column; gap:6px; }
