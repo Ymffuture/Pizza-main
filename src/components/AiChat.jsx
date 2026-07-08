@@ -490,7 +490,7 @@ function Bubble({ msg, index, onCancelConfirm, cancellingId, user, isProBite, on
         {/* Typing dots while pre-typing phase */}
         {!isUser && msg.preTyping && !msg.content && (
           <div className="kb-ai-bubble kb-ai-bubble-b kb-ai-typing-bubble">
-            <span /><span /><span />
+            <TbCircleDotted size={18} className={"claude-think-spin"} />
           </div>
         )}
 
