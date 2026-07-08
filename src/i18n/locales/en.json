@@ -1,0 +1,128 @@
+{
+  "common": {
+    "home": "Home",
+    "menu": "Menu",
+    "cart": "Cart",
+    "checkout": "Checkout",
+    "signIn": "Sign In",
+    "createAccount": "Create Account",
+    "orderNow": "Order Now",
+    "loading": "Loading…",
+    "cancel": "Cancel",
+    "save": "Save",
+    "close": "Close",
+    "confirm": "Confirm",
+    "back": "Back",
+    "next": "Next",
+    "retry": "Retry",
+    "search": "Search"
+  },
+  "nav": {
+    "coverage": "Coverage delivery",
+    "profile": "Profile",
+    "wallet": "Wallet",
+    "orders": "My Orders",
+    "logout": "Log Out"
+  },
+  "footer": {
+    "tagline": "Fresh · Fast · Fire",
+    "description": "Delicious kota sandwiches delivered hot to your door across Johannesburg. Order online in seconds.",
+    "followUs": "Follow Us",
+    "quickLinks": "Quick Links",
+    "orders": "Orders",
+    "orderNow": "Order Now",
+    "apiDocs": "API Docs",
+    "location": "Johannesburg, South Africa",
+    "availableViaForm": "Available via order form",
+    "allRightsReserved": "All rights reserved.",
+    "poweredBy": "Powered by"
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Personalise your experience",
+    "appTheme": "App Theme",
+    "themeHint": "1 free theme · unlock all {{count}} with ProBite",
+    "security": "Security",
+    "passkeys": "Passkeys & Fingerprints",
+    "passkeysSub": "Manage biometric login",
+    "display": "Display",
+    "darkMode": "Dark Mode",
+    "darkModeSub": "Always on — KotaBites is dark by design",
+    "language": "Language",
+    "languageSub": "Choose your preferred language"
+  },
+  "cart": {
+    "title": "Your Cart",
+    "empty": "Your cart is empty",
+    "emptySub": "Add something delicious from the menu to get started.",
+    "browseMenu": "Browse Menu",
+    "subtotal": "Subtotal",
+    "deliveryFee": "Delivery Fee",
+    "total": "Total",
+    "proceedToCheckout": "Proceed to Checkout",
+    "remove": "Remove",
+    "quantity": "Quantity"
+  },
+  "checkout": {
+    "title": "Checkout",
+    "deliveryAddress": "Delivery Address",
+    "paymentMethod": "Payment Method",
+    "placeOrder": "Place Order",
+    "orderSummary": "Order Summary"
+  },
+  "home": {
+    "nav": {
+      "menu": "Menu",
+      "coverage": "Coverage",
+      "deliver": "Deliver with us",
+      "help": "Help",
+      "orderNow": "Order now",
+      "signIn": "Sign in",
+      "signUp": "Sign up"
+    },
+    "badge": "Delivering in Johannesburg",
+    "headline1": "Food that hits",
+    "headlineAccent": "different.",
+    "subline": "Johannesburg's freshest kota, delivered hot to your door in under 30 minutes. No fuss, no waiting.",
+    "ctaOrderNow": "Order now",
+    "ctaCheckCoverage": "Check coverage",
+    "stats": {
+      "delivery": "Average delivery",
+      "radius": "Delivery radius",
+      "rating": "Customer rating"
+    },
+    "track": {
+      "title": "Track your order",
+      "sub": "Paste your Order ID or short code below",
+      "placeholder": "e.g. A1B2C3 or full ID…",
+      "button": "Track Order",
+      "buttonLoading": "Looking up…",
+      "footer": "Secure · real-time updates",
+      "errNotFound": "Order not found — try your full Order ID.",
+      "errNotFoundShort": "Order not found. Check the ID and try again.",
+      "errGeneric": "Could not look up order. Try again shortly."
+    },
+    "promoChip": "Free delivery on your first order 🎉",
+    "features": {
+      "label": "Why KotaBites",
+      "title": "Built around you",
+      "fast": { "title": "Fast Delivery", "desc": "Hot food at your door in under 30 minutes. Every time." },
+      "fresh": { "title": "Freshly Made", "desc": "Every kota is made to order — never pre-packed or reheated." },
+      "value": { "title": "Best Value", "desc": "Quality street food at honest prices. No hidden fees." }
+    },
+    "policy": {
+      "title": "Cancellation Policy",
+      "badge": "Updated",
+      "desc": "5 free cancellations per month · R20 charge after limit · Cancellations via KotaBot only",
+      "cta": "Read policy"
+    },
+    "how": {
+      "label": "How it works",
+      "title": "Order in 3 steps",
+      "step1": { "title": "Browse the menu", "desc": "Pick your kota, add sides and drinks" },
+      "step2": { "title": "Pay securely", "desc": "Cash on delivery or pay online via Paystack" },
+      "step3": { "title": "Track & enjoy", "desc": "Live order tracking until it hits your door" },
+      "cta": "Start your order"
+    }
+  }
+}

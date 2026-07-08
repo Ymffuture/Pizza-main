@@ -1,0 +1,128 @@
+{
+  "common": {
+    "home": "Ikhaya",
+    "menu": "Imenyu",
+    "cart": "Ikart",
+    "checkout": "Khokha",
+    "signIn": "Ngena",
+    "createAccount": "Dala I-akhawunti",
+    "orderNow": "Odela Manje",
+    "loading": "Kuyalayishwa…",
+    "cancel": "Khansela",
+    "save": "Londoloza",
+    "close": "Vala",
+    "confirm": "Qinisekisa",
+    "back": "Emuva",
+    "next": "Okulandelayo",
+    "retry": "Zama futhi",
+    "search": "Sesha"
+  },
+  "nav": {
+    "coverage": "Ukufinyeleleka Kokulethwa",
+    "profile": "Iphrofayela",
+    "wallet": "Isikhwama",
+    "orders": "Ama-oda Ami",
+    "logout": "Phuma"
+  },
+  "footer": {
+    "tagline": "Kusha · Ngokushesha · Umlilo",
+    "description": "Ama-sandwich e-kota amnandi alethwa eshisa emnyango wakho kulo lonke i-Johannesburg. Odela nge-inthanethi ngemizuzwana.",
+    "followUs": "Silandele",
+    "quickLinks": "Izixhumanisi Ezisheshayo",
+    "orders": "Ama-oda",
+    "orderNow": "Odela Manje",
+    "apiDocs": "Amadokhumenti e-API",
+    "location": "Johannesburg, iNingizimu Afrika",
+    "availableViaForm": "Iyatholakala nge-fomu lokuodela",
+    "allRightsReserved": "Wonke amalungelo agodliwe.",
+    "poweredBy": "Kuqhutshwa"
+  },
+  "settings": {
+    "title": "Izilungiselelo",
+    "subtitle": "Lungisa okuhambisana nawe",
+    "appTheme": "Isakhiwo Se-app",
+    "themeHint": "Isihloko esisodwa samahhala · vula konke {{count}} nge-ProBite",
+    "security": "Ukuphepha",
+    "passkeys": "Amakhi Okuvikela Nezigxivizo Zeminwe",
+    "passkeysSub": "Phatha ukungena nge-biometric",
+    "display": "Ukubonisa",
+    "darkMode": "Imodi Emnyama",
+    "darkModeSub": "Ihlala ivuliwe — i-KotaBites imnyama ngokwakhiwa",
+    "language": "Ulimi",
+    "languageSub": "Khetha ulimi olulithandayo"
+  },
+  "cart": {
+    "title": "Ikart Yakho",
+    "empty": "Ikart yakho ayinalutho",
+    "emptySub": "Faka okumnandi okuvela kwimenyu ukuze uqale.",
+    "browseMenu": "Buka Imenyu",
+    "subtotal": "Isamba Esisodwa",
+    "deliveryFee": "Imali Yokulethwa",
+    "total": "Isamba Sonke",
+    "proceedToCheckout": "Qhubeka Uye Ekukhokheni",
+    "remove": "Susa",
+    "quantity": "Inani"
+  },
+  "checkout": {
+    "title": "Khokha",
+    "deliveryAddress": "Ikheli Lokulethwa",
+    "paymentMethod": "Indlela Yokukhokha",
+    "placeOrder": "Faka I-oda",
+    "orderSummary": "Isifinyezo Se-oda"
+  },
+  "home": {
+    "nav": {
+      "menu": "Imenyu",
+      "coverage": "Ukufinyeleleka",
+      "deliver": "Sebenzisana nathi ekulethweni",
+      "help": "Usizo",
+      "orderNow": "Odela manje",
+      "signIn": "Ngena",
+      "signUp": "Bhalisa"
+    },
+    "badge": "Siletha e-Johannesburg",
+    "headline1": "Ukudla okushaya",
+    "headlineAccent": "ngokwehlukile.",
+    "subline": "I-kota emnandi kunazo zonke e-Johannesburg, ilethwa ishisa emnyango wakho ngaphansi kwemizuzu engu-30. Akunankinga, akulindiwe.",
+    "ctaOrderNow": "Odela manje",
+    "ctaCheckCoverage": "Hlola ukufinyeleleka",
+    "stats": {
+      "delivery": "Isikhathi esijwayelekile sokulethwa",
+      "radius": "Ibanga lokulethwa",
+      "rating": "Isilinganiso samakhasimende"
+    },
+    "track": {
+      "title": "Landelela i-oda lakho",
+      "sub": "Namathisela i-ID ye-oda noma ikhodi emfushane ngezansi",
+      "placeholder": "isb. A1B2C3 noma i-ID egcwele…",
+      "button": "Landelela I-oda",
+      "buttonLoading": "Kuyasesheka…",
+      "footer": "Kuphephile · izibuyekezo zangesikhathi sangempela",
+      "errNotFound": "I-oda alitholakalanga — zama i-ID yakho egcwele ye-oda.",
+      "errNotFoundShort": "I-oda alitholakalanga. Hlola i-ID uphinde uzame futhi.",
+      "errGeneric": "Ayikwazanga ukuthola i-oda. Zama futhi maduze."
+    },
+    "promoChip": "Ukulethwa kwamahhala kwi-oda lakho lokuqala 🎉",
+    "features": {
+      "label": "Kungani i-KotaBites",
+      "title": "Yakhelwe wena",
+      "fast": { "title": "Ukulethwa Okusheshayo", "desc": "Ukudla okushisayo emnyango wakho ngaphansi kwemizuzu engu-30. Njalo." },
+      "fresh": { "title": "Kwenziwa Kusanda", "desc": "Yonke i-kota yenziwa ngesikhathi so-oda — ayipheki kusengaphambili noma ifudumezwe kabusha." },
+      "value": { "title": "Inani Elihle Kakhulu", "desc": "Ukudla komgwaqo okusezingeni eliphezulu ngamanani aqotho. Ayikho imali efihliwe." }
+    },
+    "policy": {
+      "title": "Inqubomgomo Yokukhansela",
+      "badge": "Kubuyekeziwe",
+      "desc": "Ukukhansela kwamahhala okungu-5 ngenyanga · Imali eyi-R20 emva komkhawulo · Ukukhansela kuphela nge-KotaBot",
+      "cta": "Funda inqubomgomo"
+    },
+    "how": {
+      "label": "Kusebenza kanjani",
+      "title": "Odela ngezinyathelo ezi-3",
+      "step1": { "title": "Buka imenyu", "desc": "Khetha i-kota yakho, wengeze izinto ezihambisanayo neziphuzo" },
+      "step2": { "title": "Khokha ngokuphephile", "desc": "Ukukhokha ngemali uma kufika noma khokha nge-inthanethi nge-Paystack" },
+      "step3": { "title": "Landelela & ujabule", "desc": "Ukulandelela i-oda ngesikhathi sangempela kuze kufike emnyango wakho" },
+      "cta": "Qala i-oda lakho"
+    }
+  }
+}

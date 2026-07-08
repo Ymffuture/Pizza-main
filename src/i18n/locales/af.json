@@ -1,0 +1,128 @@
+{
+  "common": {
+    "home": "Tuis",
+    "menu": "Spyskaart",
+    "cart": "Mandjie",
+    "checkout": "Afhandel",
+    "signIn": "Meld Aan",
+    "createAccount": "Skep Rekening",
+    "orderNow": "Bestel Nou",
+    "loading": "Laai tans…",
+    "cancel": "Kanselleer",
+    "save": "Stoor",
+    "close": "Maak toe",
+    "confirm": "Bevestig",
+    "back": "Terug",
+    "next": "Volgende",
+    "retry": "Probeer weer",
+    "search": "Soek"
+  },
+  "nav": {
+    "coverage": "Afleweringsdekking",
+    "profile": "Profiel",
+    "wallet": "Beursie",
+    "orders": "My Bestellings",
+    "logout": "Meld Af"
+  },
+  "footer": {
+    "tagline": "Vars · Vinnig · Vuur",
+    "description": "Heerlike kota-toebroodjies warm afgelewer by jou deur regoor Johannesburg. Bestel aanlyn in sekondes.",
+    "followUs": "Volg Ons",
+    "quickLinks": "Vinnige Skakels",
+    "orders": "Bestellings",
+    "orderNow": "Bestel Nou",
+    "apiDocs": "API Dokumentasie",
+    "location": "Johannesburg, Suid-Afrika",
+    "availableViaForm": "Beskikbaar via bestelvorm",
+    "allRightsReserved": "Alle regte voorbehou.",
+    "poweredBy": "Aangedryf deur"
+  },
+  "settings": {
+    "title": "Instellings",
+    "subtitle": "Pas jou ervaring aan",
+    "appTheme": "Program Tema",
+    "themeHint": "1 gratis tema · ontsluit alle {{count}} met ProBite",
+    "security": "Sekuriteit",
+    "passkeys": "Sleutels & Vingerafdrukke",
+    "passkeysSub": "Bestuur biometriese aanmelding",
+    "display": "Vertoon",
+    "darkMode": "Donker Modus",
+    "darkModeSub": "Altyd aan — KotaBites is donker by ontwerp",
+    "language": "Taal",
+    "languageSub": "Kies jou voorkeurtaal"
+  },
+  "cart": {
+    "title": "Jou Mandjie",
+    "empty": "Jou mandjie is leeg",
+    "emptySub": "Voeg iets heerliks van die spyskaart by om te begin.",
+    "browseMenu": "Blaai deur Spyskaart",
+    "subtotal": "Subtotaal",
+    "deliveryFee": "Afleweringsfooi",
+    "total": "Totaal",
+    "proceedToCheckout": "Gaan voort na Afhandel",
+    "remove": "Verwyder",
+    "quantity": "Hoeveelheid"
+  },
+  "checkout": {
+    "title": "Afhandel",
+    "deliveryAddress": "Afleweringsadres",
+    "paymentMethod": "Betaalmetode",
+    "placeOrder": "Plaas Bestelling",
+    "orderSummary": "Bestellingopsomming"
+  },
+  "home": {
+    "nav": {
+      "menu": "Spyskaart",
+      "coverage": "Dekking",
+      "deliver": "Aflewer saam met ons",
+      "help": "Hulp",
+      "orderNow": "Bestel nou",
+      "signIn": "Meld aan",
+      "signUp": "Skep rekening"
+    },
+    "badge": "Aflewering in Johannesburg",
+    "headline1": "Kos wat reg",
+    "headlineAccent": "smaak.",
+    "subline": "Johannesburg se varsste kota, warm afgelewer by jou deur binne 30 minute. Geen gedoe, geen wag nie.",
+    "ctaOrderNow": "Bestel nou",
+    "ctaCheckCoverage": "Gaan dekking na",
+    "stats": {
+      "delivery": "Gemiddelde aflewering",
+      "radius": "Afleweringsradius",
+      "rating": "Klantgradering"
+    },
+    "track": {
+      "title": "Volg jou bestelling",
+      "sub": "Plak jou Bestelling-ID of kortkode hieronder",
+      "placeholder": "bv. A1B2C3 of volledige ID…",
+      "button": "Volg Bestelling",
+      "buttonLoading": "Soek tans…",
+      "footer": "Veilig · intydse opdaterings",
+      "errNotFound": "Bestelling nie gevind nie — probeer jou volledige Bestelling-ID.",
+      "errNotFoundShort": "Bestelling nie gevind nie. Kontroleer die ID en probeer weer.",
+      "errGeneric": "Kon nie bestelling opspoor nie. Probeer binnekort weer."
+    },
+    "promoChip": "Gratis aflewering met jou eerste bestelling 🎉",
+    "features": {
+      "label": "Hoekom KotaBites",
+      "title": "Gebou om jou",
+      "fast": { "title": "Vinnige Aflewering", "desc": "Warm kos by jou deur binne 30 minute. Elke keer." },
+      "fresh": { "title": "Vars Gemaak", "desc": "Elke kota word op bestelling gemaak — nooit vooraf verpak of opgewarm nie." },
+      "value": { "title": "Beste Waarde", "desc": "Kwaliteit straatkos teen eerlike pryse. Geen verskuilde fooie nie." }
+    },
+    "policy": {
+      "title": "Kansellasiebeleid",
+      "badge": "Opgedateer",
+      "desc": "5 gratis kansellasies per maand · R20 fooi na die limiet · Kansellasies slegs via KotaBot",
+      "cta": "Lees beleid"
+    },
+    "how": {
+      "label": "Hoe dit werk",
+      "title": "Bestel in 3 stappe",
+      "step1": { "title": "Blaai deur die spyskaart", "desc": "Kies jou kota, voeg bysteuntjies en drankies by" },
+      "step2": { "title": "Betaal veilig", "desc": "Kontant met aflewering of betaal aanlyn via Paystack" },
+      "step3": { "title": "Volg & geniet", "desc": "Intydse opsporing tot by jou deur" },
+      "cta": "Begin jou bestelling"
+    }
+  }
+}
