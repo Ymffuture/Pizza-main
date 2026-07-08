@@ -221,29 +221,27 @@ const WELCOME_ACTIONS = [
 /*  MARKDOWN                                                                   */
 /* ─────────────────────────────────────────────────────────────────────────── */
 
-const markdownComponents = {
+ const markdownComponents = {
+  // Typography
   p: ({ children }) => <p className="kb-md-p">{children}</p>,
+  strong: ({ children }) => <strong className="kb-md-strong">{children}</strong>,
+  em: ({ children }) => <em className="kb-md-em">{children}</em>,
+  del: ({ children }) => <del className="kb-md-del">{children}</del>,
 
-  strong: ({ children }) => (
-    <strong className="kb-md-strong">{children}</strong>
-  ),
+  // Headings
+  h1: ({ children }) => <h1 className="kb-md-h1">{children}</h1>,
+  h2: ({ children }) => <h2 className="kb-md-h2">{children}</h2>,
+  h3: ({ children }) => <h3 className="kb-md-h3">{children}</h3>,
+  h4: ({ children }) => <h4 className="kb-md-h4">{children}</h4>,
+  h5: ({ children }) => <h5 className="kb-md-h5">{children}</h5>,
+  h6: ({ children }) => <h6 className="kb-md-h6">{children}</h6>,
 
-  em: ({ children }) => (
-    <em className="kb-md-em">{children}</em>
-  ),
+  // Lists
+  ul: ({ children }) => <ul className="kb-md-ul">{children}</ul>,
+  ol: ({ children }) => <ol className="kb-md-ol">{children}</ol>,
+  li: ({ children }) => <li className="kb-md-li">{children}</li>,
 
-  ul: ({ children }) => (
-    <ul className="kb-md-ul">{children}</ul>
-  ),
-
-  ol: ({ children }) => (
-    <ol className="kb-md-ol">{children}</ol>
-  ),
-
-  li: ({ children }) => (
-    <li className="kb-md-li">{children}</li>
-  ),
-
+  // Links
   a: ({ href, children }) => (
     <a
       href={href}
@@ -255,56 +253,74 @@ const markdownComponents = {
     </a>
   ),
 
+  // Images
+  img: ({ src, alt }) => (
+    <img
+      src={src}
+      alt={alt}
+      loading="lazy"
+      className="kb-md-img"
+    />
+  ),
+
+  // Tables
   table: ({ children }) => (
     <div className="kb-md-table-wrapper">
       <table className="kb-md-table">{children}</table>
     </div>
   ),
+  thead: ({ children }) => <thead>{children}</thead>,
+  tbody: ({ children }) => <tbody>{children}</tbody>,
+  tr: ({ children }) => <tr className="kb-md-tr">{children}</tr>,
+  th: ({ children }) => <th className="kb-md-th">{children}</th>,
+  td: ({ children }) => <td className="kb-md-td">{children}</td>,
 
-  thead: ({ children }) => (
-    <thead className="kb-md-thead">{children}</thead>
-  ),
-
-  tbody: ({ children }) => (
-    <tbody>{children}</tbody>
-  ),
-
-  tr: ({ children }) => (
-    <tr className="kb-md-tr">{children}</tr>
-  ),
-
-  th: ({ children }) => (
-    <th className="kb-md-th">{children}</th>
-  ),
-
-  td: ({ children }) => (
-    <td className="kb-md-td">{children}</td>
-  ),
-
+  // Quotes
   blockquote: ({ children }) => (
     <blockquote className="kb-md-blockquote">
       {children}
     </blockquote>
   ),
 
+  // Horizontal line
   hr: () => <hr className="kb-md-hr" />,
 
-  h1: ({ children }) => <h1 className="kb-md-h1">{children}</h1>,
-  h2: ({ children }) => <h2 className="kb-md-h2">{children}</h2>,
-  h3: ({ children }) => <h3 className="kb-md-h3">{children}</h3>,
-  h4: ({ children }) => <h4 className="kb-md-h4">{children}</h4>,
+  // Definition lists
+  dl: ({ children }) => <dl className="kb-md-dl">{children}</dl>,
+  dt: ({ children }) => <dt className="kb-md-dt">{children}</dt>,
+  dd: ({ children }) => <dd className="kb-md-dd">{children}</dd>,
 
-  img: ({ src, alt }) => (
-    <img
-      src={src}
-      alt={alt}
-      className="kb-md-img"
-      loading="lazy"
-    />
+  // Keyboard keys
+  kbd: ({ children }) => (
+    <kbd className="kb-md-kbd">{children}</kbd>
   ),
 
+  // Superscript / Subscript
+  sup: ({ children }) => (
+    <sup className="kb-md-sup">{children}</sup>
+  ),
+
+  sub: ({ children }) => (
+    <sub className="kb-md-sub">{children}</sub>
+  ),
+
+  // Details / Spoilers
+  details: ({ children }) => (
+    <details className="kb-md-details">
+      {children}
+    </details>
+  ),
+
+  summary: ({ children }) => (
+    <summary className="kb-md-summary">
+      {children}
+    </summary>
+  ),
+
+  // Code
   code({ inline, className, children }) {
-    const language = className?.replace("language-", "");
+    const language =
+      className?.replace("language-", "") || "";
 
     if (inline) {
       return (
@@ -318,7 +334,7 @@ const markdownComponents = {
       <div className="kb-md-code-block">
         {language && (
           <div className="kb-md-code-header">
-            {language.toUpperCase()}
+            {language}
           </div>
         )}
 
@@ -2222,19 +2238,209 @@ const styles = `
 }
 .kb-welcome-footer { margin-top: 8px !important; color: rgba(200,200,220,0.7); }
 
+/* ===========================
+   Root
+=========================== */
 
-/* Tables */
+.kb-markdown{
+    color:#ececec;
+    line-height:1.75;
+    font-size:15px;
+    word-break:break-word;
+}
+
+/* ===========================
+   Paragraphs
+=========================== */
+
+.kb-md-p{
+    margin:0 0 1rem;
+}
+
+/* ===========================
+   Headings
+=========================== */
+
+.kb-md-h1,
+.kb-md-h2,
+.kb-md-h3,
+.kb-md-h4,
+.kb-md-h5,
+.kb-md-h6{
+    margin:1.8rem 0 .9rem;
+    font-weight:700;
+    line-height:1.3;
+    color:#fff;
+}
+
+.kb-md-h1{font-size:2rem;}
+.kb-md-h2{font-size:1.75rem;}
+.kb-md-h3{font-size:1.45rem;}
+.kb-md-h4{font-size:1.25rem;}
+.kb-md-h5{font-size:1.1rem;}
+.kb-md-h6{font-size:1rem;}
+
+/* ===========================
+   Text
+=========================== */
+
+.kb-md-strong{
+    font-weight:700;
+}
+
+.kb-md-em{
+    font-style:italic;
+}
+
+.kb-md-del{
+    text-decoration:line-through;
+    opacity:.7;
+}
+
+/* ===========================
+   Links
+=========================== */
+
+.kb-md-a{
+    color:#4ea1ff;
+    text-decoration:none;
+}
+
+.kb-md-a:hover{
+    text-decoration:underline;
+}
+
+/* ===========================
+   Lists
+=========================== */
+
+.kb-md-ul,
+.kb-md-ol{
+    margin:1rem 0;
+    padding-left:1.6rem;
+}
+
+.kb-md-li{
+    margin:.4rem 0;
+}
+
+/* ===========================
+   Horizontal Rule
+=========================== */
+
+.kb-md-hr{
+    border:none;
+    border-top:1px solid #333;
+    margin:2rem 0;
+}
+
+/* ===========================
+   Blockquote
+=========================== */
+
+.kb-md-blockquote{
+    margin:1rem 0;
+    padding:1rem 1.2rem;
+    border-left:4px solid #10a37f;
+    background:#202123;
+    border-radius:0 8px 8px 0;
+    color:#d6d6d6;
+}
+
+/* ===========================
+   Images
+=========================== */
+
+.kb-md-img{
+    display:block;
+    max-width:100%;
+    border-radius:12px;
+    margin:18px auto;
+}
+
+/* SVG */
+
+.kb-md svg{
+    max-width:100%;
+    background:#fff;
+    border-radius:12px;
+    padding:12px;
+}
+
+/* ===========================
+   Inline Code
+=========================== */
+
+.kb-md-code-inline{
+    padding:2px 6px;
+    border-radius:6px;
+    background:#2d333b;
+    color:#ff7b72;
+    font-size:.95em;
+    font-family:
+        "JetBrains Mono",
+        monospace;
+}
+
+/* ===========================
+   Code Block
+=========================== */
+
+.kb-md-code-block{
+    margin:18px 0;
+    overflow:hidden;
+    border-radius:12px;
+    border:1px solid #30363d;
+    background:#0d1117;
+}
+
+.kb-md-code-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:10px 16px;
+    background:#161b22;
+    color:#9ca3af;
+    font-size:.8rem;
+    font-weight:600;
+    text-transform:uppercase;
+    border-bottom:1px solid #30363d;
+}
+
+.kb-md-pre{
+    margin:0;
+    padding:18px;
+    overflow:auto;
+    background:#0d1117;
+}
+
+.kb-md-pre code{
+    font-family:
+        "JetBrains Mono",
+        "Fira Code",
+        monospace;
+    font-size:14px;
+    line-height:1.7;
+    color:#e6edf3;
+}
+
+/* ===========================
+   Tables
+=========================== */
 
 .kb-md-table-wrapper{
+    width:110%;
     overflow-x:auto;
     margin:18px 0;
     border-radius:12px;
+    font-size:8px;
+    
 }
 
 .kb-md-table{
-    width:105%;
+    width:100%;
     border-collapse:collapse;
-    font-size:8px;
+    min-width:500px;
 }
 
 .kb-md-th{
@@ -2247,10 +2453,10 @@ const styles = `
 }
 
 .kb-md-td{
-    padding:12px 16px;
-    border:1px solid #3d3d3d;
     background:#2b2d31;
     color:#ececec;
+    padding:12px 16px;
+    border:1px solid #3d3d3d;
 }
 
 .kb-md-tr:nth-child(even) .kb-md-td{
@@ -2260,94 +2466,87 @@ const styles = `
 .kb-md-tr:hover .kb-md-td{
     background:#343541;
 }
-.kb-md-code-block{
-    margin:16px 0;
-    overflow:hidden;
-    border-radius:12px;
-    border:1px solid #3c3c3c;
-    background:#0d1117;
-}
 
-.kb-md-code-header{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    padding:10px 14px;
-    font-size:.8rem;
-    font-weight:600;
-    letter-spacing:.05em;
-    color:#9ca3af;
-    background:#161b22;
-    border-bottom:1px solid #30363d;
-}
+/* ===========================
+   Keyboard
+=========================== */
 
-.kb-md-pre{
-    margin:0;
-    padding:18px;
-    overflow:auto;
-    background:#0d1117;
-    color:#e6edf3;
-}
-
-.kb-md-pre code{
-    font-family:
-        "JetBrains Mono",
-        "Fira Code",
-        monospace;
-    font-size:14px;
-    line-height:1.7;
-}
-
-.kb-md-code-inline{
-    background:#2d333b;
-    color:#ff7b72;
-    padding:2px 6px;
+.kb-md-kbd{
+    display:inline-block;
+    padding:3px 8px;
     border-radius:6px;
-    font-size:.9em;
-}
-.kb-md-img[src$=".svg"]{
-    background:#fff;
-    border-radius:12px;
-    padding:16px;
-    max-width:100%;
-}
-.kb-md-blockquote{
-    margin:18px 0;
-    padding:12px 18px;
-    border-left:4px solid #10a37f;
-    background:#202123;
-    color:#d1d5db;
-    font-style:italic;
-}
-.kb-md-img{
-    display:block;
-    max-width:100%;
-    margin:16px auto;
-    border-radius:12px;
-}
-.kb-md-a{
-    color:#3b82f6;
-    text-decoration:none;
+    background:#2d2d2d;
+    border:1px solid #555;
+    font-size:8px;
+    font-family:inherit;
 }
 
-.kb-md-a:hover{
-    text-decoration:underline;
+/* ===========================
+   Definition Lists
+=========================== */
+
+.kb-md-dl{
+    margin:1rem 0;
 }
-.kb-md-h1,
-.kb-md-h2,
-.kb-md-h3,
-.kb-md-h4{
-    margin:24px 0 12px;
+
+.kb-md-dt{
     font-weight:700;
-    color:#fff;
-}
-.kb-md-ul,
-.kb-md-ol{
-    margin:14px 0;
-    padding-left:24px;
+    margin-top:.8rem;
 }
 
-.kb-md-li{
-    margin:8px 0;
+.kb-md-dd{
+    margin-left:1.5rem;
+    margin-bottom:.6rem;
+}
+
+/* ===========================
+   Details
+=========================== */
+
+.kb-md-details{
+    margin:1rem 0;
+    padding:1rem;
+    border-radius:10px;
+    background:#202123;
+    border:1px solid #333;
+}
+
+.kb-md-summary{
+    cursor:pointer;
+    font-weight:600;
+}
+
+/* ===========================
+   Sup/Sub
+=========================== */
+
+.kb-md-sup{
+    vertical-align:super;
+    font-size:75%;
+}
+
+.kb-md-sub{
+    vertical-align:sub;
+    font-size:75%;
+}
+
+/* ===========================
+   Scrollbar
+=========================== */
+
+.kb-md-pre::-webkit-scrollbar,
+.kb-md-table-wrapper::-webkit-scrollbar{
+    height:8px;
+}
+
+.kb-md-pre::-webkit-scrollbar-thumb,
+.kb-md-table-wrapper::-webkit-scrollbar-thumb{
+    background:#555;
+    border-radius:20px;
+}
+
+.kb-md-pre::-webkit-scrollbar-track,
+.kb-md-table-wrapper::-webkit-scrollbar-track{
+    background:transparent;
 }
 `;
