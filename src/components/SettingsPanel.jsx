@@ -1,12 +1,13 @@
 // src/components/SettingsPanel.jsx
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { X, Palette, Moon, Fingerprint, ChevronRight, Shield, Settings, Lock, Globe } from "lucide-react";
+import { X, Palette, Moon, Fingerprint, ChevronRight, Shield, Settings, Lock, Globe, Bell, BellOff, Loader2 } from "lucide-react";
 import { THEMES, useTheme, FREE_THEME_ID } from "../hooks/useTheme";
 import { Link, useNavigate } from "react-router-dom";
 import { useBilling } from "../context/BillingContext";
 import { useToast } from "./Toast";
 import { SUPPORTED_LANGUAGES } from "../i18n";
+import { isPushSupported, isPushSubscribed, subscribeToPush, unsubscribeFromPush } from "../utils/webPush";
 
 export default function SettingsPanel({ open, onClose }) {
   const { t, i18n } = useTranslation();
@@ -15,6 +16,35 @@ export default function SettingsPanel({ open, onClose }) {
   const navigate = useNavigate();
   const toast = useToast();
   const panelRef = useRef(null);
+
+  const [pushSubscribed, setPushSubscribed] = useState(false);
+  const [pushBusy, setPushBusy] = useState(false);
+  const pushSupported = isPushSupported();
+
+  useEffect(() => {
+    if (!open || !pushSupported) return;
+    isPushSubscribed().then(setPushSubscribed).catch(() => {});
+  }, [open, pushSupported]);
+
+  const togglePush = async () => {
+    if (pushBusy) return;
+    setPushBusy(true);
+    try {
+      if (pushSubscribed) {
+        await unsubscribeFromPush();
+        setPushSubscribed(false);
+        toast.show({ type: "info", title: t("settings.pushOffTitle"), message: t("settings.pushOffSub") });
+      } else {
+        await subscribeToPush();
+        setPushSubscribed(true);
+        toast.show({ type: "success", title: t("settings.pushOnTitle"), message: t("settings.pushOnSub") });
+      }
+    } catch (err) {
+      toast.show({ type: "error", title: t("settings.pushErrorTitle"), message: err?.message || t("settings.pushErrorSub") });
+    } finally {
+      setPushBusy(false);
+    }
+  };
 
   useEffect(() => {
     const handler = (e) => { if (e.key === "Escape") onClose(); };
@@ -161,6 +191,26 @@ export default function SettingsPanel({ open, onClose }) {
                 </div>
                 <div className="sp-toggle-on" />
               </div>
+
+              {/* Push notifications */}
+              {pushSupported && (
+                <button className="sp-list-item" onClick={togglePush} disabled={pushBusy} style={{ width: "100%", border: "none", background: "none", textAlign: "left" }}>
+                  <div className={`sp-list-icon ${pushSubscribed ? "sp-list-icon-green" : "sp-list-icon-blue"}`}>
+                    {pushBusy
+                      ? <Loader2 style={{ width: 15, height: 15, color: "#60a5fa" }} className="sp-spin" />
+                      : pushSubscribed
+                        ? <Bell style={{ width: 15, height: 15, color: "#4ade80" }} />
+                        : <BellOff style={{ width: 15, height: 15, color: "#60a5fa" }} />}
+                  </div>
+                  <div className="sp-list-text">
+                    <p className="sp-list-title">{t("settings.pushNotifications")}</p>
+                    <p className="sp-list-sub">
+                      {pushSubscribed ? t("settings.pushSubscribed") : t("settings.pushNotSubscribed")}
+                    </p>
+                  </div>
+                  <div className={pushSubscribed ? "sp-toggle-on" : "sp-toggle-off"} />
+                </button>
+              )}
             </div>
           </section>
 
@@ -341,6 +391,20 @@ const css = `
     background:linear-gradient(135deg,var(--red,#DA291C),var(--gold,#FFC72C));
     flex-shrink:0; position:relative;
   }
+  .sp-toggle-on::after, .sp-toggle-off::after {
+    content:''; position:absolute; top:2px; width:18px; height:18px;
+    border-radius:50%; background:#fff; transition:left 0.2s;
+  }
+  .sp-toggle-on::after  { left:18px; }
+  .sp-toggle-off {
+    width:38px; height:22px; border-radius:11px;
+    background:rgba(255,248,231,0.1);
+    flex-shrink:0; position:relative;
+  }
+  .sp-toggle-off::after { left:2px; }
+
+  @keyframes spSpin { to { transform:rotate(360deg); } }
+  .sp-spin { animation:spSpin 0.8s linear infinite; }
 
   /* Footer */
   .sp-footer {
