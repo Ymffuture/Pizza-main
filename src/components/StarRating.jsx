@@ -8,6 +8,7 @@
 //   currentUser object  — { id, full_name, email, picture } from AuthContext
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Heart, MessageCircle, Bookmark,
   Share2, Send, X, Trash2, MessageCircleHeart,
@@ -112,6 +113,21 @@ export default function SocialActions({
   // ── Auto-focus reply input when thread opens ──────────────────────────────
   useEffect(() => {
     if (showThread) setTimeout(() => inputRef.current?.focus(), 80);
+  }, [showThread]);
+
+  // ── Modal behavior: lock body scroll + close on Escape ────────────────────
+  useEffect(() => {
+    if (!showThread) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') setShowThread(false);
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      document.removeEventListener('keydown', onKeyDown);
+    };
   }, [showThread]);
 
   // ── Like (item-level) ───────────────────────────────────────────────────
@@ -433,16 +449,48 @@ export default function SocialActions({
         />
       </div>
 
-      {/* ── Reply thread ─────────────────────────────────────────────────── */}
-      <AnimatePresence>
-        {showThread && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.25, ease: 'easeInOut' }}
-            className="mt-3 pt-3 border-t border-white/5 overflow-hidden"
-          >
+      {/* ── Reply thread — rendered as a modal dialog ──────────────────────── */}
+      {showThread && createPortal(
+        <AnimatePresence>
+          {showThread && (
+            <motion.div
+              key="comments-modal-backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-0 sm:p-4"
+              onMouseDown={(e) => {
+                if (e.target === e.currentTarget) setShowThread(false);
+              }}
+              role="dialog"
+              aria-modal="true"
+              aria-label="Comments"
+            >
+              <motion.div
+                key="comments-modal-panel"
+                initial={{ opacity: 0, y: 40, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 40, scale: 0.98 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 32 }}
+                className="w-full sm:max-w-lg bg-slate-900 border border-slate-800 rounded-t-2xl sm:rounded-2xl shadow-2xl max-h-[85vh] flex flex-col overflow-hidden"
+              >
+                {/* Modal header */}
+                <div className="flex items-center justify-between px-4 py-3 border-b border-white/5 shrink-0">
+                  <h3 className="text-sm font-bold text-white">
+                    Comments{stats.comments > 0 ? ` · ${fmt(stats.comments)}` : ''}
+                  </h3>
+                  <button
+                    onClick={() => setShowThread(false)}
+                    className="p-1.5 text-slate-500 hover:text-slate-200 hover:bg-slate-800 rounded-full transition-colors"
+                    aria-label="Close comments"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div className="px-4 pt-3 overflow-y-auto flex-1">
+
             {/* Compose box */}
             {currentUser ? (
               <form
@@ -521,10 +569,14 @@ export default function SocialActions({
                   ))}
                 </div>
               )}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+                </div>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
     </div>
   );
 }
