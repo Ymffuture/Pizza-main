@@ -1,6 +1,7 @@
 // src/pages/Login.jsx — DeepSeek layout · react-icons · borderless · KOTABITES
 import { useState, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../components/Toast";
 import { Flame, Eye, EyeOff, Loader, AlertCircle, ShieldCheck, Loader2 } from "lucide-react";
@@ -12,6 +13,7 @@ import GitHubButton      from "../components/GitHubButton";
 import FingerprintButton from "../components/FingerprintButton";
 
 export default function Login() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { login } = useAuth();
   const toast     = useToast();
@@ -34,9 +36,9 @@ export default function Login() {
   /* ── Validation ── */
   const validate = () => {
     const e = {};
-    if (!form.email.trim())    e.email    = "Email is required";
-    else if (!/\S+@\S+\.\S+/.test(form.email.trim().toLowerCase())) e.email = "Invalid email";
-    if (!form.password.trim()) e.password = "Password is required";
+    if (!form.email.trim())    e.email    = t("auth.errEmailRequired");
+    else if (!/\S+@\S+\.\S+/.test(form.email.trim().toLowerCase())) e.email = t("auth.errEmailInvalid");
+    if (!form.password.trim()) e.password = t("auth.errPasswordRequired");
     return e;
   };
 
@@ -44,7 +46,7 @@ export default function Login() {
   const handleSuccess = (data) => {
     const token = data.access_token;
     if (token) sessionStorage.setItem("kb_token", token);
-    toast.show({ type: "success", title: "Welcome!", message: data.full_name || data.user?.full_name || data.email });
+    toast.show({ type: "success", title: t("auth.toastWelcome"), message: data.full_name || data.user?.full_name || data.email });
     navigate(redirect, { replace: true });
   };
 
@@ -54,10 +56,10 @@ export default function Login() {
   };
   const handleOAuthError = (err) => {
     setOauthLoading(null);
-    toast.show({ type: "error", title: "Sign-in failed", message: err?.message || "Try again" });
+    toast.show({ type: "error", title: t("auth.toastSignInFailed"), message: err?.message || t("auth.toastTryAgain") });
   };
   const handleFpSuccess = (data) => { setOauthLoading(null); handleSuccess(data); };
-  const handleFpError   = (err)  => { setOauthLoading(null); toast.show({ type: "error", title: "Fingerprint failed", message: err?.message || "Try your password" }); };
+  const handleFpError   = (err)  => { setOauthLoading(null); toast.show({ type: "error", title: t("auth.toastFingerprintFailed"), message: err?.message || t("auth.toastTryPassword") }); };
 
   const handleChange = (field) => (ev) => {
     setForm((p) => ({ ...p, [field]: ev.target.value }));
@@ -73,15 +75,15 @@ export default function Login() {
     setNeedsVerification(false);
     try {
       await login(form);
-      toast.show({ type: "success", title: "Welcome back!", message: form.email.trim().toLowerCase() });
+      toast.show({ type: "success", title: t("auth.toastWelcomeBack"), message: form.email.trim().toLowerCase() });
       navigate(redirect, { replace: true });
     } catch (err) {
-      const msg = err?.response?.data?.detail || err?.response?.data?.message || err.message || "Login failed";
+      const msg = err?.response?.data?.detail || err?.response?.data?.message || err.message || t("auth.toastLoginFailed");
       if (msg.toLowerCase().includes("verify") || msg.toLowerCase().includes("verification")) {
         setNeedsVerification(true);
-        toast.show({ type: "error", title: "Email not verified", message: "Please verify your email before logging in." });
+        toast.show({ type: "error", title: t("auth.emailNotVerified"), message: t("auth.checkInboxVerify") });
       } else {
-        toast.show({ type: "error", title: "Login failed", message: msg });
+        toast.show({ type: "error", title: t("auth.toastLoginFailed"), message: msg });
       }
     } finally {
       setLoading(false);
@@ -115,9 +117,9 @@ export default function Login() {
         {/* ── OAuth loading overlay label ── */}
         {oauthLoading && (
           <div className="ds-oauth-label">
-            {oauthLoading === "google"  && <><FcGoogle size={14} /> Connecting with Google…</>}
-            {oauthLoading === "github"  && <><FaGithub size={13} color="#fff" /> Connecting with GitHub…</>}
-            {oauthLoading === "fp"      && <><BsFingerprint size={13} color="#FFC72C" /> Scanning fingerprint…</>}
+            {oauthLoading === "google"  && <><FcGoogle size={14} /> {t("auth.connectingGoogle")}</>}
+            {oauthLoading === "github"  && <><FaGithub size={13} color="#fff" /> {t("auth.connectingGithub")}</>}
+            {oauthLoading === "fp"      && <><BsFingerprint size={13} color="#FFC72C" /> {t("auth.scanningFingerprint")}</>}
           </div>
         )}
 
@@ -132,10 +134,10 @@ export default function Login() {
           <div className="ds-banner">
             <AlertCircle size={15} style={{ flexShrink: 0, color: "#f87171" }} />
             <div>
-              <p className="ds-banner-title">Email not verified</p>
-              <p className="ds-banner-body">Check your inbox for the verification link.</p>
+              <p className="ds-banner-title">{t("auth.emailNotVerified")}</p>
+              <p className="ds-banner-body">{t("auth.checkInboxVerify")}</p>
             </div>
-            <Link to="/verify-email" className="ds-banner-link">Resend →</Link>
+            <Link to="/verify-email" className="ds-banner-link">{t("auth.resend")}</Link>
           </div>
         )}
 
@@ -145,7 +147,7 @@ export default function Login() {
           <div className="ds-field">
             <input
               type="email" className={`ds-input${errors.email ? " ds-input--err" : ""}`}
-              placeholder="Phone number / email address"
+              placeholder={t("auth.emailPlaceholder")}
               value={form.email} onChange={handleChange("email")}
               autoComplete="email" disabled={isAnyLoading}
             />
@@ -157,7 +159,7 @@ export default function Login() {
               <input
                 type={showPw ? "text" : "password"}
                 className="ds-input ds-input--pw"
-                placeholder="Password"
+                placeholder={t("auth.passwordPlaceholder")}
                 value={form.password} onChange={handleChange("password")}
                 autoComplete="current-password" disabled={isAnyLoading}
               />
@@ -171,29 +173,29 @@ export default function Login() {
           </div>
 
           <p className="ds-terms">
-            By signing in you agree to KOTABITES&rsquo;{" "}
-            <Link to="/terms" className="ds-terms-link">Terms of Use</Link>{" "}
-            and <Link to="/privacy" className="ds-terms-link">Privacy Policy</Link>.
+            {t("auth.termsPrefix")}{" "}
+            <Link to="/terms" className="ds-terms-link">{t("auth.termsOfUse")}</Link>{" "}
+            {t("auth.and")} <Link to="/privacy" className="ds-terms-link">{t("auth.privacyPolicy")}</Link>.
           </p>
 
           <div className="ds-row">
-            <Link to="/forgot-password" className="ds-text-link">Forgot password?</Link>
+            <Link to="/forgot-password" className="ds-text-link">{t("auth.forgotPassword")}</Link>
             <Link to={`/register${redirect !== "/menu" ? `?redirect=${redirect}` : ""}`} className="ds-text-link">
-              Sign up
+              {t("auth.signUp")}
             </Link>
           </div>
 
           <button type="submit" disabled={isAnyLoading} className="ds-cta">
             {loading
-              ? <><Loader size={18} className="ds-spin" /> Signing in…</>
-              : "Sign in"}
+              ? <><Loader size={18} className="ds-spin" /> {t("auth.signingIn")}</>
+              : t("auth.signIn")}
           </button>
         </form>
 
         {/* Divider */}
         <div className="ds-divider">
           <div className="ds-line" />
-          <span className="ds-divider-text">or</span>
+          <span className="ds-divider-text">{t("auth.or")}</span>
           <div className="ds-line" />
         </div>
 
@@ -205,8 +207,8 @@ export default function Login() {
             className={`ds-social-btn${oauthLoading === "google" ? " ds-social-btn-active" : ""}`}
             onClick={() => triggerOAuth(googleRef, "google")}
             disabled={isAnyLoading}
-            aria-label="Continue with Google"
-            title="Continue with Google"
+            aria-label={t("auth.continueWithGoogle")}
+            title={t("auth.continueWithGoogle")}
           >
             {oauthLoading === "google"
               ? <Loader2 size={20} className="ds-spin" style={{ color: "#4285F4" }} />
@@ -219,8 +221,8 @@ export default function Login() {
             className={`ds-social-btn${oauthLoading === "github" ? " ds-social-btn-active" : ""}`}
             onClick={() => triggerOAuth(githubRef, "github")}
             disabled={isAnyLoading}
-            aria-label="Continue with GitHub"
-            title="Continue with GitHub"
+            aria-label={t("auth.continueWithGithub")}
+            title={t("auth.continueWithGithub")}
           >
             {oauthLoading === "github"
               ? <Loader2 size={20} className="ds-spin" style={{ color: "#e0e0e0" }} />
@@ -233,8 +235,8 @@ export default function Login() {
             className={`ds-social-btn${oauthLoading === "fp" ? " ds-social-btn-active" : ""}`}
             onClick={() => triggerOAuth(fpRef, "fp")}
             disabled={isAnyLoading}
-            aria-label="Sign in with fingerprint"
-            title="Sign in with fingerprint"
+            aria-label={t("auth.signInWithFingerprint")}
+            title={t("auth.signInWithFingerprint")}
           >
             {oauthLoading === "fp"
               ? <Loader2 size={20} className="ds-spin" style={{ color: "#FFC72C" }} />
@@ -255,15 +257,15 @@ export default function Login() {
 
         {/* Social labels */}
         <div className="ds-social-labels">
-          <span>Google</span>
-          <span>GitHub</span>
-          <span>Fingerprint</span>
+          <span>{t("auth.google")}</span>
+          <span>{t("auth.github")}</span>
+          <span>{t("auth.fingerprint")}</span>
         </div>
 
         {/* Security badge */}
         <div className="ds-secure">
           <ShieldCheck size={12} color="rgba(255,248,231,0.25)" />
-          <span>Secured with 256-bit encryption</span>
+          <span>{t("auth.secured256")}</span>
         </div>
 
       </div>

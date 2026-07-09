@@ -1,6 +1,7 @@
 // src/pages/Register.jsx — DeepSeek layout · borderless · password strength · KOTABITES
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../components/Toast";
 import { Flame, Eye, EyeOff, Loader, CheckCircle2, ShieldCheck } from "lucide-react";
@@ -17,7 +18,6 @@ const getStrength = (pw) => {
   if (/[^A-Za-z0-9]/.test(pw))   s++;
   return s;
 };
-const STRENGTH_LABEL = ["", "Very Weak", "Weak", "Fair", "Strong", "Very Strong"];
 const STRENGTH_COLOR = ["", "#ef4444", "#f97316", "#eab308", "#4ade80", "#22c55e"];
 
 /* ── Single requirement row ── */
@@ -53,6 +53,7 @@ function PillPassword({ placeholder, value, onChange, autoComplete, disabled, ha
 }
 
 export default function Register() {
+  const { t }         = useTranslation();
   const navigate     = useNavigate();
   const { register } = useAuth();
   const toast        = useToast();
@@ -72,15 +73,15 @@ export default function Register() {
   /* ── Validation ── */
   const validate = () => {
     const e = {};
-    if (!form.full_name.trim())  e.full_name = "Full name is required";
-    if (!form.email.trim())      e.email     = "Email is required";
-    else if (!/\S+@\S+\.\S+/.test(form.email)) e.email = "Invalid email";
-    if (!form.phone.trim())      e.phone     = "Phone number is required";
+    if (!form.full_name.trim())  e.full_name = t("auth.errFullNameRequired");
+    if (!form.email.trim())      e.email     = t("auth.errEmailRequired");
+    else if (!/\S+@\S+\.\S+/.test(form.email)) e.email = t("auth.errEmailInvalid");
+    if (!form.phone.trim())      e.phone     = t("auth.errPhoneRequired");
     else if (!/^0\d{9}$/.test(form.phone.replace(/\s/g, "")))
-      e.phone = "Must be 10 digits starting with 0";
-    if (!form.password.trim())   e.password  = "Password is required";
-    else if (form.password.length < 6) e.password = "At least 6 characters";
-    if (form.confirm !== form.password) e.confirm = "Passwords don't match";
+      e.phone = t("auth.errPhoneFormat");
+    if (!form.password.trim())   e.password  = t("auth.errPasswordRequired");
+    else if (form.password.length < 6) e.password = t("auth.errPasswordMin");
+    if (form.confirm !== form.password) e.confirm = t("auth.errConfirmMismatch");
     return e;
   };
 
@@ -102,12 +103,12 @@ export default function Register() {
         password:  form.password,
         ...(referralCode ? { referral_code: referralCode } : {}),
       });
-      toast.show({ type: "success", title: "Account created!", message: "Check your email to verify." });
+      toast.show({ type: "success", title: t("auth.toastAccountCreated"), message: t("auth.toastCheckEmailVerify") });
       setRegistered(true);
       setTimeout(() => navigate("/verify-email"), 90000);
     } catch (err) {
-      const msg = err?.response?.data?.detail || err?.response?.data?.message || err.message || "Registration failed";
-      toast.show({ type: "error", title: "Sign up failed", message: msg });
+      const msg = err?.response?.data?.detail || err?.response?.data?.message || err.message || t("auth.toastRegistrationFailed");
+      toast.show({ type: "error", title: t("auth.toastSignupFailed"), message: msg });
     } finally {
       setLoading(false);
     }
@@ -126,14 +127,14 @@ export default function Register() {
           <div className="ds-success-icon">
             <CheckCircle2 size={36} color="#0e0700" strokeWidth={2.5} />
           </div>
-          <h2 className="ds-success-title">Check your email</h2>
+          <h2 className="ds-success-title">{t("auth.checkEmailTitle")}</h2>
           <p className="ds-success-sub">
-            We sent a verification link to{" "}
+            {t("auth.checkEmailSub")}{" "}
             <strong style={{ color: "var(--kb-gold)" }}>{form.email}</strong>.
-            <br />Please verify before signing in.
+            <br />{t("auth.checkEmailSub2")}
           </p>
           <Link to="/verify-email" className="ds-cta" style={{ marginTop: 24, display: "flex", textDecoration: "none" }}>
-            Go to verification →
+            {t("auth.goToVerification")}
           </Link>
         </div>
       </div>
@@ -157,7 +158,7 @@ export default function Register() {
 
           {referralCode && (
             <div className="ds-referral-banner">
-              <ShieldCheck size={14} /> You were referred by a friend — sign up and you'll both earn 50 KotaPoints!
+              <ShieldCheck size={14} /> {t("auth.referralBanner")}
             </div>
           )}
 
@@ -165,7 +166,7 @@ export default function Register() {
           <div className="ds-field">
             <input
               type="text" className={`ds-input${errors.full_name ? " ds-input--err" : ""}`}
-              placeholder="Full name"
+              placeholder={t("auth.fullNamePlaceholder")}
               value={form.full_name} onChange={handleChange("full_name")}
               autoComplete="name" disabled={loading}
             />
@@ -176,7 +177,7 @@ export default function Register() {
           <div className="ds-field">
             <input
               type="email" className={`ds-input${errors.email ? " ds-input--err" : ""}`}
-              placeholder="Email address"
+              placeholder={t("auth.emailOnlyPlaceholder")}
               value={form.email} onChange={handleChange("email")}
               autoComplete="email" disabled={loading}
             />
@@ -187,7 +188,7 @@ export default function Register() {
           <div className="ds-field">
             <input
               type="tel" className={`ds-input${errors.phone ? " ds-input--err" : ""}`}
-              placeholder="Phone number (e.g. 082 123 4567)"
+              placeholder={t("auth.phonePlaceholder")}
               value={form.phone} onChange={handleChange("phone")}
               autoComplete="tel" disabled={loading}
             />
@@ -197,7 +198,7 @@ export default function Register() {
           {/* Password */}
           <div className="ds-field">
             <PillPassword
-              placeholder="Password (min. 6 characters)"
+              placeholder={t("auth.passwordMinPlaceholder")}
               value={form.password} onChange={handleChange("password")}
               autoComplete="new-password" disabled={loading}
               hasError={!!errors.password}
@@ -218,7 +219,7 @@ export default function Register() {
                   ))}
                 </div>
                 <span className="ds-strength-label" style={{ color: STRENGTH_COLOR[strength] }}>
-                  {STRENGTH_LABEL[strength]}
+                  {strength ? t(`auth.strength.${strength}`) : ""}
                 </span>
               </div>
             )}
@@ -226,10 +227,10 @@ export default function Register() {
             {/* Requirements checklist */}
             {form.password && (
               <div className="ds-reqs">
-                <Req met={form.password.length >= 6}           text="At least 6 characters" />
-                <Req met={/[A-Z]/.test(form.password)}         text="One uppercase letter" />
-                <Req met={/[0-9]/.test(form.password)}         text="One number" />
-                <Req met={/[^A-Za-z0-9]/.test(form.password)}  text="One special character" />
+                <Req met={form.password.length >= 6}           text={t("auth.reqLength")} />
+                <Req met={/[A-Z]/.test(form.password)}         text={t("auth.reqUppercase")} />
+                <Req met={/[0-9]/.test(form.password)}         text={t("auth.reqNumber")} />
+                <Req met={/[^A-Za-z0-9]/.test(form.password)}  text={t("auth.reqSpecial")} />
               </div>
             )}
           </div>
@@ -237,7 +238,7 @@ export default function Register() {
           {/* Confirm password */}
           <div className="ds-field">
             <PillPassword
-              placeholder="Confirm password"
+              placeholder={t("auth.confirmPasswordPlaceholder")}
               value={form.confirm} onChange={handleChange("confirm")}
               autoComplete="new-password" disabled={loading}
               hasError={!!errors.confirm}
@@ -251,36 +252,36 @@ export default function Register() {
               ? <p className="ds-err">{errors.confirm}</p>
               : form.confirm && (
                   <p className="ds-match" style={{ color: pwMatch ? "#4ade80" : "#f87171" }}>
-                    {pwMatch ? "✓ Passwords match" : "✗ Passwords don't match"}
+                    {pwMatch ? t("auth.passwordsMatch") : t("auth.passwordsDontMatch")}
                   </p>
                 )}
           </div>
 
           {/* Terms */}
           <p className="ds-terms">
-            By creating an account you agree to KOTABITES&rsquo;{" "}
-            <Link to="/terms" className="ds-terms-link">Terms of Use</Link>{" "}
-            and <Link to="/privacy" className="ds-terms-link">Privacy Policy</Link>.
+            {t("auth.termsPrefixRegister")}{" "}
+            <Link to="/terms" className="ds-terms-link">{t("auth.termsOfUse")}</Link>{" "}
+            {t("auth.and")} <Link to="/privacy" className="ds-terms-link">{t("auth.privacyPolicy")}</Link>.
           </p>
 
           {/* Already have an account */}
           <div className="ds-row">
-            <span className="ds-muted-text">Already have an account?</span>
+            <span className="ds-muted-text">{t("auth.alreadyHaveAccount")}</span>
             <Link to={`/login${redirect !== "/menu" ? `?redirect=${redirect}` : ""}`} className="ds-text-link">
-              Sign in
+              {t("auth.signIn")}
             </Link>
           </div>
 
           {/* CTA */}
           <button type="submit" disabled={loading} className="ds-cta">
-            {loading ? <><Loader size={18} className="ds-spin" /> Creating account…</> : "Create Account"}
+            {loading ? <><Loader size={18} className="ds-spin" /> {t("auth.creatingAccount")}</> : t("auth.createAccount")}
           </button>
         </form>
 
         {/* Security badge */}
         <div className="ds-secure">
           <ShieldCheck size={12} color="rgba(255,248,231,0.25)" />
-          <span>Your data is encrypted and secure</span>
+          <span>{t("auth.secureData")}</span>
         </div>
 
       </div>
