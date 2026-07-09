@@ -49,7 +49,16 @@
     "darkMode": "Imodi Emnyama",
     "darkModeSub": "Ihlala ivuliwe — i-KotaBites imnyama ngokwakhiwa",
     "language": "Ulimi",
-    "languageSub": "Khetha ulimi olulithandayo"
+    "languageSub": "Khetha ulimi olulithandayo",
+    "pushNotifications": "Izaziso Ezisunduzwayo",
+    "pushSubscribed": "Kunikwe amandla kule divayisi",
+    "pushNotSubscribed": "Thola isaziso ngisho nalapho i-app ivaliwe",
+    "pushOnTitle": "Izaziso zinikwe amandla",
+    "pushOnSub": "Uzothola izaziso ezisunduzwayo kule divayisi",
+    "pushOffTitle": "Izaziso zikhutshaziwe",
+    "pushOffSub": "Ngeke usathola izaziso ezisunduzwayo kule divayisi",
+    "pushErrorTitle": "Ayikwazanga ukubuyekeza izaziso",
+    "pushErrorSub": "Sicela uzame futhi"
   },
   "cart": {
     "title": "Ikart Yakho",
