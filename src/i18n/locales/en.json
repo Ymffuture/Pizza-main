@@ -115,9 +115,18 @@
     "features": {
       "label": "Why KotaBites",
       "title": "Built around you",
-      "fast": { "title": "Fast Delivery", "desc": "Hot food at your door in under 30 minutes. Every time." },
-      "fresh": { "title": "Freshly Made", "desc": "Every kota is made to order — never pre-packed or reheated." },
-      "value": { "title": "Best Value", "desc": "Quality street food at honest prices. No hidden fees." }
+      "fast": {
+        "title": "Fast Delivery",
+        "desc": "Hot food at your door in under 30 minutes. Every time."
+      },
+      "fresh": {
+        "title": "Freshly Made",
+        "desc": "Every kota is made to order — never pre-packed or reheated."
+      },
+      "value": {
+        "title": "Best Value",
+        "desc": "Quality street food at honest prices. No hidden fees."
+      }
     },
     "policy": {
       "title": "Cancellation Policy",
@@ -128,9 +137,18 @@
     "how": {
       "label": "How it works",
       "title": "Order in 3 steps",
-      "step1": { "title": "Browse the menu", "desc": "Pick your kota, add sides and drinks" },
-      "step2": { "title": "Pay securely", "desc": "Cash on delivery or pay online via Paystack" },
-      "step3": { "title": "Track & enjoy", "desc": "Live order tracking until it hits your door" },
+      "step1": {
+        "title": "Browse the menu",
+        "desc": "Pick your kota, add sides and drinks"
+      },
+      "step2": {
+        "title": "Pay securely",
+        "desc": "Cash on delivery or pay online via Paystack"
+      },
+      "step3": {
+        "title": "Track & enjoy",
+        "desc": "Live order tracking until it hits your door"
+      },
       "cta": "Start your order"
     }
   },
@@ -179,7 +197,13 @@
     "secureData": "Your data is encrypted and secure",
     "alreadyHaveAccount": "Already have an account?",
     "referralBanner": "You were referred by a friend — sign up and you'll both earn 50 KotaPoints!",
-    "strength": { "1": "Very Weak", "2": "Weak", "3": "Fair", "4": "Strong", "5": "Very Strong" },
+    "strength": {
+      "1": "Very Weak",
+      "2": "Weak",
+      "3": "Fair",
+      "4": "Strong",
+      "5": "Very Strong"
+    },
     "reqLength": "At least 6 characters",
     "reqUppercase": "One uppercase letter",
     "reqNumber": "One number",
@@ -198,6 +222,7 @@
     "toastAccountCreated": "Account created!",
     "toastCheckEmailVerify": "Check your email to verify.",
     "toastSignupFailed": "Sign up failed",
-    "toastRegistrationFailed": "Registration failed"
+    "toastRegistrationFailed": "Registration failed",
+    "secured256": "Secured with 256-bit encryption"
   }
 }

@@ -115,9 +115,18 @@
     "features": {
       "label": "Kungani i-KotaBites",
       "title": "Yakhelwe wena",
-      "fast": { "title": "Ukulethwa Okusheshayo", "desc": "Ukudla okushisayo emnyango wakho ngaphansi kwemizuzu engu-30. Njalo." },
-      "fresh": { "title": "Kwenziwa Kusanda", "desc": "Yonke i-kota yenziwa ngesikhathi so-oda — ayipheki kusengaphambili noma ifudumezwe kabusha." },
-      "value": { "title": "Inani Elihle Kakhulu", "desc": "Ukudla komgwaqo okusezingeni eliphezulu ngamanani aqotho. Ayikho imali efihliwe." }
+      "fast": {
+        "title": "Ukulethwa Okusheshayo",
+        "desc": "Ukudla okushisayo emnyango wakho ngaphansi kwemizuzu engu-30. Njalo."
+      },
+      "fresh": {
+        "title": "Kwenziwa Kusanda",
+        "desc": "Yonke i-kota yenziwa ngesikhathi so-oda — ayipheki kusengaphambili noma ifudumezwe kabusha."
+      },
+      "value": {
+        "title": "Inani Elihle Kakhulu",
+        "desc": "Ukudla komgwaqo okusezingeni eliphezulu ngamanani aqotho. Ayikho imali efihliwe."
+      }
     },
     "policy": {
       "title": "Inqubomgomo Yokukhansela",
@@ -128,10 +137,92 @@
     "how": {
       "label": "Kusebenza kanjani",
       "title": "Odela ngezinyathelo ezi-3",
-      "step1": { "title": "Buka imenyu", "desc": "Khetha i-kota yakho, wengeze izinto ezihambisanayo neziphuzo" },
-      "step2": { "title": "Khokha ngokuphephile", "desc": "Ukukhokha ngemali uma kufika noma khokha nge-inthanethi nge-Paystack" },
-      "step3": { "title": "Landelela & ujabule", "desc": "Ukulandelela i-oda ngesikhathi sangempela kuze kufike emnyango wakho" },
+      "step1": {
+        "title": "Buka imenyu",
+        "desc": "Khetha i-kota yakho, wengeze izinto ezihambisanayo neziphuzo"
+      },
+      "step2": {
+        "title": "Khokha ngokuphephile",
+        "desc": "Ukukhokha ngemali uma kufika noma khokha nge-inthanethi nge-Paystack"
+      },
+      "step3": {
+        "title": "Landelela & ujabule",
+        "desc": "Ukulandelela i-oda ngesikhathi sangempela kuze kufike emnyango wakho"
+      },
       "cta": "Qala i-oda lakho"
     }
+  },
+  "auth": {
+    "emailPlaceholder": "Inombolo yefoni / ikheli le-imeyili",
+    "emailOnlyPlaceholder": "Ikheli le-imeyili",
+    "passwordPlaceholder": "Iphasiwedi",
+    "passwordMinPlaceholder": "Iphasiwedi (okungenani izinhlamvu ezi-6)",
+    "confirmPasswordPlaceholder": "Qinisekisa iphasiwedi",
+    "fullNamePlaceholder": "Igama eliphelele",
+    "phonePlaceholder": "Inombolo yefoni (isb. 082 123 4567)",
+    "errEmailRequired": "I-imeyili iyadingeka",
+    "errEmailInvalid": "I-imeyili engalungile",
+    "errPasswordRequired": "Iphasiwedi iyadingeka",
+    "errPasswordMin": "Okungenani izinhlamvu ezi-6",
+    "errFullNameRequired": "Igama eliphelele liyadingeka",
+    "errPhoneRequired": "Inombolo yefoni iyadingeka",
+    "errPhoneFormat": "Kufanele ibe izinombolo ezingu-10 eziqala ngo-0",
+    "errConfirmMismatch": "Amaphasiwedi awafani",
+    "passwordsMatch": "✓ Amaphasiwedi ayafana",
+    "passwordsDontMatch": "✗ Amaphasiwedi awafani",
+    "connectingGoogle": "Iyaxhuma ku-Google…",
+    "connectingGithub": "Iyaxhuma ku-GitHub…",
+    "scanningFingerprint": "Isesha izigxivizo zeminwe…",
+    "emailNotVerified": "I-imeyili ayiqinisekiswanga",
+    "checkInboxVerify": "Hlola ibhokisi lakho lokungena ukuthola isixhumanisi sokuqinisekisa.",
+    "resend": "Thumela futhi →",
+    "termsPrefix": "Ngokungena uyavuma nge",
+    "termsPrefixRegister": "Ngokwakha i-akhawunti uyavuma nge",
+    "termsOfUse": "Imigomo Yokusetshenziswa",
+    "and": "futhi",
+    "privacyPolicy": "Inqubomgomo Yobumfihlo",
+    "forgotPassword": "Ukhohlwe iphasiwedi?",
+    "signUp": "Bhalisa",
+    "signIn": "Ngena",
+    "signingIn": "Iyangena…",
+    "creatingAccount": "Yakha i-akhawunti…",
+    "createAccount": "Yakha I-akhawunti",
+    "or": "noma",
+    "continueWithGoogle": "Qhubeka nge-Google",
+    "continueWithGithub": "Qhubeka nge-GitHub",
+    "signInWithFingerprint": "Ngena ngezigxivizo zeminwe",
+    "google": "Google",
+    "github": "GitHub",
+    "fingerprint": "Izigxivizo Zeminwe",
+    "secureData": "Idatha yakho ibethelwe futhi iphephile",
+    "alreadyHaveAccount": "Usunayo i-akhawunti?",
+    "referralBanner": "Ubudlulisiwe ngumngane — bhalisa futhi nobabili nizohola amaphuzu e-KotaPoints angu-50!",
+    "strength": {
+      "1": "Buthakathaka Kakhulu",
+      "2": "Buthakathaka",
+      "3": "Kulungile",
+      "4": "Kuqinile",
+      "5": "Kuqinile Kakhulu"
+    },
+    "reqLength": "Okungenani izinhlamvu ezi-6",
+    "reqUppercase": "Unobumba omkhulu owodwa",
+    "reqNumber": "Inombolo eyodwa",
+    "reqSpecial": "Uphawu oluqondile olulodwa",
+    "checkEmailTitle": "Hlola i-imeyili yakho",
+    "checkEmailSub": "Sithumele isixhumanisi sokuqinisekisa ku",
+    "checkEmailSub2": "Sicela uqinisekise ngaphambi kokungena.",
+    "goToVerification": "Yiya ekuqinisekiseni →",
+    "toastWelcome": "Siyakwamukela!",
+    "toastWelcomeBack": "Siyakwamukela futhi!",
+    "toastSignInFailed": "Ukungena kwehlulekile",
+    "toastTryAgain": "Zama futhi",
+    "toastFingerprintFailed": "Izigxivizo zeminwe zehlulekile",
+    "toastTryPassword": "Zama iphasiwedi yakho",
+    "toastLoginFailed": "Ukungena kwehlulekile",
+    "toastAccountCreated": "I-akhawunti yakhiwe!",
+    "toastCheckEmailVerify": "Hlola i-imeyili yakho ukuze uqinisekise.",
+    "toastSignupFailed": "Ukubhalisa kwehlulekile",
+    "toastRegistrationFailed": "Ukubhalisa kwehlulekile",
+    "secured256": "Kuvikelwe nge-256-bit encryption"
   }
 }

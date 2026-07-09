@@ -115,9 +115,18 @@
     "features": {
       "label": "Hoekom KotaBites",
       "title": "Gebou om jou",
-      "fast": { "title": "Vinnige Aflewering", "desc": "Warm kos by jou deur binne 30 minute. Elke keer." },
-      "fresh": { "title": "Vars Gemaak", "desc": "Elke kota word op bestelling gemaak — nooit vooraf verpak of opgewarm nie." },
-      "value": { "title": "Beste Waarde", "desc": "Kwaliteit straatkos teen eerlike pryse. Geen verskuilde fooie nie." }
+      "fast": {
+        "title": "Vinnige Aflewering",
+        "desc": "Warm kos by jou deur binne 30 minute. Elke keer."
+      },
+      "fresh": {
+        "title": "Vars Gemaak",
+        "desc": "Elke kota word op bestelling gemaak — nooit vooraf verpak of opgewarm nie."
+      },
+      "value": {
+        "title": "Beste Waarde",
+        "desc": "Kwaliteit straatkos teen eerlike pryse. Geen verskuilde fooie nie."
+      }
     },
     "policy": {
       "title": "Kansellasiebeleid",
@@ -128,9 +137,18 @@
     "how": {
       "label": "Hoe dit werk",
       "title": "Bestel in 3 stappe",
-      "step1": { "title": "Blaai deur die spyskaart", "desc": "Kies jou kota, voeg bysteuntjies en drankies by" },
-      "step2": { "title": "Betaal veilig", "desc": "Kontant met aflewering of betaal aanlyn via Paystack" },
-      "step3": { "title": "Volg & geniet", "desc": "Intydse opsporing tot by jou deur" },
+      "step1": {
+        "title": "Blaai deur die spyskaart",
+        "desc": "Kies jou kota, voeg bysteuntjies en drankies by"
+      },
+      "step2": {
+        "title": "Betaal veilig",
+        "desc": "Kontant met aflewering of betaal aanlyn via Paystack"
+      },
+      "step3": {
+        "title": "Volg & geniet",
+        "desc": "Intydse opsporing tot by jou deur"
+      },
       "cta": "Begin jou bestelling"
     }
   },
@@ -179,7 +197,13 @@
     "secureData": "Jou data is geënkripteer en veilig",
     "alreadyHaveAccount": "Het jy reeds 'n rekening?",
     "referralBanner": "Jy is deur 'n vriend verwys — skep 'n rekening en julle albei verdien 50 KotaPunte!",
-    "strength": { "1": "Baie Swak", "2": "Swak", "3": "Redelik", "4": "Sterk", "5": "Baie Sterk" },
+    "strength": {
+      "1": "Baie Swak",
+      "2": "Swak",
+      "3": "Redelik",
+      "4": "Sterk",
+      "5": "Baie Sterk"
+    },
     "reqLength": "Minstens 6 karakters",
     "reqUppercase": "Een hoofletter",
     "reqNumber": "Een syfer",
@@ -198,6 +222,7 @@
     "toastAccountCreated": "Rekening geskep!",
     "toastCheckEmailVerify": "Gaan jou e-pos na om te bevestig.",
     "toastSignupFailed": "Registrasie het misluk",
-    "toastRegistrationFailed": "Registrasie het misluk"
+    "toastRegistrationFailed": "Registrasie het misluk",
+    "secured256": "Beveilig met 256-bis-enkripsie"
   }
 }
