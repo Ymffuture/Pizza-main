@@ -10,7 +10,7 @@ const EJS_SERVICE_OTP      = import.meta.env.VITE_EMAILJS_SERVICE_ID_OTP;
 
 const EJS_TEMPLATE     = import.meta.env.VITE_EMAILJS_VERIFY_TEMPLATE_ID;
 const EJS_OTP_TEMPLATE = import.meta.env.VITE_EMAILJS_OTP_TEMPLATE_ID || EJS_TEMPLATE;
-const EJS_KEY           = import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
+const EJS_KEY           = import.meta.env.VITE_EJS_KEY;
 const APP_URL           = import.meta.env.VITE_APP_URL || "https://foodsorder.vercel.app";
 
 export function AuthProvider({ children }) {
