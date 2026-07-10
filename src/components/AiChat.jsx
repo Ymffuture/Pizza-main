@@ -1792,7 +1792,7 @@ const styles = `
   .kb-model-wrap { position:relative; }
   .kb-model-btn {
     display:flex; align-items:center; gap:4px; height:30px; flex-shrink:0;
-    background:rgba(200,200,220,0.07); border:1px solid rgba(0,229,255,0.16);
+    background:transparent; border:none;
     border-radius:50px; padding:0 9px 0 10px; cursor:pointer;
     color:rgba(200,200,220,0.75); transition:all 0.15s;
   }
