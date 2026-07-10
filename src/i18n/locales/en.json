@@ -223,6 +223,20 @@
     "toastCheckEmailVerify": "Check your email to verify.",
     "toastSignupFailed": "Sign up failed",
     "toastRegistrationFailed": "Registration failed",
-    "secured256": "Secured with 256-bit encryption"
+    "secured256": "Secured with 256-bit encryption",
+    "otpSentTitle": "Code sent!",
+    "otpSentSub": "We emailed a 6-digit code to {{email}}",
+    "otpTitle": "Enter your code",
+    "otpSub": "We sent a 6-digit code to",
+    "otpPlaceholder": "000000",
+    "otpVerify": "Verify & Sign in",
+    "otpVerifying": "Verifying…",
+    "otpResend": "Didn't get it? Resend code",
+    "otpResending": "Resending…",
+    "otpResentTitle": "Code resent!",
+    "otpResentSub": "Check your inbox for the new code.",
+    "otpBack": "← Use a different email",
+    "errOtpLength": "Enter all 6 digits",
+    "errOtpInvalid": "Incorrect or expired code"
   }
 }

@@ -223,6 +223,20 @@
     "toastCheckEmailVerify": "Gaan jou e-pos na om te bevestig.",
     "toastSignupFailed": "Registrasie het misluk",
     "toastRegistrationFailed": "Registrasie het misluk",
-    "secured256": "Beveilig met 256-bis-enkripsie"
+    "secured256": "Beveilig met 256-bis-enkripsie",
+    "otpSentTitle": "Kode gestuur!",
+    "otpSentSub": "Ons het 'n 6-syfer kode ge-epos na {{email}}",
+    "otpTitle": "Voer jou kode in",
+    "otpSub": "Ons het 'n 6-syfer kode gestuur na",
+    "otpPlaceholder": "000000",
+    "otpVerify": "Verifieer & Meld aan",
+    "otpVerifying": "Verifieer tans…",
+    "otpResend": "Nie ontvang nie? Stuur kode weer",
+    "otpResending": "Stuur tans weer…",
+    "otpResentTitle": "Kode weer gestuur!",
+    "otpResentSub": "Gaan jou inkassie na vir die nuwe kode.",
+    "otpBack": "← Gebruik 'n ander e-pos",
+    "errOtpLength": "Voer al 6 syfers in",
+    "errOtpInvalid": "Verkeerde of vervalle kode"
   }
 }

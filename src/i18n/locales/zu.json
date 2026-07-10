@@ -223,6 +223,20 @@
     "toastCheckEmailVerify": "Hlola i-imeyili yakho ukuze uqinisekise.",
     "toastSignupFailed": "Ukubhalisa kwehlulekile",
     "toastRegistrationFailed": "Ukubhalisa kwehlulekile",
-    "secured256": "Kuvikelwe nge-256-bit encryption"
+    "secured256": "Kuvikelwe nge-256-bit encryption",
+    "otpSentTitle": "Ikhodi ithunyelwe!",
+    "otpSentSub": "Sithumele ikhodi enezinombolo ezingu-6 ku-{{email}}",
+    "otpTitle": "Faka ikhodi yakho",
+    "otpSub": "Sithumele ikhodi enezinombolo ezingu-6 ku",
+    "otpPlaceholder": "000000",
+    "otpVerify": "Qinisekisa Bese Ungena",
+    "otpVerifying": "Iyaqinisekisa…",
+    "otpResend": "Awuyitholanga? Thumela ikhodi futhi",
+    "otpResending": "Iyathumela futhi…",
+    "otpResentTitle": "Ikhodi ithunyelwe futhi!",
+    "otpResentSub": "Hlola ibhokisi lakho lokungena ukuthola ikhodi entsha.",
+    "otpBack": "← Sebenzisa i-imeyili ehlukile",
+    "errOtpLength": "Faka zonke izinhlamvu ezingu-6",
+    "errOtpInvalid": "Ikhodi engalungile noma ephelelwe yisikhathi"
   }
 }
