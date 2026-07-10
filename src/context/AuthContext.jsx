@@ -45,7 +45,7 @@ export function AuthProvider({ children }) {
     if (otp_code && EJS_SERVICE_OTP && EJS_OTP_TEMPLATE && EJS_KEY) {
       try {
         await emailjs.send(
-          EJS_SERVICE, EJS_OTP_TEMPLATE,
+          EJS_SERVICE_OTP, EJS_OTP_TEMPLATE,
           { to_email: email, to_name: full_name, otp_code, expires_in },
           EJS_KEY,
         );
@@ -80,9 +80,9 @@ export function AuthProvider({ children }) {
   const resendOtpLogin = useCallback(async (email) => {
     const res = await resendLoginOtp(email);
     const { otp_code, full_name, expires_in } = res.data;
-    if (otp_code && EJS_SERVICE && EJS_OTP_TEMPLATE && EJS_KEY) {
+    if (otp_code && EJS_SERVICE_OTP && EJS_OTP_TEMPLATE && EJS_KEY) {
       await emailjs.send(
-        EJS_SERVICE, EJS_OTP_TEMPLATE,
+        EJS_SERVICE_OTP, EJS_OTP_TEMPLATE,
         { to_email: email, to_name: full_name, otp_code, expires_in },
         EJS_KEY,
       );
