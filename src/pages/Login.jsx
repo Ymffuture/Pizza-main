@@ -4,7 +4,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../components/Toast";
-import { Flame, Eye, EyeOff, Loader, AlertCircle, ShieldCheck, Loader2 } from "lucide-react";
+import { Flame, Eye, EyeOff, Loader, AlertCircle, ShieldCheck, Loader2, MailCheck } from "lucide-react";
 import { FcGoogle }      from "react-icons/fc";
 import { FaGithub }      from "react-icons/fa";
 import { BsFingerprint } from "react-icons/bs";
@@ -15,7 +15,7 @@ import FingerprintButton from "../components/FingerprintButton";
 export default function Login() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, completeOtpLogin, resendOtpLogin } = useAuth();
   const toast     = useToast();
 
   const googleRef = useRef(null);
@@ -28,6 +28,14 @@ export default function Login() {
   const [oauthLoading, setOauthLoading]           = useState(null); // "google"|"github"|"fp"|null
   const [showPw, setShowPw]                       = useState(false);
   const [needsVerification, setNeedsVerification] = useState(false);
+
+  // ── Login-OTP step — shown after a correct password, before a session
+  //    token is actually issued (see AuthContext.login / completeOtpLogin) ──
+  const [otpStep, setOtpStep]       = useState(false);
+  const [otpValue, setOtpValue]     = useState("");
+  const [otpError, setOtpError]     = useState("");
+  const [otpVerifying, setOtpVerifying] = useState(false);
+  const [otpResending, setOtpResending] = useState(false);
 
   const redirect = new URLSearchParams(window.location.search).get("redirect") || "/menu";
 
@@ -74,9 +82,9 @@ export default function Login() {
     setLoading(true);
     setNeedsVerification(false);
     try {
-      await login(form);
-      toast.show({ type: "success", title: t("auth.toastWelcomeBack"), message: form.email.trim().toLowerCase() });
-      navigate(redirect, { replace: true });
+      await login(form); // password verified server-side; issues + emails an OTP, no token yet
+      setOtpStep(true);
+      toast.show({ type: "success", title: t("auth.otpSentTitle"), message: t("auth.otpSentSub", { email: form.email.trim().toLowerCase() }) });
     } catch (err) {
       const msg = err?.response?.data?.detail || err?.response?.data?.message || err.message || t("auth.toastLoginFailed");
       if (msg.toLowerCase().includes("verify") || msg.toLowerCase().includes("verification")) {
@@ -90,12 +98,107 @@ export default function Login() {
     }
   };
 
+  const handleOtpSubmit = async (ev) => {
+    ev.preventDefault();
+    if (otpValue.trim().length !== 6) { setOtpError(t("auth.errOtpLength")); return; }
+    setOtpVerifying(true);
+    setOtpError("");
+    try {
+      await completeOtpLogin(form.email.trim().toLowerCase(), otpValue.trim());
+      toast.show({ type: "success", title: t("auth.toastWelcomeBack"), message: form.email.trim().toLowerCase() });
+      navigate(redirect, { replace: true });
+    } catch (err) {
+      setOtpError(err?.response?.data?.detail || err.message || t("auth.errOtpInvalid"));
+    } finally {
+      setOtpVerifying(false);
+    }
+  };
+
+  const handleOtpResend = async () => {
+    setOtpResending(true);
+    setOtpError("");
+    try {
+      await resendOtpLogin(form.email.trim().toLowerCase());
+      toast.show({ type: "success", title: t("auth.otpResentTitle"), message: t("auth.otpResentSub") });
+      setOtpValue("");
+    } catch (err) {
+      toast.show({ type: "error", title: t("auth.toastLoginFailed"), message: err?.response?.data?.detail || err.message });
+    } finally {
+      setOtpResending(false);
+    }
+  };
+
   const triggerOAuth = (ref, provider) => {
     if (isAnyLoading) return;
     setOauthLoading(provider);
     // small delay so loader bar renders before popup opens
     setTimeout(() => ref.current?.querySelector("button")?.click(), 80);
   };
+
+  /* ── OTP entry screen ── */
+  if (otpStep) {
+    return (
+      <div className="ds-root">
+        <style>{styles}</style>
+        <div className="ds-card">
+          <div className="ds-brand">
+            <div className="ds-flame"><Flame size={22} color="#0e0700" strokeWidth={2.5} /></div>
+            <span className="ds-wordmark">KOTABITES</span>
+          </div>
+
+          <div className="ds-state" style={{ marginBottom: 20 }}>
+            <div className="ds-otp-icon"><MailCheck size={26} color="var(--kb-gold)" /></div>
+            <h2 className="ds-state-title">{t("auth.otpTitle")}</h2>
+            <p className="ds-state-sub">
+              {t("auth.otpSub")}{" "}
+              <strong style={{ color: "var(--kb-gold)" }}>{form.email.trim().toLowerCase()}</strong>
+            </p>
+          </div>
+
+          <form onSubmit={handleOtpSubmit} className="ds-form">
+            <div className="ds-field">
+              <input
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                maxLength={6}
+                className={`ds-input ds-otp-input${otpError ? " ds-input--err" : ""}`}
+                placeholder={t("auth.otpPlaceholder")}
+                value={otpValue}
+                onChange={(e) => { setOtpValue(e.target.value.replace(/\D/g, "").slice(0, 6)); setOtpError(""); }}
+                disabled={otpVerifying}
+                autoFocus
+              />
+              {otpError && <p className="ds-err">{otpError}</p>}
+            </div>
+
+            <button type="submit" disabled={otpVerifying || otpValue.length !== 6} className="ds-cta">
+              {otpVerifying
+                ? <><Loader size={18} className="ds-spin" /> {t("auth.otpVerifying")}</>
+                : t("auth.otpVerify")}
+            </button>
+          </form>
+
+          <div className="ds-row" style={{ justifyContent: "center", marginTop: 16 }}>
+            <button type="button" className="ds-text-link" onClick={handleOtpResend} disabled={otpResending} style={{ background: "none", border: "none", cursor: "pointer" }}>
+              {otpResending ? t("auth.otpResending") : t("auth.otpResend")}
+            </button>
+          </div>
+
+          <div className="ds-row" style={{ justifyContent: "center" }}>
+            <button type="button" className="ds-text-link" onClick={() => { setOtpStep(false); setOtpValue(""); setOtpError(""); }} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--kb-muted)" }}>
+              {t("auth.otpBack")}
+            </button>
+          </div>
+
+          <div className="ds-secure">
+            <ShieldCheck size={12} color="rgba(255,248,231,0.25)" />
+            <span>{t("auth.secured256")}</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   /* ─────────────────────────────────────────────────────────── */
   return (
@@ -418,6 +521,19 @@ const styles = `
   .ds-eye { background:none; border:none; cursor:pointer; color:var(--kb-muted); display:flex; align-items:center; padding:0; transition:color 0.2s; flex-shrink:0; }
   .ds-eye:hover { color:var(--kb-text); }
   .ds-err { font-size:11px; font-weight:700; color:#f87171; padding-left:8px; }
+
+  /* OTP step */
+  .ds-otp-icon {
+    width:60px; height:60px; margin:0 auto 4px; border-radius:50%;
+    background:rgba(255,199,44,0.1); display:flex; align-items:center; justify-content:center;
+  }
+  .ds-otp-input {
+    text-align:center; font-size:22px; font-weight:800; letter-spacing:10px;
+    padding-left:10px;
+  }
+  .ds-state { display:flex; flex-direction:column; align-items:center; gap:10px; text-align:center; }
+  .ds-state-title { font-family:'Bebas Neue',sans-serif; font-size:26px; letter-spacing:2px; color:var(--kb-text); margin:6px 0 0; }
+  .ds-state-sub   { font-size:13px; color:var(--kb-muted); max-width:280px; line-height:1.55; margin:0; }
 
   .ds-terms { font-size:12px; color:var(--kb-muted); line-height:1.5; margin:0; }
   .ds-terms-link { color:var(--kb-text); font-weight:600; text-decoration:underline; text-underline-offset:2px; text-decoration-color:rgba(255,248,231,0.25); }
