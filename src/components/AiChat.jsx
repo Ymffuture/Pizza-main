@@ -2079,7 +2079,7 @@ const styles = `
 
   .kb-stop-btn {
     width:30px; height:30px; border-radius:50%; flex-shrink:0;
-    background:var(--kb-text); border:none; cursor:pointer;
+    background:transparent ; border:none; cursor:pointer;
     display:flex; align-items:center; justify-content:center; color:var(--kb-dark);
     transition:all 0.18s; animation:kbWindowIn 0.15s ease;
   }
@@ -2089,7 +2089,7 @@ const styles = `
   .kb-plus-wrap { position:relative; }
   .kb-plus-btn {
     width:30px; height:30px; border-radius:50%; flex-shrink:0;
-    background:rgba(200,200,220,0.07); border:1.5px solid rgba(0,229,255,0.14);
+   background:transparent ; border:none; 
     cursor:pointer; display:flex; align-items:center; justify-content:center;
     color:rgba(200,200,220,0.7); transition:all 0.18s;
   }
@@ -2173,7 +2173,7 @@ const styles = `
   /* ── Voice recording ── */
   .kb-mic-btn {
     width:30px; height:30px; border-radius:50%; flex-shrink:0;
-    background:rgba(200,200,220,0.07); border:1.5px solid rgba(0,229,255,0.14);
+    background:transparent ; border:none; 
     cursor:pointer; display:flex; align-items:center; justify-content:center;
     color:rgba(200,200,220,0.7); transition:all 0.18s;
   }
